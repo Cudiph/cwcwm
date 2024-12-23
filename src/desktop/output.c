@@ -212,6 +212,9 @@ static void output_repaint(struct cwc_output *output,
 {
     _output_configure_scene(output, &server.scene->tree.node, 1.0f);
 
+    if (!wlr_scene_output_needs_frame(scene_output))
+        return;
+
     struct wlr_output_state pending;
     wlr_output_state_init(&pending);
 
@@ -236,6 +239,7 @@ static void output_repaint(struct cwc_output *output,
         cwc_log(CWC_ERROR, "Page-flip failed on output %s",
                 output->wlr_output->name);
     }
+
     wlr_output_state_finish(&pending);
 }
 
