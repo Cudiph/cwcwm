@@ -585,6 +585,7 @@ CLIENT_PROPERTY_CREATE_BOOLEAN(below)
  *
  * @property allow_tearing
  * @tparam[opt=false] boolean allow_tearing
+ * @see cwc.screen.allow_tearing
  */
 CLIENT_PROPERTY_CREATE_BOOLEAN(allow_tearing)
 

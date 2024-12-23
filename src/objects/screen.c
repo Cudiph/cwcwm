@@ -365,10 +365,11 @@ static int luaC_screen_get_layout_mode(lua_State *L)
     return 1;
 }
 
-/** The layout mode of the active workspace.
+/** Whether to allow screen to tear or not.
  *
  * @property allow_tearing
- * @tparam[opt=false] integer layout_mode Layout mode enum from cuteful.
+ * @tparam[opt=false] boolean allow_tearing
+ * @see cwc.client.allow_tearing
  */
 static int luaC_screen_set_allow_tearing(lua_State *L)
 {
