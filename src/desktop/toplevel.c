@@ -1,5 +1,6 @@
 /* toplevel.c - toplevel/window/client processing
  *
+ * Copyright (C) 2020 dwl team
  * Copyright (C) 2024 Dwi Asmoro Bangun <dwiaceromo@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify

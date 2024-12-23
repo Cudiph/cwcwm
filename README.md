@@ -63,10 +63,12 @@ CwC took ~~inspiration~~ code from these awesome projects:
 
 - [Awesome](https://github.com/awesomeWM/awesome)
 - [dwl](https://codeberg.org/dwl/dwl)
-- [hikari](https://hub.darcs.net/raichoo/hikari)
+- [Hikari](https://hub.darcs.net/raichoo/hikari)
 - [Hyprland](https://github.com/hyprwm/Hyprland)
 - [Sway](https://github.com/swaywm/sway)
 - [TinyWL](https://gitlab.freedesktop.org/wlroots/wlroots)
+
+See [LICENSE.md](LICENSE.md) for license details.
 
 
 [getting_started]: https://cudiph.github.io/cwc/apidoc/documentation/00-getting-started.md.html

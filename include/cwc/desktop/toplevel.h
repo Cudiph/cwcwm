@@ -1,3 +1,8 @@
+/*
+ * Copyright © 2020 dwl team
+ * See LICENSE.md file for copyright and license details.
+ */
+
 #ifndef _CWC_TOPLEVEL_H
 #define _CWC_TOPLEVEL_H
 
