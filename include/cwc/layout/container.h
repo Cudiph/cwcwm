@@ -1,6 +1,5 @@
 #ifndef _CWC_CONTAINER_H
 #define _CWC_CONTAINER_H
-
 #include <wlr/interfaces/wlr_buffer.h>
 #include <wlr/util/box.h>
 

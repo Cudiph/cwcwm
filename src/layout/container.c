@@ -557,6 +557,9 @@ void cwc_container_insert_toplevel(struct cwc_container *c,
 
 static void _destroy_container(struct cwc_container *container)
 {
+    lua_State *L = g_config_get_lua_State();
+    cwc_object_emit_signal_simple("container::destroy", L, container);
+
     if (server.insert_marked == container)
         server.insert_marked = NULL;
 
@@ -576,8 +579,6 @@ static void _destroy_container(struct cwc_container *container)
     if (container->link_minimized.next && container->link_minimized.prev)
         wl_list_remove(&container->link_minimized);
 
-    lua_State *L = g_config_get_lua_State();
-    cwc_object_emit_signal_simple("container::destroy", L, container);
     luaC_object_unregister(L, container);
 
     cwc_border_destroy(&container->border);
