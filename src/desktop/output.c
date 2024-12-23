@@ -201,7 +201,8 @@ static bool output_can_tear(struct cwc_output *output)
         return false;
 
     if (cwc_toplevel_is_fullscreen(toplevel)
-        && cwc_toplevel_is_allow_tearing(toplevel))
+        && cwc_toplevel_is_allow_tearing(toplevel)
+        && cwc_output_is_allow_tearing(output))
         return true;
 
     return false;
@@ -355,6 +356,7 @@ static void on_new_output(struct wl_listener *listener, void *data)
     struct cwc_output *output = calloc(1, sizeof(*output));
     output->type              = DATA_TYPE_OUTPUT;
     output->wlr_output        = wlr_output;
+    output->tearing_allowed   = false;
     output->wlr_output->data  = output;
     server.focused_output     = output;
 

@@ -365,6 +365,29 @@ static int luaC_screen_get_layout_mode(lua_State *L)
     return 1;
 }
 
+/** The layout mode of the active workspace.
+ *
+ * @property allow_tearing
+ * @tparam[opt=false] integer layout_mode Layout mode enum from cuteful.
+ */
+static int luaC_screen_set_allow_tearing(lua_State *L)
+{
+    struct cwc_output *output = luaC_screen_checkudata(L, 1);
+
+    cwc_output_set_allow_tearing(output, lua_toboolean(L, 2));
+
+    return 0;
+}
+
+static int luaC_screen_get_allow_tearing(lua_State *L)
+{
+    struct cwc_output *output = luaC_screen_checkudata(L, 1);
+
+    lua_pushboolean(L, cwc_output_is_allow_tearing(output));
+
+    return 1;
+}
+
 /** Bitfield of currently activated tags.
  *
  * @property active_tag
@@ -690,6 +713,7 @@ void luaC_screen_setup(lua_State *L)
         SCREEN_REG_READ_ONLY(restored),
 
         // rw properties
+        SCREEN_REG_PROPERTY(allow_tearing),
         SCREEN_REG_PROPERTY(layout_mode),
         SCREEN_REG_PROPERTY(active_tag),
         SCREEN_REG_PROPERTY(active_workspace),

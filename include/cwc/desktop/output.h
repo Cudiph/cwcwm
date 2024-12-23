@@ -39,6 +39,7 @@ struct cwc_output {
 
     struct cwc_output_state *state;
     bool restored;
+    bool tearing_allowed;
 
     struct wl_listener frame_l;
     struct wl_listener request_state_l;
@@ -119,6 +120,17 @@ cwc_output_tiling_layout_update_all_general_workspace(struct cwc_output *output)
     for (int i = 1; i < output->state->max_general_workspace; i++) {
         cwc_output_tiling_layout_update(output, i);
     }
+}
+
+static inline bool cwc_output_is_allow_tearing(struct cwc_output *output)
+{
+    return output->tearing_allowed;
+}
+
+static inline void cwc_output_set_allow_tearing(struct cwc_output *output,
+                                                bool set)
+{
+    output->tearing_allowed = set;
 }
 
 #endif // !_CWC_OUTPUT_H
