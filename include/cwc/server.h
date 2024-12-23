@@ -38,6 +38,9 @@ struct cwc_server {
     struct wlr_xdg_decoration_manager_v1 *xdg_decoration_manager;
     struct wl_listener new_decoration_l;
 
+    struct wlr_tearing_control_manager_v1 *tearing_manager;
+    struct wl_listener new_tearing_object_l;
+
     struct cwc_session_lock_manager *session_lock;
     struct cwc_idle *idle;
 

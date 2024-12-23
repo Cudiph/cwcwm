@@ -42,6 +42,7 @@ struct cwc_toplevel {
 
     struct cwc_toplevel_decoration *decoration;
     bool mapped;
+    bool tearing_hint;
 
     struct wl_list link_output_toplevels; // cwc_output.toplevels
     struct wl_list link_container;        // cwc_container.toplevels
@@ -398,6 +399,17 @@ static inline struct cwc_container *
 cwc_toplevel_get_container(struct cwc_toplevel *toplevel)
 {
     return toplevel->container;
+}
+
+static inline void cwc_toplevel_set_allow_tearing(struct cwc_toplevel *toplevel,
+                                                  bool set)
+{
+    toplevel->tearing_hint = set;
+}
+
+static inline bool cwc_toplevel_is_allow_tearing(struct cwc_toplevel *toplevel)
+{
+    return toplevel->tearing_hint;
 }
 
 #endif // !_CWC_TOPLEVEL_H

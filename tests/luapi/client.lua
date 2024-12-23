@@ -74,6 +74,10 @@ local function property_test(c)
     assert(c.opacity >= 0 and c.opacity <= 1)
     c.opacity = 0.5
     assert(c.opacity == 0.5)
+
+    assert(not c.allow_tearing)
+    c.allow_tearing = true
+    assert(c.allow_tearing)
 end
 
 local function method_test(c)

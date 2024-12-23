@@ -28,6 +28,7 @@
 #include <wlr/types/wlr_output_management_v1.h>
 #include <wlr/types/wlr_output_power_management_v1.h>
 #include <wlr/types/wlr_scene.h>
+#include <wlr/types/wlr_tearing_control_v1.h>
 
 #include "cwc/config.h"
 #include "cwc/desktop/layer_shell.h"
@@ -192,9 +193,50 @@ static void _output_configure_scene(struct cwc_output *output,
     }
 }
 
-static void output_repaint(struct cwc_output *output)
+static bool output_can_tear(struct cwc_output *output)
+{
+    struct cwc_toplevel *toplevel = cwc_toplevel_get_focused();
+
+    if (!toplevel)
+        return false;
+
+    if (cwc_toplevel_is_fullscreen(toplevel)
+        && cwc_toplevel_is_allow_tearing(toplevel))
+        return true;
+
+    return false;
+}
+
+static void output_repaint(struct cwc_output *output,
+                           struct wlr_scene_output *scene_output)
 {
     _output_configure_scene(output, &server.scene->tree.node, 1.0f);
+
+    struct wlr_output_state pending;
+    wlr_output_state_init(&pending);
+
+    if (!wlr_scene_output_build_state(scene_output, &pending, NULL)) {
+        wlr_output_state_finish(&pending);
+        return;
+    }
+
+    if (output_can_tear(output)) {
+        pending.tearing_page_flip = true;
+
+        if (!wlr_output_test_state(output->wlr_output, &pending)) {
+            cwc_log(CWC_DEBUG,
+                    "Output test failed on '%s', retrying without tearing "
+                    "page-flip",
+                    output->wlr_output->name);
+            pending.tearing_page_flip = false;
+        }
+    }
+
+    if (!wlr_output_commit_state(output->wlr_output, &pending)) {
+        cwc_log(CWC_ERROR, "Page-flip failed on output %s",
+                output->wlr_output->name);
+    }
+    wlr_output_state_finish(&pending);
 }
 
 static void on_output_frame(struct wl_listener *listener, void *data)
@@ -208,7 +250,7 @@ static void on_output_frame(struct wl_listener *listener, void *data)
     if (!scene_output)
         return;
 
-    output_repaint(output);
+    output_repaint(output, scene_output);
 
     /* Render the scene if needed and commit the output */
     wlr_scene_output_commit(scene_output, NULL);
@@ -440,6 +482,46 @@ static void on_opm_set_mode(struct wl_listener *listener, void *data)
     wlr_output_state_finish(&state);
 }
 
+struct tearing_object {
+    struct wlr_tearing_control_v1 *tearing_control;
+
+    struct wl_listener set_hint_l;
+    struct wl_listener destroy_l;
+};
+
+static void on_tearing_object_destroy(struct wl_listener *listener, void *data)
+{
+    struct tearing_object *obj = wl_container_of(listener, obj, destroy_l);
+
+    wl_list_remove(&obj->set_hint_l.link);
+    wl_list_remove(&obj->destroy_l.link);
+    free(obj);
+}
+
+static void on_tearing_object_set_hint(struct wl_listener *listener, void *data)
+{
+    struct tearing_object *obj = wl_container_of(listener, obj, destroy_l);
+
+    struct cwc_toplevel *toplevel =
+        cwc_toplevel_try_from_wlr_surface(obj->tearing_control->surface);
+
+    if (toplevel)
+        toplevel->tearing_hint = obj->tearing_control->current;
+}
+
+static void on_new_tearing_object(struct wl_listener *listener, void *data)
+{
+    struct wlr_tearing_control_v1 *tearing_control = data;
+
+    struct tearing_object *obj = calloc(1, sizeof(*obj));
+    obj->tearing_control       = tearing_control;
+
+    obj->set_hint_l.notify = on_tearing_object_set_hint;
+    obj->destroy_l.notify  = on_tearing_object_destroy;
+    wl_signal_add(&tearing_control->events.set_hint, &obj->set_hint_l);
+    wl_signal_add(&tearing_control->events.destroy, &obj->destroy_l);
+}
+
 void setup_output(struct cwc_server *s)
 {
     // wlr output layout
@@ -459,6 +541,13 @@ void setup_output(struct cwc_server *s)
     s->opm_set_mode_l.notify = on_opm_set_mode;
     wl_signal_add(&s->output_power_manager->events.set_mode,
                   &s->opm_set_mode_l);
+
+    // tearing manager
+    s->tearing_manager =
+        wlr_tearing_control_manager_v1_create(s->wl_display, 1);
+    s->new_tearing_object_l.notify = on_new_tearing_object;
+    wl_signal_add(&s->tearing_manager->events.new_object,
+                  &s->new_tearing_object_l);
 }
 
 void cwc_output_update_visible(struct cwc_output *output)

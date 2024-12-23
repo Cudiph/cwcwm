@@ -581,6 +581,13 @@ CLIENT_PROPERTY_CREATE_BOOLEAN(above)
  */
 CLIENT_PROPERTY_CREATE_BOOLEAN(below)
 
+/** Allow the client to tear when in fullscreen.
+ *
+ * @property allow_tearing
+ * @tparam[opt=false] boolean allow_tearing
+ */
+CLIENT_PROPERTY_CREATE_BOOLEAN(allow_tearing)
+
 /** Geometry of the client (border not included).
  *
  * @property geometry
@@ -928,6 +935,7 @@ void luaC_client_setup(lua_State *L)
         CLIENT_REG_PROPERTY(above),
         CLIENT_REG_PROPERTY(below),
         CLIENT_REG_PROPERTY(opacity),
+        CLIENT_REG_PROPERTY(allow_tearing),
 
         {NULL,          NULL                     },
     };

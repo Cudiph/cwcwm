@@ -35,7 +35,8 @@ srcs = [
   protocols_server_header['xdg-shell'],
 
   # Staging upstream protocols
-  protocols_server_header['cursor-shape-v1'], # done
+  protocols_server_header['cursor-shape-v1'],
+  protocols_server_header['tearing-control-v1'],
 
   # Unstable upstream protocols
   protocols_server_header['pointer-constraints-unstable-v1'],
