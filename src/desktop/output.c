@@ -264,6 +264,8 @@ static void on_output_frame(struct wl_listener *listener, void *data)
     wlr_scene_output_send_frame_done(scene_output, &now);
 }
 
+static void output_layers_fini(struct cwc_output *output);
+
 static void on_output_destroy(struct wl_listener *listener, void *data)
 {
     struct cwc_output *output = wl_container_of(listener, output, destroy_l);
@@ -274,6 +276,8 @@ static void on_output_destroy(struct wl_listener *listener, void *data)
 
     cwc_log(CWC_INFO, "destroying output (%s): %p %p", output->wlr_output->name,
             output, output->wlr_output);
+
+    output_layers_fini(output);
 
     wl_list_remove(&output->destroy_l.link);
     wl_list_remove(&output->frame_l.link);
@@ -286,6 +290,18 @@ static void on_output_destroy(struct wl_listener *listener, void *data)
     luaC_object_unregister(g_config_get_lua_State(), output);
 
     free(output);
+}
+
+static void output_layer_set_position(struct cwc_output *output, int x, int y)
+{
+    wlr_scene_node_set_position(&output->layers.background->node, x, y);
+    wlr_scene_node_set_position(&output->layers.bottom->node, x, y);
+    wlr_scene_node_set_position(&output->layers.below->node, x, y);
+    wlr_scene_node_set_position(&output->layers.toplevel->node, x, y);
+    wlr_scene_node_set_position(&output->layers.above->node, x, y);
+    wlr_scene_node_set_position(&output->layers.top->node, x, y);
+    wlr_scene_node_set_position(&output->layers.overlay->node, x, y);
+    wlr_scene_node_set_position(&output->layers.session_lock->node, x, y);
 }
 
 static void update_output_manager_config()
@@ -304,6 +320,8 @@ static void update_output_manager_config()
         config_head->state.enabled = output->wlr_output->enabled;
         config_head->state.x       = output_box.x;
         config_head->state.y       = output_box.y;
+
+        output_layer_set_position(output, output_box.x, output_box.y);
     }
 
     wlr_output_manager_v1_set_configuration(server.output_manager, cfg);
@@ -332,13 +350,34 @@ static void on_config_commit(struct wl_listener *listener, void *data)
     cwc_output_tiling_layout_update_all_general_workspace(output);
 }
 
+static void output_layers_init(struct cwc_output *output)
+{
+    output->layers.background = wlr_scene_tree_create(server.root.background);
+    output->layers.bottom     = wlr_scene_tree_create(server.root.bottom);
+    output->layers.below      = wlr_scene_tree_create(server.root.below);
+    output->layers.toplevel   = wlr_scene_tree_create(server.root.toplevel);
+    output->layers.above      = wlr_scene_tree_create(server.root.above);
+    output->layers.top        = wlr_scene_tree_create(server.root.top);
+    output->layers.overlay    = wlr_scene_tree_create(server.root.overlay);
+    output->layers.session_lock =
+        wlr_scene_tree_create(server.root.session_lock);
+}
+
+static void output_layers_fini(struct cwc_output *output)
+{
+    wlr_scene_node_destroy(&output->layers.background->node);
+    wlr_scene_node_destroy(&output->layers.bottom->node);
+    wlr_scene_node_destroy(&output->layers.below->node);
+    wlr_scene_node_destroy(&output->layers.toplevel->node);
+    wlr_scene_node_destroy(&output->layers.above->node);
+    wlr_scene_node_destroy(&output->layers.top->node);
+    wlr_scene_node_destroy(&output->layers.overlay->node);
+    wlr_scene_node_destroy(&output->layers.session_lock->node);
+}
+
 static void on_new_output(struct wl_listener *listener, void *data)
 {
     struct wlr_output *wlr_output = data;
-
-    // TODO: multihead setup
-    if (wl_list_length(&server.outputs) || wlr_output->non_desktop)
-        return;
 
     /* Configures the output created by the backend to use our allocator
      * and our renderer. Must be done once, before commiting the output */
@@ -377,6 +416,8 @@ static void on_new_output(struct wl_listener *listener, void *data)
         output->state = cwc_output_state_create();
     else
         output->restored = true;
+
+    output_layers_init(output);
 
     output->frame_l.notify         = on_output_frame;
     output->request_state_l.notify = on_request_state;
