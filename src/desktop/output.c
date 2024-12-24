@@ -288,12 +288,24 @@ static void on_output_destroy(struct wl_listener *listener, void *data)
     free(output);
 }
 
-static void update_output_manager_config(struct cwc_output *output)
+static void update_output_manager_config()
 {
-    // Probably won't work in multihead setup
     struct wlr_output_configuration_v1 *cfg =
         wlr_output_configuration_v1_create();
-    wlr_output_configuration_head_v1_create(cfg, output->wlr_output);
+    struct cwc_output *output;
+    wl_list_for_each(output, &server.outputs, link)
+    {
+        struct wlr_output_configuration_head_v1 *config_head =
+            wlr_output_configuration_head_v1_create(cfg, output->wlr_output);
+        struct wlr_box output_box;
+        wlr_output_layout_get_box(server.output_layout, output->wlr_output,
+                                  &output_box);
+
+        config_head->state.enabled = output->wlr_output->enabled;
+        config_head->state.x       = output_box.x;
+        config_head->state.y       = output_box.y;
+    }
+
     wlr_output_manager_v1_set_configuration(server.output_manager, cfg);
 }
 
@@ -304,6 +316,7 @@ static void on_request_state(struct wl_listener *listener, void *data)
     struct wlr_output_event_request_state *event = data;
 
     wlr_output_commit_state(output->wlr_output, event->state);
+    update_output_manager_config();
     arrange_layers(output);
 }
 
@@ -396,7 +409,7 @@ static void on_new_output(struct wl_listener *listener, void *data)
     cwc_log(CWC_INFO, "created output (%s): %p %p", wlr_output->name, output,
             output->wlr_output);
 
-    update_output_manager_config(output);
+    update_output_manager_config();
     arrange_layers(output);
 
     luaC_object_screen_register(g_config_get_lua_State(), output);
@@ -449,7 +462,7 @@ static void output_manager_apply(struct wlr_output_configuration_v1 *config,
 
         wlr_output_state_finish(&state);
 
-        update_output_manager_config(output);
+        update_output_manager_config();
         arrange_layers(output);
         cwc_output_tiling_layout_update(output, 0);
     }
