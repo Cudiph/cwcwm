@@ -30,6 +30,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <wlr/backend/multi.h>
 #include <wlr/backend/session.h>
 #include <xkbcommon/xkbcommon-keysyms.h>
 #include <xkbcommon/xkbcommon.h>
@@ -274,21 +275,45 @@ static void _chvt(void *args)
     wlr_session_change_vt(server.session, (uint64_t)args);
 }
 
-// static void _test(void *args)
-// {
-//     struct cwc_toplevel *toplevel = cwc_toplevel_get_focused();
-//
-//     master_set_master(toplevel);
-// }
+// FIXME: revert this when multihead complete
+#ifndef NDEBUG
+#include <wlr/backend/headless.h>
+#include <wlr/backend/wayland.h>
+#include <wlr/backend/x11.h>
+
+void create_output(struct wlr_backend *backend, void *data)
+{
+    if (wl_list_length(&server.outputs) > 1)
+        return;
+
+    if (wlr_backend_is_wl(backend)) {
+        wlr_wl_output_create(backend);
+    } else if (wlr_backend_is_headless(backend)) {
+        wlr_headless_add_output(backend, 1920, 1080);
+    } else if (wlr_backend_is_x11(backend)) {
+        wlr_x11_output_create(backend);
+    }
+}
+
+static void _test(void *args)
+{
+    wlr_multi_for_each_backend(server.backend, create_output, NULL);
+}
+#else
+static void _test(void *args)
+{
+    ;
+}
+#endif
 
 #define WLR_MODIFIER_NONE 0
 void keybind_register_common_key()
 {
-    // keybind_kbd_register(WLR_MODIFIER_NONE, XKB_KEY_F11,
-    //                      (struct cwc_keybind_info){
-    //                          .type     = CWC_KEYBIND_TYPE_C,
-    //                          .on_press = _test,
-    //                      });
+    keybind_kbd_register(WLR_MODIFIER_NONE, XKB_KEY_F11,
+                         (struct cwc_keybind_info){
+                             .type     = CWC_KEYBIND_TYPE_C,
+                             .on_press = _test,
+                         });
 
     for (size_t i = 1; i <= 12; ++i) {
         char keyname[7];

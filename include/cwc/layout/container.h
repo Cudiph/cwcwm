@@ -77,7 +77,7 @@ struct cwc_container {
     struct wl_list link_minimized;        // cwc_output.minimized
 };
 
-void cwc_container_init(struct wlr_scene_tree *parent,
+void cwc_container_init(struct cwc_output *output,
                         struct cwc_toplevel *toplevel,
                         int border_w);
 

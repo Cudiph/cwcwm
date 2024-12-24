@@ -470,13 +470,14 @@ _update_to_current_active_tag_and_worskpace(struct cwc_container *cont)
     cont->workspace = cont->output->state->active_workspace;
 }
 
-void cwc_container_init(struct wlr_scene_tree *parent,
+void cwc_container_init(struct cwc_output *output,
                         struct cwc_toplevel *toplevel,
                         int border_w)
 {
     struct cwc_container *cont = calloc(1, sizeof(*cont));
     cont->type                 = DATA_TYPE_CONTAINER;
-    cont->tree                 = wlr_scene_tree_create(parent);
+    cont->output               = server.focused_output;
+    cont->tree                 = wlr_scene_tree_create(output->layers.toplevel);
     cont->popup_tree           = wlr_scene_tree_create(cont->tree);
     cont->tree->node.data      = cont;
     cont->opacity              = 1.0f;
@@ -486,7 +487,6 @@ void cwc_container_init(struct wlr_scene_tree *parent,
     cont->height              = geom.height + g_config.border_width * 2;
     cont->floating_box.width  = cont->width;
     cont->floating_box.height = cont->height;
-    cont->output              = server.focused_output;
 
     _update_to_current_active_tag_and_worskpace(cont);
 
@@ -596,7 +596,7 @@ static void _clear_container_stuff_in_toplevel(struct cwc_toplevel *toplevel)
 
     // toplevel should be inserted to container again when removing from
     // container
-    wlr_scene_node_reparent(&toplevel->surf_tree->node, server.layers.bottom);
+    wlr_scene_node_reparent(&toplevel->surf_tree->node, server.temporary_tree);
 
     cwc_container_refresh(toplevel->container);
 

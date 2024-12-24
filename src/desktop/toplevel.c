@@ -69,7 +69,7 @@ static void on_surface_map(struct wl_listener *listener, void *data)
         cwc_container_insert_toplevel(server.insert_marked, toplevel);
     } else {
         int bw = g_config.border_width;
-        cwc_container_init(server.layers.toplevel, toplevel,
+        cwc_container_init(server.focused_output, toplevel,
                            cwc_toplevel_is_unmanaged(toplevel) ? 0 : bw);
     }
 
@@ -357,7 +357,7 @@ static void on_popup_commit(struct wl_listener *listener, void *data)
     } else if (layersurf) {
         struct cwc_layer_surface *l = layersurf->data;
         node                        = &l->scene_layer->tree->node;
-        parent_stree                = server.layers.top;
+        parent_stree                = server.root.top;
         box.width                   = l->output->wlr_output->width;
         box.height                  = l->output->wlr_output->height;
     } else {
@@ -973,7 +973,7 @@ void cwc_toplevel_set_tiled(struct cwc_toplevel *toplevel, uint32_t edges)
 
 bool cwc_toplevel_is_ontop(struct cwc_toplevel *toplevel)
 {
-    if (toplevel->container->tree->node.parent == server.layers.top)
+    if (toplevel->container->tree->node.parent == server.root.top)
         return true;
 
     return false;
@@ -983,17 +983,17 @@ void cwc_toplevel_set_ontop(struct cwc_toplevel *toplevel, bool set)
 {
     if (set) {
         wlr_scene_node_reparent(&toplevel->container->tree->node,
-                                server.layers.top);
+                                server.root.top);
         return;
     }
 
     wlr_scene_node_reparent(&toplevel->container->tree->node,
-                            server.layers.toplevel);
+                            server.root.toplevel);
 }
 
 bool cwc_toplevel_is_above(struct cwc_toplevel *toplevel)
 {
-    if (toplevel->container->tree->node.parent == server.layers.above)
+    if (toplevel->container->tree->node.parent == server.root.above)
         return true;
 
     return false;
@@ -1003,17 +1003,17 @@ void cwc_toplevel_set_above(struct cwc_toplevel *toplevel, bool set)
 {
     if (set) {
         wlr_scene_node_reparent(&toplevel->container->tree->node,
-                                server.layers.above);
+                                server.root.above);
         return;
     }
 
     wlr_scene_node_reparent(&toplevel->container->tree->node,
-                            server.layers.toplevel);
+                            server.root.toplevel);
 }
 
 bool cwc_toplevel_is_below(struct cwc_toplevel *toplevel)
 {
-    if (toplevel->container->tree->node.parent == server.layers.below)
+    if (toplevel->container->tree->node.parent == server.root.below)
         return true;
 
     return false;
@@ -1023,12 +1023,12 @@ void cwc_toplevel_set_below(struct cwc_toplevel *toplevel, bool set)
 {
     if (set) {
         wlr_scene_node_reparent(&toplevel->container->tree->node,
-                                server.layers.below);
+                                server.root.below);
         return;
     }
 
     wlr_scene_node_reparent(&toplevel->container->tree->node,
-                            server.layers.toplevel);
+                            server.root.toplevel);
 }
 
 void layout_coord_to_surface_coord(

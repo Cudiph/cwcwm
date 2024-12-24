@@ -83,6 +83,13 @@ static void attach_pointer_device(struct cwc_seat *seat,
     libinput_device_apply_config(libinput_dev);
 }
 
+static void apply_mapping_pointer_device(struct wlr_input_device *dev)
+{
+    struct wlr_pointer *pointer = wlr_pointer_from_input_device(dev);
+
+    // TODO: xxx
+}
+
 static void on_new_input(struct wl_listener *listener, void *data)
 {
     struct cwc_seat *seat = wl_container_of(listener, seat, new_input_l);
@@ -91,6 +98,7 @@ static void on_new_input(struct wl_listener *listener, void *data)
     switch (device->type) {
     case WLR_INPUT_DEVICE_POINTER:
         attach_pointer_device(seat, device);
+        apply_mapping_pointer_device(device);
         break;
     case WLR_INPUT_DEVICE_KEYBOARD:
         cwc_keyboard_group_add_device(seat->kbd_group, device);
@@ -171,7 +179,7 @@ static void on_start_drag(struct wl_listener *listener, void *data)
     struct cwc_drag *cwc_drag = calloc(1, sizeof(*cwc_drag));
     cwc_drag->wlr_drag        = drag;
     cwc_drag->scene_tree =
-        wlr_scene_drag_icon_create(server.layers.overlay, drag->icon);
+        wlr_scene_drag_icon_create(server.root.overlay, drag->icon);
 
     cwc_drag->on_drag_motion_l.notify  = on_drag_motion;
     cwc_drag->on_drag_destroy_l.notify = on_drag_destroy;

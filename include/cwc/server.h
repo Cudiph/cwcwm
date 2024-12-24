@@ -45,8 +45,9 @@ struct cwc_server {
     struct cwc_idle *idle;
 
     struct wlr_scene_tree *main_tree;
+    struct wlr_scene_tree *temporary_tree;
     // sorted from back to front
-    struct scene_layers {
+    struct {
         struct wlr_scene_tree *background;   // layer_shell
         struct wlr_scene_tree *bottom;       // layer_shell
         struct wlr_scene_tree *below;        // toplevel below normal toplevel
@@ -55,7 +56,7 @@ struct cwc_server {
         struct wlr_scene_tree *top;          // layer_shell
         struct wlr_scene_tree *overlay;      // layer_shell
         struct wlr_scene_tree *session_lock; // session_lock
-    } layers;
+    } root;
     struct wlr_layer_shell_v1 *layer_shell;
     struct wl_listener layer_shell_surface_l;
 

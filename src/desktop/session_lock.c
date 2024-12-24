@@ -46,23 +46,22 @@ static void on_new_surface(struct wl_listener *listener, void *data)
     struct cwc_session_lock_manager *mgr             = locker->manager;
     struct wlr_session_lock_surface_v1 *lock_surface = data;
 
-    // use 1 locker only
-    if (mgr->locked)
-        wlr_session_lock_v1_destroy(locker->locker);
+    struct cwc_output *output = lock_surface->output->data;
 
-    wlr_scene_subsurface_tree_create(server.layers.session_lock,
+    wlr_scene_subsurface_tree_create(output->layers.session_lock,
                                      lock_surface->surface);
 
-    wlr_session_lock_surface_v1_configure(lock_surface,
-                                          lock_surface->output->width,
-                                          lock_surface->output->height);
+    wlr_session_lock_surface_v1_configure(
+        lock_surface, output->wlr_output->width, output->wlr_output->height);
 
     // set state
-    mgr->locked          = true;
-    mgr->locker          = locker;
-    locker->lock_surface = lock_surface;
-    wlr_session_lock_v1_send_locked(locker->locker);
-    keyboard_focus_surface(server.seat, lock_surface->surface);
+    if (!mgr->locked) {
+        mgr->locked          = true;
+        mgr->locker          = locker;
+        locker->lock_surface = lock_surface;
+        wlr_session_lock_v1_send_locked(locker->locker);
+        keyboard_focus_surface(server.seat, lock_surface->surface);
+    }
 }
 
 static void on_lock_destroy(struct wl_listener *listener, void *data)

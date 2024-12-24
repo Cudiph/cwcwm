@@ -41,6 +41,17 @@ struct cwc_output {
     bool restored;
     bool tearing_allowed;
 
+    struct {
+        struct wlr_scene_tree *background;   // layer_shell
+        struct wlr_scene_tree *bottom;       // layer_shell
+        struct wlr_scene_tree *below;        // toplevel below normal toplevel
+        struct wlr_scene_tree *toplevel;     // regular toplevel belong here
+        struct wlr_scene_tree *above;        // toplevel above normal toplevel
+        struct wlr_scene_tree *top;          // layer_shell
+        struct wlr_scene_tree *overlay;      // layer_shell
+        struct wlr_scene_tree *session_lock; // session_lock
+    } layers;
+
     struct wl_listener frame_l;
     struct wl_listener request_state_l;
     struct wl_listener destroy_l;
