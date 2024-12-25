@@ -23,6 +23,8 @@
 #include <wayland-server-core.h>
 #include <wayland-util.h>
 #include <wlr/backend.h>
+#include <wlr/backend/headless.h>
+#include <wlr/backend/multi.h>
 #include <wlr/backend/session.h>
 #include <wlr/render/allocator.h>
 #include <wlr/types/wlr_alpha_modifier_v1.h>
@@ -71,6 +73,14 @@ static int setup_wayland_core(struct cwc_server *s)
         cwc_log(CWC_ERROR, "Failed to create wlr backend");
         return EXIT_FAILURE;
     }
+
+    s->headless_backend = wlr_headless_backend_create(s->wl_event_loop);
+    if (!s->headless_backend) {
+        cwc_log(CWC_ERROR, "Failed to create headless backend");
+        return EXIT_FAILURE;
+    }
+
+    wlr_multi_backend_add(s->backend, s->headless_backend);
 
     struct wlr_renderer *drw;
     if (!(drw = s->renderer = wlr_renderer_autocreate(s->backend))) {
@@ -145,6 +155,22 @@ int server_init(struct cwc_server *s, char *config_path, char *library_path)
     wlr_scene_set_gamma_control_manager_v1(
         s->scene, wlr_gamma_control_manager_v1_create(dpy));
 
+    // root scene graph
+    s->temporary_tree = wlr_scene_tree_create(&s->scene->tree);
+    wlr_scene_node_set_enabled(&s->temporary_tree->node, false);
+
+    struct wlr_scene_tree *main_scene = s->main_tree =
+        wlr_scene_tree_create(&s->scene->tree);
+    s->root.background   = wlr_scene_tree_create(main_scene);
+    s->root.bottom       = wlr_scene_tree_create(main_scene);
+    s->root.below        = wlr_scene_tree_create(main_scene);
+    s->root.toplevel     = wlr_scene_tree_create(main_scene);
+    s->root.above        = wlr_scene_tree_create(main_scene);
+    s->root.top          = wlr_scene_tree_create(main_scene);
+    s->root.overlay      = wlr_scene_tree_create(main_scene);
+    s->root.session_lock = wlr_scene_tree_create(main_scene);
+
+    // desktop
     setup_output(s);
     setup_xdg_shell(s);
     setup_decoration_manager(s);
@@ -158,6 +184,7 @@ int server_init(struct cwc_server *s, char *config_path, char *library_path)
     setup_cwc_session_lock(s);
     setup_layer_shell(s);
 
+    // inputs
     s->seat = cwc_seat_create();
     setup_pointer(s);
     setup_keyboard(s);

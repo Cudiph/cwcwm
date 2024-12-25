@@ -23,6 +23,7 @@
 #include <wayland-server-core.h>
 #include <wayland-util.h>
 #include <wlr/backend.h>
+#include <wlr/backend/headless.h>
 #include <wlr/types/wlr_alpha_modifier_v1.h>
 #include <wlr/types/wlr_layer_shell_v1.h>
 #include <wlr/types/wlr_output_management_v1.h>
@@ -285,6 +286,21 @@ static void on_output_destroy(struct wl_listener *listener, void *data)
 
     wl_list_remove(&output->config_commit_l.link);
 
+    // change focus to previous inserted outputs although the order may wrong
+    if (wl_list_length_at_least(&server.outputs, 2)) {
+        struct cwc_output *o;
+        wl_list_for_each_reverse(o, &output->link, link)
+        {
+            if (&o->link == &server.outputs)
+                continue;
+
+            server.focused_output = o;
+            break;
+        }
+    } else {
+        server.focused_output = server.fallback_output;
+    }
+
     wl_list_remove(&output->link);
 
     luaC_object_unregister(g_config_get_lua_State(), output);
@@ -367,9 +383,34 @@ static void output_layers_fini(struct cwc_output *output)
     wlr_scene_node_destroy(&output->layers.session_lock->node);
 }
 
+static struct cwc_output *cwc_output_create(struct wlr_output *wlr_output)
+{
+    struct cwc_output *output = calloc(1, sizeof(*output));
+    output->type              = DATA_TYPE_OUTPUT;
+    output->wlr_output        = wlr_output;
+    output->tearing_allowed   = false;
+    output->wlr_output->data  = output;
+
+    wlr_output_layout_get_box(server.output_layout, output->wlr_output,
+                              &output->output_layout_box);
+    output->usable_area = output->output_layout_box;
+
+    if (!cwc_output_state_try_restore(output))
+        output->state = cwc_output_state_create();
+    else
+        output->restored = true;
+
+    output_layers_init(output);
+
+    return output;
+}
+
 static void on_new_output(struct wl_listener *listener, void *data)
 {
     struct wlr_output *wlr_output = data;
+
+    if (strcmp(wlr_output->name, "FALLBACK") == 0)
+        return;
 
     /* Configures the output created by the backend to use our allocator
      * and our renderer. Must be done once, before commiting the output */
@@ -397,19 +438,8 @@ static void on_new_output(struct wl_listener *listener, void *data)
     wlr_output_commit_state(wlr_output, &state);
     wlr_output_state_finish(&state);
 
-    struct cwc_output *output = calloc(1, sizeof(*output));
-    output->type              = DATA_TYPE_OUTPUT;
-    output->wlr_output        = wlr_output;
-    output->tearing_allowed   = false;
-    output->wlr_output->data  = output;
+    struct cwc_output *output = cwc_output_create(wlr_output);
     server.focused_output     = output;
-
-    if (!cwc_output_state_try_restore(output))
-        output->state = cwc_output_state_create();
-    else
-        output->restored = true;
-
-    output_layers_init(output);
 
     output->frame_l.notify         = on_output_frame;
     output->request_state_l.notify = on_request_state;
@@ -576,6 +606,11 @@ static void on_new_tearing_object(struct wl_listener *listener, void *data)
 
 void setup_output(struct cwc_server *s)
 {
+    struct wlr_output *headless =
+        wlr_headless_add_output(s->headless_backend, 1280, 720);
+    wlr_output_set_name(headless, "FALLBACK");
+    s->fallback_output = cwc_output_create(headless);
+
     // wlr output layout
     s->output_layout       = wlr_output_layout_create(s->wl_display);
     s->new_output_l.notify = on_new_output;

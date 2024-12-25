@@ -250,20 +250,6 @@ static void on_new_surface(struct wl_listener *listener, void *data)
 
 void setup_layer_shell(struct cwc_server *s)
 {
-    s->temporary_tree = wlr_scene_tree_create(&s->scene->tree);
-    wlr_scene_node_set_enabled(&s->temporary_tree->node, false);
-
-    struct wlr_scene_tree *main_scene = s->main_tree =
-        wlr_scene_tree_create(&s->scene->tree);
-    s->root.background   = wlr_scene_tree_create(main_scene);
-    s->root.bottom       = wlr_scene_tree_create(main_scene);
-    s->root.below        = wlr_scene_tree_create(main_scene);
-    s->root.toplevel     = wlr_scene_tree_create(main_scene);
-    s->root.above        = wlr_scene_tree_create(main_scene);
-    s->root.top          = wlr_scene_tree_create(main_scene);
-    s->root.overlay      = wlr_scene_tree_create(main_scene);
-    s->root.session_lock = wlr_scene_tree_create(main_scene);
-
     s->layer_shell = wlr_layer_shell_v1_create(s->wl_display, 4);
     s->layer_shell_surface_l.notify = on_new_surface;
     wl_signal_add(&s->layer_shell->events.new_surface,

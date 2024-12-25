@@ -8,6 +8,7 @@ struct cwc_server {
     struct wl_event_loop *wl_event_loop;
 
     struct wlr_backend *backend;
+    struct wlr_backend *headless_backend;
     struct wlr_renderer *renderer;
     struct wlr_allocator *allocator;
     struct wlr_compositor *compositor;
