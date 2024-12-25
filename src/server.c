@@ -186,12 +186,12 @@ void server_fini(struct cwc_server *s)
     cwc_idle_fini(s);
     xwayland_fini(s);
     cwc_plugin_stop_plugins(&s->plugins);
-    wlr_scene_node_destroy(&s->scene->tree.node);
     wlr_output_layout_destroy(s->output_layout);
     wlr_allocator_destroy(s->allocator);
     wlr_renderer_destroy(s->renderer);
     wlr_xwayland_destroy(s->xwayland);
     wl_display_destroy(s->wl_display);
+    wlr_scene_node_destroy(&s->scene->tree.node);
 }
 
 void _spawn(void *data)
