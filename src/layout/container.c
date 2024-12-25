@@ -514,6 +514,8 @@ void cwc_container_init(struct cwc_output *output,
 
     if (cwc_toplevel_is_unmanaged(toplevel)) {
         cont->state |= CONTAINER_STATE_UNMANAGED;
+        cwc_container_set_position_global(cont, toplevel->xwsurface->x,
+                                          toplevel->xwsurface->y);
         goto emit_signal;
     }
 
@@ -1092,21 +1094,25 @@ void cwc_container_set_size(struct cwc_container *container, int w, int h)
 static void all_toplevel_update_xwsurface(struct cwc_toplevel *toplevel,
                                           void *data)
 {
+    struct wlr_box *xy = data;
     if (cwc_toplevel_is_x11(toplevel)) {
-        int lx, ly;
-        wlr_scene_node_coords(&toplevel->container->tree->node, &lx, &ly);
-        wlr_xwayland_surface_configure(toplevel->xwsurface, lx, ly,
-                                       toplevel->xwsurface->width,
-                                       toplevel->xwsurface->height);
+        struct wlr_xwayland_surface *xwsurface = toplevel->xwsurface;
+        wlr_xwayland_surface_configure(xwsurface, xy->x, xy->y,
+                                       xwsurface->width, xwsurface->height);
     }
 }
 
 void cwc_container_set_position(struct cwc_container *container, int x, int y)
 {
+    // sample can be any layer
+    x += container->output->output_layout_box.x;
+    y += container->output->output_layout_box.y;
+
     wlr_scene_node_set_position(&container->tree->node, x, y);
 
+    struct wlr_box xy = {.x = x, .y = y};
     cwc_container_for_each_toplevel(container, all_toplevel_update_xwsurface,
-                                    NULL);
+                                    &xy);
 
     if (cwc_container_should_save_floating_box(container)) {
         container->floating_box.x = x;
@@ -1123,6 +1129,16 @@ void cwc_container_set_position_gap(struct cwc_container *container,
     int pos_x = x + gaps;
     int pos_y = y + gaps;
     cwc_container_set_position(container, pos_x, pos_y);
+}
+
+void cwc_container_set_position_global(struct cwc_container *container,
+                                       int x,
+                                       int y)
+{
+    int ox = container->output->output_layout_box.x;
+    int oy = container->output->output_layout_box.y;
+
+    cwc_container_set_position(container, x - ox, y - oy);
 }
 
 void cwc_container_restore_floating_box(struct cwc_container *container)

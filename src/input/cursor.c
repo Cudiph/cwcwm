@@ -67,7 +67,7 @@ static void process_cursor_move(struct cwc_cursor *cursor)
 
     double new_x = cx - cursor->grab_x;
     double new_y = cy - cursor->grab_y;
-    cwc_container_set_position(grabbed->container, new_x, new_y);
+    cwc_container_set_position_global(grabbed->container, new_x, new_y);
 }
 
 /* scheduling the resize will prevent the compositor flooding configure request.
@@ -427,8 +427,9 @@ void stop_interactive()
     // apply pending change from schedule
     if (cursor->state == CWC_CURSOR_STATE_RESIZE) {
         struct wlr_box pending = cursor->pending_box;
-        cwc_container_set_position(cursor->grabbed_toplevel->container,
-                                   pending.x, pending.y);
+        wlr_scene_node_set_position(
+            &cursor->grabbed_toplevel->container->tree->node, pending.x,
+            pending.y);
         cwc_toplevel_set_size_surface(cursor->grabbed_toplevel, pending.width,
                                       pending.height);
     }

@@ -107,6 +107,9 @@ void cwc_container_set_position(struct cwc_container *container, int x, int y);
 void cwc_container_set_position_gap(struct cwc_container *container,
                                     int x,
                                     int y);
+void cwc_container_set_position_global(struct cwc_container *container,
+                                       int x,
+                                       int y);
 void cwc_container_set_fullscreen(struct cwc_container *cont, bool set);
 void cwc_container_set_maximized(struct cwc_container *container, bool set);
 void cwc_container_set_minimized(struct cwc_container *container, bool set);

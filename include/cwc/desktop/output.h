@@ -36,6 +36,7 @@ struct cwc_output {
     struct wl_list link; // server.outputs
     struct wlr_output *wlr_output;
     struct wlr_box usable_area;
+    struct wlr_box output_layout_box;
 
     struct cwc_output_state *state;
     bool restored;

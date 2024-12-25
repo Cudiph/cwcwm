@@ -352,7 +352,7 @@ static void on_popup_commit(struct wl_listener *listener, void *data)
     struct wlr_scene_node *node;
     if (toplevel) {
         parent_stree = toplevel->container->popup_tree;
-        box          = toplevel->container->output->usable_area;
+        box          = toplevel->container->output->output_layout_box;
         node         = &toplevel->container->tree->node;
     } else if (layersurf) {
         struct cwc_layer_surface *l = layersurf->data;
@@ -471,6 +471,7 @@ struct cwc_toplevel *
 cwc_toplevel_get_nearest_by_direction(struct cwc_toplevel *toplevel,
                                       enum wlr_direction dir)
 {
+    // TODO: add global direction option
     struct cwc_toplevel **toplevels =
         cwc_output_get_visible_toplevels(toplevel->container->output);
 
@@ -635,16 +636,9 @@ static void on_request_configure(struct wl_listener *listener, void *data)
     struct wlr_xwayland_surface *surface               = toplevel->xwsurface;
     struct wlr_xwayland_surface_configure_event *event = data;
 
-    if (!cwc_toplevel_is_mapped(toplevel))
-        return;
-
-    // also don't configure on tiling
-    if (!cwc_toplevel_is_floating(toplevel)
-        || !cwc_toplevel_is_configure_allowed(toplevel))
-        return;
-
-    wlr_scene_node_set_position(&toplevel->container->tree->node, event->x,
-                                event->y);
+    if (toplevel->container)
+        wlr_scene_node_set_position(&toplevel->container->tree->node, event->x,
+                                    event->y);
 
     wlr_xwayland_surface_configure(surface, event->x, event->y, event->width,
                                    event->height);

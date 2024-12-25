@@ -318,6 +318,7 @@ static void update_output_manager_config()
         config_head->state.x       = output_box.x;
         config_head->state.y       = output_box.y;
 
+        output->output_layout_box = output_box;
         output_layer_set_position(output, output_box.x, output_box.y);
     }
 
