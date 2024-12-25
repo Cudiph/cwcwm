@@ -407,8 +407,8 @@ static void init_surf_tree(struct cwc_toplevel *toplevel,
             container->tree, toplevel->xwsurface->surface);
 
         toplevel->xwsurface->surface->data = toplevel->surf_tree;
-        cwc_toplevel_set_position(toplevel, toplevel->xwsurface->x,
-                                  toplevel->xwsurface->y);
+        cwc_container_set_position_global(container, toplevel->xwsurface->x,
+                                          toplevel->xwsurface->y);
 
         goto assign_common;
     }
@@ -1144,7 +1144,7 @@ void cwc_container_set_position_global(struct cwc_container *container,
 void cwc_container_restore_floating_box(struct cwc_container *container)
 {
     struct wlr_box *float_box = &container->floating_box;
-    cwc_container_set_position(container, float_box->x, float_box->y);
+    cwc_container_set_position_global(container, float_box->x, float_box->y);
     cwc_container_set_size(container, float_box->width, float_box->height);
 }
 
