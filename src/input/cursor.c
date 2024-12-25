@@ -427,9 +427,8 @@ void stop_interactive()
     // apply pending change from schedule
     if (cursor->state == CWC_CURSOR_STATE_RESIZE) {
         struct wlr_box pending = cursor->pending_box;
-        wlr_scene_node_set_position(
-            &cursor->grabbed_toplevel->container->tree->node, pending.x,
-            pending.y);
+        cwc_container_set_position_global(cursor->grabbed_toplevel->container,
+                                          pending.x, pending.y);
         cwc_toplevel_set_size_surface(cursor->grabbed_toplevel, pending.width,
                                       pending.height);
     }

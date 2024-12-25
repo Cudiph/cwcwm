@@ -485,6 +485,7 @@ void cwc_container_init(struct cwc_output *output,
     struct wlr_box geom       = cwc_toplevel_get_geometry(toplevel);
     cont->width               = geom.width + g_config.border_width * 2;
     cont->height              = geom.height + g_config.border_width * 2;
+    cont->floating_box        = output->output_layout_box;
     cont->floating_box.width  = cont->width;
     cont->floating_box.height = cont->height;
 

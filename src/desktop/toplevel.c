@@ -637,8 +637,8 @@ static void on_request_configure(struct wl_listener *listener, void *data)
     struct wlr_xwayland_surface_configure_event *event = data;
 
     if (toplevel->container)
-        wlr_scene_node_set_position(&toplevel->container->tree->node, event->x,
-                                    event->y);
+        cwc_container_set_position_global(toplevel->container, event->x,
+                                          event->y);
 
     wlr_xwayland_surface_configure(surface, event->x, event->y, event->width,
                                    event->height);
