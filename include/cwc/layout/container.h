@@ -92,6 +92,9 @@ void cwc_container_remove_toplevel(struct cwc_toplevel *toplevel);
 void cwc_container_remove_toplevel_but_dont_destroy_container_when_empty(
     struct cwc_toplevel *toplevel);
 
+void cwc_container_move_to_output(struct cwc_container *container,
+                                  struct cwc_output *output);
+
 void cwc_container_focusidx(struct cwc_container *container, int idx);
 void cwc_container_swap(struct cwc_container *source,
                         struct cwc_container *target);

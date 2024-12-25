@@ -645,6 +645,20 @@ void cwc_container_for_each_toplevel_top_to_bottom(
     }
 }
 
+void cwc_container_move_to_output(struct cwc_container *container,
+                                  struct cwc_output *output)
+{
+    struct cwc_output *old = container->output;
+    if (old == output)
+        return;
+
+    container->output = output;
+    wl_list_reattach(output->state->focus_stack.prev,
+                     &container->link_output_fstack);
+    wl_list_reattach(output->state->containers.prev,
+                     &container->link_output_container);
+}
+
 void cwc_container_for_each_bottom_to_top(
     struct cwc_container *container,
     void (*f)(struct cwc_toplevel *toplevel, void *data),
@@ -1066,6 +1080,19 @@ cwc_container_should_save_floating_box(struct cwc_container *container)
            && !cwc_container_is_maximized(container);
 }
 
+static inline void update_container_output(struct cwc_container *container)
+{
+    struct wlr_box box        = cwc_container_get_box(container);
+    int x                     = box.x + (box.width / 2);
+    int y                     = box.y + (box.height / 2);
+    struct cwc_output *output = cwc_output_at(server.output_layout, x, y);
+
+    if (!output)
+        return;
+
+    cwc_container_move_to_output(container, output);
+}
+
 void cwc_container_set_size(struct cwc_container *container, int w, int h)
 {
     int gaps =
@@ -1090,6 +1117,8 @@ void cwc_container_set_size(struct cwc_container *container, int w, int h)
 
     container->width  = w;
     container->height = h;
+
+    update_container_output(container);
 }
 
 static void all_toplevel_update_xwsurface(struct cwc_toplevel *toplevel,
@@ -1105,7 +1134,6 @@ static void all_toplevel_update_xwsurface(struct cwc_toplevel *toplevel,
 
 void cwc_container_set_position(struct cwc_container *container, int x, int y)
 {
-    // sample can be any layer
     x += container->output->output_layout_box.x;
     y += container->output->output_layout_box.y;
 
@@ -1119,6 +1147,8 @@ void cwc_container_set_position(struct cwc_container *container, int x, int y)
         container->floating_box.x = x;
         container->floating_box.y = y;
     }
+
+    update_container_output(container);
 }
 
 void cwc_container_set_position_gap(struct cwc_container *container,

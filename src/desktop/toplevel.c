@@ -438,11 +438,9 @@ void cwc_toplevel_focus(struct cwc_toplevel *toplevel, bool raise)
     if (wlr_surface == prev_surface)
         return;
 
-    if (!cwc_toplevel_is_unmanaged(toplevel)) {
-        wl_list_remove(&toplevel->container->link_output_fstack);
-        wl_list_insert(&toplevel->container->output->state->focus_stack,
-                       &toplevel->container->link_output_fstack);
-    }
+    if (!cwc_toplevel_is_unmanaged(toplevel))
+        wl_list_reattach(&toplevel->container->output->state->focus_stack,
+                         &toplevel->container->link_output_fstack);
 
     /* don't emit signal in process cursor motion called from this function
      * because it'll ruin the focus stack as it notify enter any random surface
