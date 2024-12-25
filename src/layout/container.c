@@ -1117,8 +1117,6 @@ void cwc_container_set_size(struct cwc_container *container, int w, int h)
 
     container->width  = w;
     container->height = h;
-
-    update_container_output(container);
 }
 
 static void all_toplevel_update_xwsurface(struct cwc_toplevel *toplevel,
