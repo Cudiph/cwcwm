@@ -356,8 +356,9 @@ static void on_popup_commit(struct wl_listener *listener, void *data)
         node         = &toplevel->container->tree->node;
     } else if (layersurf) {
         struct cwc_layer_surface *l = layersurf->data;
+        struct cwc_output *o        = l->output;
         node                        = &l->scene_layer->tree->node;
-        parent_stree                = server.root.top;
+        parent_stree                = o->layers.top;
         box.width                   = l->output->wlr_output->width;
         box.height                  = l->output->wlr_output->height;
     } else {

@@ -477,7 +477,7 @@ void cwc_container_init(struct cwc_output *output,
     struct cwc_container *cont = calloc(1, sizeof(*cont));
     cont->type                 = DATA_TYPE_CONTAINER;
     cont->output               = server.focused_output;
-    cont->tree                 = wlr_scene_tree_create(output->layers.toplevel);
+    cont->tree                 = wlr_scene_tree_create(server.root.toplevel);
     cont->popup_tree           = wlr_scene_tree_create(cont->tree);
     cont->tree->node.data      = cont;
     cont->opacity              = 1.0f;

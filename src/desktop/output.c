@@ -296,9 +296,6 @@ static void output_layer_set_position(struct cwc_output *output, int x, int y)
 {
     wlr_scene_node_set_position(&output->layers.background->node, x, y);
     wlr_scene_node_set_position(&output->layers.bottom->node, x, y);
-    wlr_scene_node_set_position(&output->layers.below->node, x, y);
-    wlr_scene_node_set_position(&output->layers.toplevel->node, x, y);
-    wlr_scene_node_set_position(&output->layers.above->node, x, y);
     wlr_scene_node_set_position(&output->layers.top->node, x, y);
     wlr_scene_node_set_position(&output->layers.overlay->node, x, y);
     wlr_scene_node_set_position(&output->layers.session_lock->node, x, y);
@@ -354,9 +351,6 @@ static void output_layers_init(struct cwc_output *output)
 {
     output->layers.background = wlr_scene_tree_create(server.root.background);
     output->layers.bottom     = wlr_scene_tree_create(server.root.bottom);
-    output->layers.below      = wlr_scene_tree_create(server.root.below);
-    output->layers.toplevel   = wlr_scene_tree_create(server.root.toplevel);
-    output->layers.above      = wlr_scene_tree_create(server.root.above);
     output->layers.top        = wlr_scene_tree_create(server.root.top);
     output->layers.overlay    = wlr_scene_tree_create(server.root.overlay);
     output->layers.session_lock =
@@ -367,9 +361,6 @@ static void output_layers_fini(struct cwc_output *output)
 {
     wlr_scene_node_destroy(&output->layers.background->node);
     wlr_scene_node_destroy(&output->layers.bottom->node);
-    wlr_scene_node_destroy(&output->layers.below->node);
-    wlr_scene_node_destroy(&output->layers.toplevel->node);
-    wlr_scene_node_destroy(&output->layers.above->node);
     wlr_scene_node_destroy(&output->layers.top->node);
     wlr_scene_node_destroy(&output->layers.overlay->node);
     wlr_scene_node_destroy(&output->layers.session_lock->node);
@@ -665,6 +656,18 @@ cwc_output_get_newest_focus_toplevel(struct cwc_output *output, bool visible)
             continue;
 
         return toplevel;
+    }
+
+    return NULL;
+}
+
+struct cwc_output *cwc_output_get_by_name(const char *name)
+{
+    struct cwc_output *output;
+    wl_list_for_each(output, &server.outputs, link)
+    {
+        if (strcmp(output->wlr_output->name, name) == 0)
+            return output;
     }
 
     return NULL;

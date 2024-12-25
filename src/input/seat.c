@@ -83,11 +83,20 @@ static void attach_pointer_device(struct cwc_seat *seat,
     libinput_device_apply_config(libinput_dev);
 }
 
-static void apply_mapping_pointer_device(struct wlr_input_device *dev)
+static void map_pointer_to_output(struct wlr_input_device *dev)
 {
     struct wlr_pointer *pointer = wlr_pointer_from_input_device(dev);
 
-    // TODO: xxx
+    if (pointer->output_name == NULL)
+        return;
+
+    struct cwc_output *output = cwc_output_get_by_name(pointer->output_name);
+
+    if (!output)
+        return;
+
+    wlr_cursor_map_input_to_output(server.seat->cursor->wlr_cursor,
+                                   &pointer->base, output->wlr_output);
 }
 
 static void on_new_input(struct wl_listener *listener, void *data)
@@ -98,7 +107,7 @@ static void on_new_input(struct wl_listener *listener, void *data)
     switch (device->type) {
     case WLR_INPUT_DEVICE_POINTER:
         attach_pointer_device(seat, device);
-        apply_mapping_pointer_device(device);
+        map_pointer_to_output(device);
         break;
     case WLR_INPUT_DEVICE_KEYBOARD:
         cwc_keyboard_group_add_device(seat->kbd_group, device);

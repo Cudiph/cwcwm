@@ -68,8 +68,6 @@ static void process_cursor_move(struct cwc_cursor *cursor)
     double new_x = cx - cursor->grab_x;
     double new_y = cy - cursor->grab_y;
     cwc_container_set_position(grabbed->container, new_x, new_y);
-
-    printf("%f %f\n", new_x, new_y);
 }
 
 /* scheduling the resize will prevent the compositor flooding configure request.
@@ -192,10 +190,9 @@ void process_cursor_motion(struct cwc_cursor *cursor,
     double sx, sy;
     struct wlr_surface *surface = scene_surface_at(cx, cy, &sx, &sy);
     struct cwc_output *output   = cwc_output_at(server.output_layout, cx, cy);
-    if (output) {
+
+    if (output)
         server.focused_output = output;
-        printf("%f %f %p %d\n", cx, cy, output, output->wlr_output->width);
-    }
 
     // sway + dwl implementation in very simplified way, may contain bugs
     if (active_constraint && device
