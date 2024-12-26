@@ -51,6 +51,8 @@ void bsp_toggle_split(struct bsp_node *node);
 
 void bsp_update_node(struct bsp_node *parent);
 
+void bsp_node_destroy(struct bsp_node *node);
+
 void bsp_node_enable(struct bsp_node *node);
 void bsp_node_disable(struct bsp_node *node);
 

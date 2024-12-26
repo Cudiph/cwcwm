@@ -328,6 +328,15 @@ static void on_output_destroy(struct wl_listener *listener, void *data)
                               &server.focused_output->output_layout_box);
 
     rescue_output_toplevel_container(output, server.focused_output);
+
+    for (int i = 1; i < MAX_WORKSPACE; i++) {
+        struct bsp_node *root = output->state->tag_info[i].bsp_root_entry.root;
+        bsp_node_destroy(root);
+        cwc_output_set_layout_mode(
+            server.focused_output, i,
+            server.focused_output->state->tag_info[i].layout_mode);
+    }
+
     cwc_output_update_visible(server.focused_output);
 
     luaC_object_unregister(g_config_get_lua_State(), output);
@@ -842,20 +851,21 @@ static void restore_floating_box_for_all(struct cwc_output *output)
 }
 
 void cwc_output_set_layout_mode(struct cwc_output *output,
+                                int workspace,
                                 enum cwc_layout_mode mode)
 {
 
     if (mode < 0 || mode >= CWC_LAYOUT_LENGTH)
         return;
 
-    enum cwc_layout_mode *current_mode =
-        &cwc_output_get_current_tag_info(output)->layout_mode;
-    *current_mode = mode;
+    if (!workspace)
+        workspace = output->state->active_workspace;
+
+    output->state->tag_info[workspace].layout_mode = mode;
 
     switch (mode) {
     case CWC_LAYOUT_BSP:
-        insert_tiled_toplevel_to_bsp_tree(output,
-                                          output->state->active_workspace);
+        insert_tiled_toplevel_to_bsp_tree(output, workspace);
         break;
     case CWC_LAYOUT_FLOATING:
         restore_floating_box_for_all(output);
@@ -864,7 +874,7 @@ void cwc_output_set_layout_mode(struct cwc_output *output,
         break;
     }
 
-    cwc_output_tiling_layout_update(output, 0);
+    cwc_output_tiling_layout_update(output, workspace);
 }
 
 void cwc_output_set_strategy_idx(struct cwc_output *output, int idx)

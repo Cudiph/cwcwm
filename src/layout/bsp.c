@@ -32,8 +32,11 @@ bsp_node_get_sibling(struct bsp_node *parent_node, struct bsp_node *me)
     return parent_node->left == me ? parent_node->right : parent_node->left;
 }
 
-static inline void bsp_node_destroy(struct bsp_node *node)
+void bsp_node_destroy(struct bsp_node *node)
 {
+    if (!node)
+        return;
+
     if (node->left)
         bsp_node_destroy(node->left);
 

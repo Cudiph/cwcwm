@@ -350,7 +350,7 @@ static int luaC_screen_set_layout_mode(lua_State *L)
     struct cwc_output *output = luaC_screen_checkudata(L, 1);
     uint32_t layout_mode      = luaL_checkint(L, 2);
 
-    cwc_output_set_layout_mode(output, layout_mode);
+    cwc_output_set_layout_mode(output, 0, layout_mode);
 
     return 0;
 }
