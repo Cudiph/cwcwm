@@ -579,8 +579,9 @@ static void _destroy_container(struct cwc_container *container)
         cwc_output_tiling_layout_update(container->output,
                                         container->workspace);
 
-    if (container->link_minimized.next && container->link_minimized.prev)
-        wl_list_remove(&container->link_minimized);
+    if (container->link_output_minimized.next
+        && container->link_output_minimized.prev)
+        wl_list_remove(&container->link_output_minimized);
 
     luaC_object_unregister(L, container);
 
@@ -657,6 +658,12 @@ void cwc_container_move_to_output(struct cwc_container *container,
                      &container->link_output_fstack);
     wl_list_reattach(output->state->containers.prev,
                      &container->link_output_container);
+
+    if (container->link_output_minimized.next)
+        wl_list_reattach(output->state->minimized.prev,
+                         &container->link_output_minimized);
+
+    // TODO: translate the old output coord to the new output
 }
 
 void cwc_container_for_each_bottom_to_top(
@@ -1011,7 +1018,7 @@ void cwc_container_set_minimized(struct cwc_container *container, bool set)
     struct bsp_node *bsp_node = container->bsp_node;
     if (set) {
         struct cwc_output *o = container->output;
-        wl_list_insert(&o->state->minimized, &container->link_minimized);
+        wl_list_insert(&o->state->minimized, &container->link_output_minimized);
 
         if (bsp_node)
             bsp_node_disable(bsp_node);
@@ -1021,8 +1028,8 @@ void cwc_container_set_minimized(struct cwc_container *container, bool set)
     } else {
         container->state &= ~CONTAINER_STATE_MINIMIZED;
 
-        if (container->link_minimized.next)
-            wl_list_remove(&container->link_minimized);
+        if (container->link_output_minimized.next)
+            wl_list_remove(&container->link_output_minimized);
 
         if (bsp_node)
             bsp_node_enable(bsp_node);

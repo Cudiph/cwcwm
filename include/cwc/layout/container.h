@@ -73,8 +73,8 @@ struct cwc_container {
     struct wl_list toplevels;
 
     struct wl_list link_output_container; // cwc_output_state.containers
-    struct wl_list link_output_fstack;    // cwc_output.focus_stack
-    struct wl_list link_minimized;        // cwc_output.minimized
+    struct wl_list link_output_fstack;    // cwc_output.state.focus_stack
+    struct wl_list link_output_minimized; // cwc_output.state.minimized
 };
 
 void cwc_container_init(struct cwc_output *output,

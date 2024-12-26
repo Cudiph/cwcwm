@@ -16,8 +16,8 @@ struct cwc_server;
  */
 struct cwc_output_state {
     struct wl_list toplevels;   // cwc_toplevel.link_output_toplevels
-    struct wl_list focus_stack; // container.link_output_fstack
-    struct wl_list containers;  // container.link_output_container
+    struct wl_list focus_stack; // cwc_container.link_output_fstack
+    struct wl_list containers;  // cwc_container.link_output_container
     struct wl_list minimized;   // cwc_container.link_output_minimized
 
     struct cwc_output *old_output;

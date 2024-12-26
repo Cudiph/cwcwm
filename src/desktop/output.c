@@ -112,7 +112,6 @@ static struct cwc_output_state *cwc_output_state_create()
 
 static inline void cwc_output_state_save(struct cwc_output *output)
 {
-    // TODO: move to fallback output or not needed?
     cwc_hhmap_insert(server.output_state_cache, output->wlr_output->name,
                      output->state);
 }
@@ -265,6 +264,27 @@ static void on_output_frame(struct wl_listener *listener, void *data)
     wlr_scene_output_send_frame_done(scene_output, &now);
 }
 
+static void move_output_object(struct cwc_output *source,
+                               struct cwc_output *target)
+{
+    struct cwc_container *container;
+    struct cwc_container *tmp;
+    wl_list_for_each_safe(container, tmp, &source->state->containers,
+                          link_output_container)
+    {
+        cwc_container_move_to_output(container, target);
+    }
+
+    struct cwc_toplevel *toplevel;
+    struct cwc_toplevel *ttmp;
+    wl_list_for_each_safe(toplevel, ttmp, &source->state->toplevels,
+                          link_output_toplevels)
+    {
+        wl_list_reattach(target->state->toplevels.prev,
+                         &toplevel->link_output_toplevels);
+    }
+}
+
 static void output_layers_fini(struct cwc_output *output);
 
 static void on_output_destroy(struct wl_listener *listener, void *data)
@@ -300,6 +320,8 @@ static void on_output_destroy(struct wl_listener *listener, void *data)
     } else {
         server.focused_output = server.fallback_output;
     }
+
+    move_output_object(output, server.focused_output);
 
     wl_list_remove(&output->link);
 
@@ -440,6 +462,7 @@ static void on_new_output(struct wl_listener *listener, void *data)
 
     struct cwc_output *output = cwc_output_create(wlr_output);
     server.focused_output     = output;
+    move_output_object(server.fallback_output, output);
 
     output->frame_l.notify         = on_output_frame;
     output->request_state_l.notify = on_request_state;

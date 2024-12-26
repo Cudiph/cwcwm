@@ -653,7 +653,8 @@ static int luaC_screen_get_minimized(lua_State *L)
 
     struct cwc_container *container;
     int i = 1;
-    wl_list_for_each(container, &output->state->minimized, link_minimized)
+    wl_list_for_each(container, &output->state->minimized,
+                     link_output_minimized)
     {
         if (activetag_only) {
             if (container->tag & output->state->active_tag)
