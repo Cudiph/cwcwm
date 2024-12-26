@@ -20,6 +20,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <wayland-util.h>
+#include <wlr/util/box.h>
 
 #include "cwc/util.h"
 
@@ -82,4 +83,14 @@ bool _cwc_assert(bool condition, const char *format, ...)
 #endif
 
     return false;
+}
+
+void normalized_region_at(
+    struct wlr_box *region, double x, double y, double *nx, double *ny)
+{
+    if (nx)
+        *nx = (x - (double)region->x) / region->width;
+
+    if (ny)
+        *ny = (y - (double)region->y) / region->height;
 }

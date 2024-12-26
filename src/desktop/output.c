@@ -413,8 +413,9 @@ static struct cwc_output *cwc_output_create(struct wlr_output *wlr_output)
     output->tearing_allowed   = false;
     output->wlr_output->data  = output;
 
-    wlr_output_layout_get_box(server.output_layout, output->wlr_output,
-                              &output->output_layout_box);
+    output->output_layout_box.width  = wlr_output->width;
+    output->output_layout_box.height = wlr_output->height;
+
     output->usable_area = output->output_layout_box;
 
     if (!cwc_output_state_try_restore(output))

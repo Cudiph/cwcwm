@@ -38,6 +38,7 @@
 #include "cwc/signal.h"
 #include "cwc/types.h"
 #include "cwc/util.h"
+#include "wlr/util/box.h"
 
 static void cairo_buffer_destroy(struct wlr_buffer *wlr_buffer)
 {
@@ -653,6 +654,8 @@ void cwc_container_move_to_output(struct cwc_container *container,
     if (old == output)
         return;
 
+    bool floating = cwc_container_is_floating(container);
+
     container->output = output;
     wl_list_reattach(output->state->focus_stack.prev,
                      &container->link_output_fstack);
@@ -663,7 +666,22 @@ void cwc_container_move_to_output(struct cwc_container *container,
         wl_list_reattach(output->state->minimized.prev,
                          &container->link_output_minimized);
 
-    // TODO: translate the old output coord to the new output
+    container->floating_box = output->output_layout_box;
+
+    /* set to float when it's floating in previous output to prevent dragged
+     * container to get tiled */
+    if (floating) {
+        struct wlr_box oldbox = cwc_container_get_box(container);
+        double x, y;
+        normalized_region_at(&old->output_layout_box, oldbox.x, oldbox.y, &x,
+                             &y);
+        x *= output->output_layout_box.width;
+        y *= output->output_layout_box.height;
+
+        cwc_container_set_position(container, x + output->output_layout_box.x,
+                                   y + output->output_layout_box.y);
+        container->state |= CONTAINER_STATE_FLOATING;
+    }
 }
 
 void cwc_container_for_each_bottom_to_top(
