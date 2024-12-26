@@ -2,9 +2,9 @@
 
 #include "cwc/desktop/output.h"
 #include "cwc/desktop/toplevel.h"
+#include "cwc/layout/container.h"
 #include "cwc/layout/master.h"
 #include "cwc/plugin.h"
-#include "cwc/server.h"
 
 static void arrange_flayout(struct cwc_toplevel **toplevels,
                             int len,
@@ -13,14 +13,11 @@ static void arrange_flayout(struct cwc_toplevel **toplevels,
 {
     int i                         = 0;
     struct cwc_toplevel *toplevel = toplevels[i];
-    double lx, ly;
-    wlr_output_layout_output_coords(server.output_layout,
-                                    toplevel->container->output->wlr_output,
-                                    &lx, &ly);
+
     while (toplevel) {
-        cwc_toplevel_set_position(toplevel, lx, ly);
-        cwc_toplevel_set_size_surface(toplevel, output->wlr_output->width,
-                                      output->wlr_output->height);
+        cwc_container_set_position_gap(toplevel->container, 0, 0);
+        cwc_container_set_size(toplevel->container, output->output_layout_box.width,
+                                      output->output_layout_box.height);
 
         toplevel = toplevels[++i];
     }
