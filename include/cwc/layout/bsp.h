@@ -41,7 +41,7 @@ struct bsp_node {
     int width, height;
 };
 
-/* insert toplevel to the bsp tree */
+/* insert toplevel to the bsp tree, toplevle must not already in a tree */
 void bsp_insert_container(struct cwc_container *new, int workspace);
 
 /* remove toplevel from the bsp tree */

@@ -22,12 +22,15 @@ struct cwc_output_state {
 
     struct cwc_output *old_output;
 
-    tag_bitfield_t active_tag; // floating / master
-    int active_workspace;      // can also indicate last single view
-    int max_general_workspace; // workspace count that will be shown in the bar
+    /* the tag used to decide if client visible */
+    tag_bitfield_t active_tag;
+    /* act as tag info index cuz multiple tag can be active */
+    int active_workspace;
+    /* workspace count that will be shown in the bar and for cycling */
+    int max_general_workspace;
 
-    // use array for now too lazy to manage the memory
-    struct cwc_view_info view_info[MAX_WORKSPACE];
+    /* use array for now too lazy to manage the memory */
+    struct cwc_tag_info tag_info[MAX_WORKSPACE];
 };
 
 /* wlr_output.data == cwc_output */
@@ -101,28 +104,28 @@ void cwc_output_set_strategy_idx(struct cwc_output *output, int idx);
 struct cwc_output *cwc_output_get_focused();
 bool cwc_output_is_exist(struct cwc_output *output);
 
-static inline struct cwc_view_info *
-cwc_output_get_current_view_info(struct cwc_output *output)
+static inline struct cwc_tag_info *
+cwc_output_get_current_tag_info(struct cwc_output *output)
 {
-    return &output->state->view_info[output->state->active_workspace];
+    return &output->state->tag_info[output->state->active_workspace];
 }
 
 static inline bool cwc_output_is_current_layout_float(struct cwc_output *output)
 {
-    return cwc_output_get_current_view_info(output)->layout_mode
+    return cwc_output_get_current_tag_info(output)->layout_mode
            == CWC_LAYOUT_FLOATING;
 }
 
 static inline bool
 cwc_output_is_current_layout_master(struct cwc_output *output)
 {
-    return cwc_output_get_current_view_info(output)->layout_mode
+    return cwc_output_get_current_tag_info(output)->layout_mode
            == CWC_LAYOUT_MASTER;
 }
 
 static inline bool cwc_output_is_current_layout_bsp(struct cwc_output *output)
 {
-    return cwc_output_get_current_view_info(output)->layout_mode
+    return cwc_output_get_current_tag_info(output)->layout_mode
            == CWC_LAYOUT_BSP;
 }
 

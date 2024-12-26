@@ -152,7 +152,7 @@ struct layout_interface *get_default_master_layout()
 
 void master_arrange_update(struct cwc_output *output)
 {
-    struct cwc_view_info *info = cwc_output_get_current_view_info(output);
+    struct cwc_tag_info *info = cwc_output_get_current_tag_info(output);
     if (info->layout_mode != CWC_LAYOUT_MASTER)
         return;
 

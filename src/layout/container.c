@@ -448,7 +448,7 @@ static void decide_should_tiled(struct cwc_toplevel *toplevel,
     }
 
     // setup tiled toplevel
-    switch (cont->output->state->view_info[cont->workspace].layout_mode) {
+    switch (cont->output->state->tag_info[cont->workspace].layout_mode) {
     case CWC_LAYOUT_FLOATING:
         return;
     case CWC_LAYOUT_MASTER:
@@ -575,7 +575,7 @@ static void _destroy_container(struct cwc_container *container)
     if (container->bsp_node)
         bsp_remove_container(container);
 
-    if (container->output->state->view_info[container->workspace].layout_mode
+    if (container->output->state->tag_info[container->workspace].layout_mode
         == CWC_LAYOUT_MASTER)
         cwc_output_tiling_layout_update(container->output,
                                         container->workspace);
@@ -875,7 +875,7 @@ void cwc_container_swap(struct cwc_container *source,
 inline bool cwc_container_is_floating(struct cwc_container *cont)
 {
     return (cont->state & CONTAINER_STATE_FLOATING)
-           || cwc_output_get_current_view_info(cont->output)->layout_mode
+           || cont->output->state->tag_info[cont->workspace].layout_mode
                   == CWC_LAYOUT_FLOATING;
 }
 
@@ -1126,8 +1126,7 @@ static inline void update_container_output(struct cwc_container *container)
 
 void cwc_container_set_size(struct cwc_container *container, int w, int h)
 {
-    int gaps =
-        cwc_output_get_current_view_info(container->output)->useless_gaps;
+    int gaps = cwc_output_get_current_tag_info(container->output)->useless_gaps;
 
     int bw            = cwc_border_get_thickness(&container->border);
     int outside_width = (bw + gaps) * 2;
@@ -1184,8 +1183,7 @@ void cwc_container_set_position_gap(struct cwc_container *container,
                                     int x,
                                     int y)
 {
-    int gaps =
-        cwc_output_get_current_view_info(container->output)->useless_gaps;
+    int gaps = cwc_output_get_current_tag_info(container->output)->useless_gaps;
     int pos_x = x + gaps;
     int pos_y = y + gaps;
     cwc_container_set_position(container, pos_x, pos_y);
@@ -1213,8 +1211,7 @@ bool cwc_container_is_visible(struct cwc_container *container)
     if (cwc_container_is_sticky(container))
         return true;
 
-    if (!container->output->state->active_workspace
-        || !container->output->state->active_tag
+    if (!container->output->state->active_tag
         || cwc_container_is_minimized(container))
         return false;
 
@@ -1244,9 +1241,8 @@ void cwc_container_move_to_tag(struct cwc_container *container, int tagidx)
     container->tag       = 1 << (tagidx - 1);
     container->workspace = tagidx;
 
-    struct cwc_view_info *view_info =
-        &container->output->state->view_info[tagidx];
-    if (view_info->layout_mode == CWC_LAYOUT_BSP)
+    struct cwc_tag_info *tag_info = &container->output->state->tag_info[tagidx];
+    if (tag_info->layout_mode == CWC_LAYOUT_BSP)
         bsp_insert_container(container, tagidx);
 
     cwc_output_tiling_layout_update(container->output, container->workspace);

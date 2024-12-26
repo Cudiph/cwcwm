@@ -82,8 +82,8 @@ struct master_state {
     struct layout_interface *current_layout;
 };
 
-// contains information of a single view only tag or a traditional workspace
-struct cwc_view_info {
+/* contains information of a single view only tag or a traditional workspace */
+struct cwc_tag_info {
     char *label;
     enum cwc_layout_mode layout_mode;
 

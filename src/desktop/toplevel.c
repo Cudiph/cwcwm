@@ -832,7 +832,7 @@ struct wlr_box cwc_toplevel_get_geometry(struct cwc_toplevel *toplevel)
 
 void cwc_toplevel_set_size_surface(struct cwc_toplevel *toplevel, int w, int h)
 {
-    int gaps = cwc_output_get_current_view_info(toplevel->container->output)
+    int gaps = cwc_output_get_current_tag_info(toplevel->container->output)
                    ->useless_gaps;
     int outside_width =
         (cwc_border_get_thickness(&toplevel->container->border) + gaps) * 2;

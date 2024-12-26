@@ -357,8 +357,8 @@ static int luaC_screen_set_layout_mode(lua_State *L)
 
 static int luaC_screen_get_layout_mode(lua_State *L)
 {
-    struct cwc_output *output  = luaC_screen_checkudata(L, 1);
-    struct cwc_view_info *info = cwc_output_get_current_view_info(output);
+    struct cwc_output *output = luaC_screen_checkudata(L, 1);
+    struct cwc_tag_info *info = cwc_output_get_current_tag_info(output);
 
     lua_pushinteger(L, info->layout_mode);
 
@@ -487,7 +487,7 @@ static int luaC_screen_set_max_general_workspace(lua_State *L)
 static int luaC_screen_get_useless_gaps(lua_State *L)
 {
     struct cwc_output *output = luaC_screen_checkudata(L, 1);
-    lua_pushnumber(L, cwc_output_get_current_view_info(output)->useless_gaps);
+    lua_pushnumber(L, cwc_output_get_current_tag_info(output)->useless_gaps);
 
     return 1;
 }
@@ -514,7 +514,7 @@ static int luaC_screen_get_mwfact(lua_State *L)
 {
     struct cwc_output *output = luaC_screen_checkudata(L, 1);
     lua_pushnumber(
-        L, cwc_output_get_current_view_info(output)->master_state.mwfact);
+        L, cwc_output_get_current_tag_info(output)->master_state.mwfact);
 
     return 1;
 }

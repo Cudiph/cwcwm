@@ -68,6 +68,8 @@ struct cwc_container {
     struct cwc_output *output;
     tag_bitfield_t tag;
     int workspace;
+
+    /* node that will be used in bsp layout */
     struct bsp_node *bsp_node;
 
     struct wl_list toplevels;

@@ -16,8 +16,9 @@ static void arrange_flayout(struct cwc_toplevel **toplevels,
 
     while (toplevel) {
         cwc_container_set_position_gap(toplevel->container, 0, 0);
-        cwc_container_set_size(toplevel->container, output->output_layout_box.width,
-                                      output->output_layout_box.height);
+        cwc_container_set_size(toplevel->container,
+                               output->output_layout_box.width,
+                               output->output_layout_box.height);
 
         toplevel = toplevels[++i];
     }
