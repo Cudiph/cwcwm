@@ -247,9 +247,7 @@ static void output_repaint(struct cwc_output *output,
 static void on_output_frame(struct wl_listener *listener, void *data)
 {
     struct cwc_output *output = wl_container_of(listener, output, frame_l);
-    struct wlr_scene *scene   = server.scene;
-    struct wlr_scene_output *scene_output =
-        wlr_scene_get_scene_output(scene, output->wlr_output);
+    struct wlr_scene_output *scene_output = output->scene_output;
     struct timespec now;
 
     if (!scene_output)
@@ -299,6 +297,7 @@ static void on_output_destroy(struct wl_listener *listener, void *data)
             output, output->wlr_output);
 
     output_layers_fini(output);
+    wlr_scene_output_destroy(output->scene_output);
 
     wl_list_remove(&output->destroy_l.link);
     wl_list_remove(&output->frame_l.link);
@@ -321,12 +320,15 @@ static void on_output_destroy(struct wl_listener *listener, void *data)
         server.focused_output = server.fallback_output;
     }
 
+    wlr_output_layout_remove(server.output_layout, output->wlr_output);
+    wlr_output_layout_get_box(server.output_layout,
+                              server.focused_output->wlr_output,
+                              &server.focused_output->output_layout_box);
+
     move_output_object(output, server.focused_output);
 
-    wl_list_remove(&output->link);
-
     luaC_object_unregister(g_config_get_lua_State(), output);
-
+    wl_list_remove(&output->link);
     free(output);
 }
 
@@ -432,7 +434,7 @@ static void on_new_output(struct wl_listener *listener, void *data)
 {
     struct wlr_output *wlr_output = data;
 
-    if (strcmp(wlr_output->name, "FALLBACK") == 0)
+    if (wlr_output == server.fallback_output->wlr_output)
         return;
 
     /* Configures the output created by the backend to use our allocator
@@ -488,10 +490,9 @@ static void on_new_output(struct wl_listener *listener, void *data)
      */
     struct wlr_output_layout_output *layout_output =
         wlr_output_layout_add_auto(server.output_layout, wlr_output);
-    struct wlr_scene_output *scene_output =
-        wlr_scene_output_create(server.scene, wlr_output);
+    output->scene_output = wlr_scene_output_create(server.scene, wlr_output);
     wlr_scene_output_layout_add_output(server.scene_layout, layout_output,
-                                       scene_output);
+                                       output->scene_output);
 
     cwc_log(CWC_INFO, "created output (%s): %p %p", wlr_output->name, output,
             output->wlr_output);

@@ -666,6 +666,12 @@ void cwc_container_move_to_output(struct cwc_container *container,
         wl_list_reattach(output->state->minimized.prev,
                          &container->link_output_minimized);
 
+    /* only reattach link when move to fallback output or vice versa or it'll
+     * ruin the layout since the fallback output is not attached to scene output
+     */
+    if (old == server.fallback_output || output == server.fallback_output)
+        return;
+
     container->floating_box = output->output_layout_box;
 
     /* set to float when it's floating in previous output to prevent dragged

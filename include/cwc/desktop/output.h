@@ -38,6 +38,7 @@ struct cwc_output {
     struct wlr_box usable_area;
     struct wlr_box output_layout_box;
 
+    struct wlr_scene_output *scene_output;
     struct cwc_output_state *state;
     bool restored;
     bool tearing_allowed;
