@@ -673,20 +673,21 @@ void cwc_container_move_to_output(struct cwc_container *container,
     if (old == server.fallback_output || output == server.fallback_output)
         return;
 
-    container->floating_box = output->output_layout_box;
+    struct wlr_box oldbox = cwc_container_get_box(container);
+    double x, y;
+    normalized_region_at(&old->output_layout_box, oldbox.x, oldbox.y, &x, &y);
+    x *= output->output_layout_box.width;
+    y *= output->output_layout_box.height;
+    x += output->output_layout_box.x;
+    y += output->output_layout_box.y;
+
+    container->floating_box.x = x;
+    container->floating_box.y = y;
 
     /* set to float when it's floating in previous output to prevent dragged
      * container to get tiled */
     if (floating) {
-        struct wlr_box oldbox = cwc_container_get_box(container);
-        double x, y;
-        normalized_region_at(&old->output_layout_box, oldbox.x, oldbox.y, &x,
-                             &y);
-        x *= output->output_layout_box.width;
-        y *= output->output_layout_box.height;
-
-        cwc_container_set_position(container, x + output->output_layout_box.x,
-                                   y + output->output_layout_box.y);
+        cwc_container_set_position(container, x, y);
         container->state |= CONTAINER_STATE_FLOATING;
     }
 }
