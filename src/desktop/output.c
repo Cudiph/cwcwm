@@ -53,7 +53,9 @@ static inline void insert_tiled_toplevel_to_bsp_tree(struct cwc_output *output,
     wl_list_for_each(container, &output->state->containers,
                      link_output_container)
     {
-        if (cwc_container_is_floating(container) || container->bsp_node != NULL)
+        if (!cwc_container_is_visible_in_workspace(container, workspace)
+            || cwc_container_is_floating(container)
+            || container->bsp_node != NULL)
             continue;
 
         bsp_insert_container(container, workspace);
@@ -63,7 +65,7 @@ static inline void insert_tiled_toplevel_to_bsp_tree(struct cwc_output *output,
     }
 }
 
-void cwc_output_tiling_layout_update(struct cwc_output *output, int view)
+void cwc_output_tiling_layout_update(struct cwc_output *output, int workspace)
 {
     if (output == server.fallback_output)
         return;
@@ -71,11 +73,11 @@ void cwc_output_tiling_layout_update(struct cwc_output *output, int view)
     enum cwc_layout_mode mode =
         cwc_output_get_current_tag_info(output)->layout_mode;
 
-    view = view ? view : output->state->active_workspace;
+    workspace = workspace ? workspace : output->state->active_workspace;
 
     switch (mode) {
     case CWC_LAYOUT_BSP:
-        bsp_update_root(output, view);
+        bsp_update_root(output, workspace);
         break;
     case CWC_LAYOUT_MASTER:
         master_arrange_update(output);
@@ -284,6 +286,23 @@ static void rescue_output_toplevel_container(struct cwc_output *source,
     }
 }
 
+static void server_focus_previous_output(struct cwc_output *reference)
+{
+    if (wl_list_length_at_least(&server.outputs, 2)) {
+        struct cwc_output *o;
+        wl_list_for_each_reverse(o, &reference->link, link)
+        {
+            if (&o->link == &server.outputs)
+                continue;
+
+            server.focused_output = o;
+            return;
+        }
+    }
+
+    server.focused_output = server.fallback_output;
+}
+
 static void output_layers_fini(struct cwc_output *output);
 
 static void on_output_destroy(struct wl_listener *listener, void *data)
@@ -307,37 +326,27 @@ static void on_output_destroy(struct wl_listener *listener, void *data)
     wl_list_remove(&output->config_commit_l.link);
 
     // change focus to previous inserted outputs although the order may wrong
-    if (wl_list_length_at_least(&server.outputs, 2)) {
-        struct cwc_output *o;
-        wl_list_for_each_reverse(o, &output->link, link)
-        {
-            if (&o->link == &server.outputs)
-                continue;
+    server_focus_previous_output(output);
 
-            server.focused_output = o;
-            break;
-        }
-    } else {
-        server.focused_output = server.fallback_output;
-    }
+    struct cwc_output *focused = server.focused_output;
 
     // update output layout
     wlr_output_layout_remove(server.output_layout, output->wlr_output);
-    wlr_output_layout_get_box(server.output_layout,
-                              server.focused_output->wlr_output,
-                              &server.focused_output->output_layout_box);
+    wlr_output_layout_get_box(server.output_layout, focused->wlr_output,
+                              &focused->output_layout_box);
 
-    rescue_output_toplevel_container(output, server.focused_output);
+    rescue_output_toplevel_container(output, focused);
 
     for (int i = 1; i < MAX_WORKSPACE; i++) {
-        struct bsp_node *root = output->state->tag_info[i].bsp_root_entry.root;
-        bsp_node_destroy(root);
-        cwc_output_set_layout_mode(
-            server.focused_output, i,
-            server.focused_output->state->tag_info[i].layout_mode);
+        bsp_entry_fini(output, i);
+
+        if (focused != server.fallback_output) {
+            cwc_output_set_layout_mode(focused, i,
+                                       focused->state->tag_info[i].layout_mode);
+        }
     }
 
-    cwc_output_update_visible(server.focused_output);
+    cwc_output_update_visible(focused);
 
     luaC_object_unregister(g_config_get_lua_State(), output);
     wl_list_remove(&output->link);

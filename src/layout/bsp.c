@@ -491,8 +491,11 @@ struct bsp_root_entry *bsp_entry_get(struct cwc_output *output, int workspace)
 void bsp_entry_fini(struct cwc_output *output, int workspace)
 {
     struct bsp_root_entry *entry = bsp_entry_get(output, workspace);
-    if (entry && entry->root)
-        bsp_node_destroy(entry->root);
-    entry->root         = NULL;
-    entry->last_focused = NULL;
+    if (entry) {
+        if (entry->root)
+            bsp_node_destroy(entry->root);
+
+        entry->root         = NULL;
+        entry->last_focused = NULL;
+    }
 }

@@ -46,6 +46,7 @@ struct cwc_output {
     bool restored;
     bool tearing_allowed;
 
+    /* direct children of the root with the same name */
     struct {
         struct wlr_scene_tree *background;   // layer_shell
         struct wlr_scene_tree *bottom;       // layer_shell
@@ -61,8 +62,8 @@ struct cwc_output {
     struct wl_listener config_commit_l;
 };
 
-/* set view to zero to update the current view */
-void cwc_output_tiling_layout_update(struct cwc_output *output, int view);
+/* set workspace to zero to update the current workspace */
+void cwc_output_tiling_layout_update(struct cwc_output *output, int workspace);
 void cwc_output_update_visible(struct cwc_output *output);
 
 /* free it after use, NULL indicates the end of the array */
