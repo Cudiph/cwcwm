@@ -45,7 +45,7 @@ struct bsp_node {
 void bsp_insert_container(struct cwc_container *new, int workspace);
 
 /* remove client from the bsp tree */
-void bsp_remove_container(struct cwc_container *container);
+void bsp_remove_container(struct cwc_container *container, bool update);
 
 void bsp_toggle_split(struct bsp_node *node);
 

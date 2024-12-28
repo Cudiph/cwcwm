@@ -130,7 +130,9 @@ end)
 
 -- sloppic focus only in tiled client
 cwc.connect_signal("client::mouse_enter", function(c)
-    if c.floating then return end
+    local focused = cwc.client.focused()
+    if focused and focused.floating then return end
+
     c:focus()
 end)
 

@@ -404,7 +404,7 @@ update_last_focused:
     root_entry->last_focused = new;
 }
 
-void bsp_remove_container(struct cwc_container *container)
+void bsp_remove_container(struct cwc_container *container, bool update)
 {
     struct bsp_root_entry *bspentry =
         bsp_entry_get(container->output, container->workspace);
@@ -448,10 +448,12 @@ destroy_node:
     bsp_node_destroy(cont_node);
     container->bsp_node = NULL;
 
-    if (grandparent_node)
-        bsp_update_node(grandparent_node);
-    else
-        bsp_update_root(container->output, container->workspace);
+    if (update) {
+        if (grandparent_node)
+            bsp_update_node(grandparent_node);
+        else
+            bsp_update_root(container->output, container->workspace);
+    }
 }
 
 void bsp_toggle_split(struct bsp_node *node)

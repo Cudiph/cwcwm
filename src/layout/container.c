@@ -572,13 +572,18 @@ static void _destroy_container(struct cwc_container *container)
         wl_list_remove(&container->link_output_fstack);
     }
 
-    if (container->bsp_node)
-        bsp_remove_container(container);
-
     if (container->output->state->tag_info[container->workspace].layout_mode
         == CWC_LAYOUT_MASTER)
         cwc_output_tiling_layout_update(container->output,
                                         container->workspace);
+    if (container->bsp_node)
+        bsp_remove_container(container, true);
+
+    if (container->old_prop.bsp_node) {
+        container->output   = container->old_prop.output;
+        container->bsp_node = container->old_prop.bsp_node;
+        bsp_remove_container(container, false);
+    }
 
     if (container->link_output_minimized.next
         && container->link_output_minimized.prev)
@@ -656,6 +661,9 @@ void cwc_container_move_to_output(struct cwc_container *container,
 
     bool floating = cwc_container_is_floating(container);
 
+    if (container->bsp_node)
+        bsp_remove_container(container, false);
+
     container->output = output;
     wl_list_reattach(output->state->focus_stack.prev,
                      &container->link_output_fstack);
@@ -688,6 +696,7 @@ void cwc_container_move_to_output(struct cwc_container *container,
      * container to get tiled */
     if (floating) {
         cwc_container_set_position(container, x, y);
+        cwc_container_move_to_tag(container, output->state->active_workspace);
         container->state |= CONTAINER_STATE_FLOATING;
     }
 }
@@ -1120,7 +1129,7 @@ static inline void update_container_output(struct cwc_container *container)
     int y                     = box.y + (box.height / 2);
     struct cwc_output *output = cwc_output_at(server.output_layout, x, y);
 
-    if (!output)
+    if (!output || output == container->output)
         return;
 
     cwc_container_move_to_output(container, output);
@@ -1238,7 +1247,7 @@ void cwc_container_move_to_tag(struct cwc_container *container, int tagidx)
         return;
 
     if (container->bsp_node)
-        bsp_remove_container(container);
+        bsp_remove_container(container, false);
 
     container->tag       = 1 << (tagidx - 1);
     container->workspace = tagidx;

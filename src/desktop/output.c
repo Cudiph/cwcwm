@@ -137,9 +137,7 @@ static bool cwc_output_state_try_restore(struct cwc_output *output)
         if (container->old_prop.output != old_output)
             continue;
 
-        /* remove bsp node from the current output */
-        if (container->bsp_node)
-            bsp_remove_container(container);
+        cwc_container_move_to_output(container, output);
 
         container->bsp_node  = container->old_prop.bsp_node;
         container->tag       = container->old_prop.tag;
@@ -160,6 +158,8 @@ static bool cwc_output_state_try_restore(struct cwc_output *output)
     }
 
     cwc_hhmap_remove(server.output_state_cache, output->wlr_output->name);
+    free(old_output);
+
     return true;
 }
 
@@ -284,8 +284,7 @@ static void rescue_output_toplevel_container(struct cwc_output *source,
     wl_list_for_each_safe(container, tmp, &source->state->containers,
                           link_output_container)
     {
-        if (source != server.fallback_output
-            && container->old_prop.output == NULL) {
+        if (container->old_prop.output == NULL) {
             container->old_prop.output    = source;
             container->old_prop.bsp_node  = container->bsp_node;
             container->old_prop.workspace = container->workspace;
@@ -368,7 +367,11 @@ static void on_output_destroy(struct wl_listener *listener, void *data)
 
     luaC_object_unregister(g_config_get_lua_State(), output);
     wl_list_remove(&output->link);
-    free(output);
+
+    // free the output only when restored because the container still need old
+    // output reference to remove bsp node.
+    output->wlr_output = NULL;
+    // free(output);
 }
 
 static void output_layer_set_position(struct cwc_output *output, int x, int y)
@@ -591,7 +594,6 @@ static void output_manager_apply(struct wlr_output_configuration_v1 *config,
 
         update_output_manager_config();
         arrange_layers(output);
-        cwc_output_tiling_layout_update(output, 0);
     }
 
     if (ok)
