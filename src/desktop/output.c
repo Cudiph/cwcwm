@@ -129,16 +129,27 @@ static bool cwc_output_state_try_restore(struct cwc_output *output)
         return false;
 
     struct cwc_output *old_output = output->state->old_output;
-    struct cwc_container *container;
 
-    // update the output in the container to the new one
+    /* restore container to old output */
+    struct cwc_container *container;
     wl_list_for_each(container, &server.containers, link)
     {
-        if (container->output == old_output)
-            container->output = output;
+        if (container->old_prop.output != old_output)
+            continue;
+
+        /* remove bsp node from the current output */
+        if (container->bsp_node)
+            bsp_remove_container(container);
+
+        container->bsp_node  = container->old_prop.bsp_node;
+        container->tag       = container->old_prop.tag;
+        container->workspace = container->old_prop.workspace;
+
+        container->old_prop.bsp_node = NULL;
+        container->old_prop.output   = NULL;
     }
 
-    // update for the layer shell
+    /* update output for the layer shell */
     struct cwc_layer_surface *layer_surface;
     wl_list_for_each(layer_surface, &server.layer_shells, link)
     {
@@ -273,6 +284,16 @@ static void rescue_output_toplevel_container(struct cwc_output *source,
     wl_list_for_each_safe(container, tmp, &source->state->containers,
                           link_output_container)
     {
+        if (source != server.fallback_output
+            && container->old_prop.output == NULL) {
+            container->old_prop.output    = source;
+            container->old_prop.bsp_node  = container->bsp_node;
+            container->old_prop.workspace = container->workspace;
+            container->old_prop.tag       = container->tag;
+
+            container->bsp_node = NULL;
+        }
+
         cwc_container_move_to_output(container, target);
     }
 
@@ -338,12 +359,9 @@ static void on_output_destroy(struct wl_listener *listener, void *data)
     rescue_output_toplevel_container(output, focused);
 
     for (int i = 1; i < MAX_WORKSPACE; i++) {
-        bsp_entry_fini(output, i);
-
-        if (focused != server.fallback_output) {
+        if (focused != server.fallback_output)
             cwc_output_set_layout_mode(focused, i,
                                        focused->state->tag_info[i].layout_mode);
-        }
     }
 
     cwc_output_update_visible(focused);

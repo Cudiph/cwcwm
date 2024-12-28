@@ -72,6 +72,14 @@ struct cwc_container {
     /* node that will be used in bsp layout */
     struct bsp_node *bsp_node;
 
+    /* for restoring to original output when hotplugging or switching vt */
+    struct old_output {
+        struct cwc_output *output;
+        struct bsp_node *bsp_node;
+        tag_bitfield_t tag;
+        int workspace;
+    } old_prop;
+
     struct wl_list toplevels;
 
     struct wl_list link_output_container; // cwc_output_state.containers
