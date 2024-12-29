@@ -236,8 +236,7 @@ void bsp_node_enable(struct bsp_node *node)
     if (root->type == BSP_NODE_INTERNAL)
         bsp_update_node(root);
     else
-        bsp_update_root(root->container->output,
-                        root->container->output->state->active_workspace);
+        bsp_update_root(root->container->output, root->container->workspace);
 }
 
 /* recursively disabled node if no one in the child node is enabled */
@@ -263,9 +262,8 @@ void bsp_node_disable(struct bsp_node *node)
     if (last_updated->type == BSP_NODE_INTERNAL && last_updated->parent)
         bsp_update_node(last_updated->parent);
     else if (last_updated->type == BSP_NODE_LEAF)
-        bsp_update_root(
-            last_updated->container->output,
-            last_updated->container->output->state->active_workspace);
+        bsp_update_root(last_updated->container->output,
+                        last_updated->container->workspace);
 }
 
 void bsp_last_focused_update(struct cwc_container *container)

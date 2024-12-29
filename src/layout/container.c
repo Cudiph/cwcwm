@@ -967,6 +967,7 @@ static void all_toplevel_set_fullscreen(struct cwc_toplevel *toplevel,
 void cwc_container_set_fullscreen(struct cwc_container *container, bool set)
 {
     struct bsp_node *bsp_node = container->bsp_node;
+    cwc_border_set_enabled(&container->border, !set);
 
     if (set) {
         // set first so the set_size don't save the fullscreen dimension as
@@ -989,8 +990,6 @@ void cwc_container_set_fullscreen(struct cwc_container *container, bool set)
     cwc_container_for_each_toplevel(container, all_toplevel_set_fullscreen,
                                     (void *)set);
 
-    cwc_border_set_enabled(&container->border, !set);
-    cwc_border_resize(&container->border, container->width, container->height);
     master_arrange_update(container->output);
 
     EMIT_PROP_SIGNAL_FOR_FRONT_TOPLEVEL(fullscreen, container);
@@ -1014,6 +1013,7 @@ static void all_toplevel_set_maximized(struct cwc_toplevel *toplevel,
 void cwc_container_set_maximized(struct cwc_container *container, bool set)
 {
     struct bsp_node *bsp_node = container->bsp_node;
+    cwc_border_set_enabled(&container->border, !set);
 
     if (set) {
         container->state |= CONTAINER_STATE_MAXIMIZED;
@@ -1032,8 +1032,6 @@ void cwc_container_set_maximized(struct cwc_container *container, bool set)
 
     cwc_container_for_each_toplevel(container, all_toplevel_set_maximized,
                                     (void *)set);
-    cwc_border_set_enabled(&container->border, !set);
-    cwc_border_resize(&container->border, container->width, container->height);
 
     master_arrange_update(container->output);
 

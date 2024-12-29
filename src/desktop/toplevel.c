@@ -124,12 +124,11 @@ static void on_surface_commit(struct wl_listener *listener, void *data)
     }
 
     if (!toplevel->container || toplevel->xdg_toplevel->current.resizing
+        || cwc_container_get_front_toplevel(toplevel->container) != toplevel
         || !cwc_output_is_exist(toplevel->container->output)
         || !cwc_toplevel_is_floating(toplevel)
-        || !cwc_toplevel_is_mapped(toplevel))
-        return;
-
-    if (cwc_container_get_front_toplevel(toplevel->container) != toplevel)
+        || !cwc_toplevel_is_mapped(toplevel)
+        || !cwc_toplevel_is_configure_allowed(toplevel))
         return;
 
     struct wlr_box geom = cwc_toplevel_get_geometry(toplevel);

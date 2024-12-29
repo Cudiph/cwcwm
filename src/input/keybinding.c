@@ -275,36 +275,10 @@ static void _chvt(void *args)
     wlr_session_change_vt(server.session, (uint64_t)args);
 }
 
-// FIXME: revert this when multihead complete
-#ifndef NDEBUG
-#include <wlr/backend/headless.h>
-#include <wlr/backend/wayland.h>
-#include <wlr/backend/x11.h>
-
-void create_output(struct wlr_backend *backend, void *data)
-{
-    if (wl_list_length(&server.outputs) > 1)
-        return;
-
-    if (wlr_backend_is_wl(backend)) {
-        wlr_wl_output_create(backend);
-    } else if (wlr_backend_is_headless(backend)) {
-        wlr_headless_add_output(backend, 1920, 1080);
-    } else if (wlr_backend_is_x11(backend)) {
-        wlr_x11_output_create(backend);
-    }
-}
-
-static void _test(void *args)
-{
-    wlr_multi_for_each_backend(server.backend, create_output, NULL);
-}
-#else
 static void _test(void *args)
 {
     ;
 }
-#endif
 
 #define WLR_MODIFIER_NONE 0
 void keybind_register_common_key()

@@ -29,17 +29,6 @@ pointer.bind(MODKEY, button.RIGHT, pointer.resize_interactive)
 ------------------- keyboard binding --------------------
 local kbd = cwc.kbd
 
-kbd.bind({ MODKEY, mod.CTRL }, "slash", function()
-    local s = cwc.screen.focused()
-    local c = cwc.client.focused()
-    local pos = pointer.get_position()
-    print(c, s, c.tag, c.workspace)
-    print(pos.x, pos.y)
-    print(cwc.client.at(pos.x, pos.y))
-    print(gears.debug.dump(c.geometry))
-    print(s.active_tag, s.active_workspace)
-end, { description = "this just for debugging" })
-
 ---------------- compositor lifecycle
 kbd.bind({ MODKEY, mod.CTRL }, "Delete", cwc.quit, { description = "exit cwc", group = "cwc" })
 kbd.bind({ MODKEY, mod.CTRL }, "r", cwc.reload, { description = "reload configuration", group = "cwc" })
@@ -473,3 +462,20 @@ kbd.bind({ mod.ALT, mod.SHIFT }, "Tab", function() --
 
     cwc.cwcle.prev(mod.ALT)
 end, { description = "cycle previous client", group = "client" })
+
+-------------------- DEV ------------------------
+kbd.bind({ MODKEY }, "F11", function() --
+    cwc.create_output(2)
+    print(#cwc.screen.get())
+end, { description = "Create output", group = "dev" })
+
+kbd.bind({ MODKEY, mod.CTRL }, "slash", function()
+    local s = cwc.screen.focused()
+    local c = cwc.client.focused()
+    local pos = pointer.get_position()
+    print(c, s, c.tag, c.workspace)
+    print(pos.x, pos.y)
+    print(cwc.client.at(pos.x, pos.y))
+    print(gears.debug.dump(c.geometry))
+    print(s.active_tag, s.active_workspace)
+end, { description = "this just for debugging", group = "dev" })
