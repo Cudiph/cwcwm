@@ -127,8 +127,7 @@ static void on_surface_commit(struct wl_listener *listener, void *data)
         || cwc_container_get_front_toplevel(toplevel->container) != toplevel
         || !cwc_output_is_exist(toplevel->container->output)
         || !cwc_toplevel_is_floating(toplevel)
-        || !cwc_toplevel_is_mapped(toplevel)
-        || !cwc_toplevel_is_configure_allowed(toplevel))
+        || !cwc_toplevel_is_mapped(toplevel))
         return;
 
     struct wlr_box geom = cwc_toplevel_get_geometry(toplevel);
