@@ -128,8 +128,11 @@ cwc.connect_signal("client::focus", function(client)
     client:raise()
 end)
 
--- sloppic focus
+-- sloppic focus only in tiled client
 cwc.connect_signal("client::mouse_enter", function(c)
+    local focused = cwc.client.focused()
+    if focused and focused.floating then return end
+
     c:focus()
 end)
 

@@ -50,21 +50,22 @@ static void on_layer_surface_destroy(struct wl_listener *listener, void *data)
 }
 
 static struct wlr_scene_tree *
-layer_shell_get_scene(enum zwlr_layer_shell_v1_layer layer)
+layer_shell_get_scene(struct cwc_output *output,
+                      enum zwlr_layer_shell_v1_layer layer)
 {
     switch (layer) {
     case ZWLR_LAYER_SHELL_V1_LAYER_BACKGROUND:
-        return server.layers.background;
+        return output->layers.background;
     case ZWLR_LAYER_SHELL_V1_LAYER_BOTTOM:
-        return server.layers.bottom;
+        return output->layers.bottom;
     case ZWLR_LAYER_SHELL_V1_LAYER_TOP:
-        return server.layers.top;
+        return output->layers.top;
     case ZWLR_LAYER_SHELL_V1_LAYER_OVERLAY:
-        return server.layers.overlay;
+        return output->layers.overlay;
     }
 
     unreachable_();
-    return server.layers.bottom;
+    return output->layers.bottom;
 }
 
 static void arrange_surface(struct cwc_output *output,
@@ -120,15 +121,15 @@ void arrange_layers(struct cwc_output *output)
     const struct wlr_box full_area = usable_area;
 
     // clang-format off
-    arrange_surface(output, &full_area, &usable_area, server.layers.overlay, true);
-	arrange_surface(output, &full_area, &usable_area, server.layers.top, true);
-	arrange_surface(output, &full_area, &usable_area, server.layers.bottom, true);
-	arrange_surface(output, &full_area, &usable_area, server.layers.background, true);
+    arrange_surface(output, &full_area, &usable_area, output->layers.overlay, true);
+    arrange_surface(output, &full_area, &usable_area, output->layers.top, true);
+    arrange_surface(output, &full_area, &usable_area, output->layers.bottom, true);
+    arrange_surface(output, &full_area, &usable_area, output->layers.background, true);
 
-	arrange_surface(output, &full_area, &usable_area, server.layers.overlay, false);
-	arrange_surface(output, &full_area, &usable_area, server.layers.top, false);
-	arrange_surface(output, &full_area, &usable_area, server.layers.bottom, false);
-	arrange_surface(output, &full_area, &usable_area, server.layers.background, false);
+    arrange_surface(output, &full_area, &usable_area, output->layers.overlay, false);
+    arrange_surface(output, &full_area, &usable_area, output->layers.top, false);
+    arrange_surface(output, &full_area, &usable_area, output->layers.bottom, false);
+    arrange_surface(output, &full_area, &usable_area, output->layers.background, false);
     // clang-format on
 
     if (!wlr_box_equal(&usable_area, &output->usable_area)) {
@@ -193,7 +194,8 @@ static void on_layer_surface_commit(struct wl_listener *listener, void *data)
     if (committed & WLR_LAYER_SURFACE_V1_STATE_LAYER) {
         enum zwlr_layer_shell_v1_layer layer_type =
             wlr_layer_surface->current.layer;
-        struct wlr_scene_tree *output_layer = layer_shell_get_scene(layer_type);
+        struct wlr_scene_tree *output_layer =
+            layer_shell_get_scene(layer_surface->output, layer_type);
         wlr_scene_node_reparent(&layer_surface->scene_layer->tree->node,
                                 output_layer);
     }
@@ -208,23 +210,24 @@ static void on_layer_surface_commit(struct wl_listener *listener, void *data)
 static void on_new_surface(struct wl_listener *listener, void *data)
 {
     struct wlr_layer_surface_v1 *layer_surface = data;
-    struct wlr_scene_tree *surface_scene_tree =
-        layer_shell_get_scene(layer_surface->pending.layer);
 
     struct cwc_layer_surface *surf = calloc(1, sizeof(*surf));
     surf->type                     = DATA_TYPE_LAYER_SHELL;
     surf->wlr_layer_surface        = layer_surface;
+
+    if (!layer_surface->output)
+        layer_surface->output = server.focused_output->wlr_output;
+
+    surf->output = layer_surface->output->data;
+
+    struct wlr_scene_tree *surface_scene_tree =
+        layer_shell_get_scene(surf->output, layer_surface->pending.layer);
     surf->scene_layer =
         wlr_scene_layer_surface_v1_create(surface_scene_tree, layer_surface);
 
     layer_surface->data                = surf;
     layer_surface->surface->data       = surf->scene_layer->tree;
     surf->scene_layer->tree->node.data = surf; // used in arrange_surface
-
-    if (!layer_surface->output)
-        layer_surface->output = server.focused_output->wlr_output;
-
-    surf->output = layer_surface->output->data;
 
     surf->new_popup_l.notify = on_new_xdg_popup;
     surf->destroy_l.notify   = on_layer_surface_destroy;
@@ -247,18 +250,6 @@ static void on_new_surface(struct wl_listener *listener, void *data)
 
 void setup_layer_shell(struct cwc_server *s)
 {
-    struct wlr_scene_tree *main_scene = s->main_tree =
-        wlr_scene_tree_create(&s->scene->tree);
-    struct scene_layers *layers = &s->layers;
-    layers->background          = wlr_scene_tree_create(main_scene);
-    layers->bottom              = wlr_scene_tree_create(main_scene);
-    layers->below               = wlr_scene_tree_create(main_scene);
-    layers->toplevel            = wlr_scene_tree_create(main_scene);
-    layers->above               = wlr_scene_tree_create(main_scene);
-    layers->top                 = wlr_scene_tree_create(main_scene);
-    layers->overlay             = wlr_scene_tree_create(main_scene);
-    layers->session_lock        = wlr_scene_tree_create(main_scene);
-
     s->layer_shell = wlr_layer_shell_v1_create(s->wl_display, 4);
     s->layer_shell_surface_l.notify = on_new_surface;
     wl_signal_add(&s->layer_shell->events.new_surface,

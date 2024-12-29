@@ -68,16 +68,26 @@ struct cwc_container {
     struct cwc_output *output;
     tag_bitfield_t tag;
     int workspace;
+
+    /* node that will be used in bsp layout */
     struct bsp_node *bsp_node;
+
+    /* for restoring to original output when hotplugging or switching vt */
+    struct old_output {
+        struct cwc_output *output;
+        struct bsp_node *bsp_node;
+        tag_bitfield_t tag;
+        int workspace;
+    } old_prop;
 
     struct wl_list toplevels;
 
     struct wl_list link_output_container; // cwc_output_state.containers
-    struct wl_list link_output_fstack;    // cwc_output.focus_stack
-    struct wl_list link_minimized;        // cwc_output.minimized
+    struct wl_list link_output_fstack;    // cwc_output.state.focus_stack
+    struct wl_list link_output_minimized; // cwc_output.state.minimized
 };
 
-void cwc_container_init(struct wlr_scene_tree *parent,
+void cwc_container_init(struct cwc_output *output,
                         struct cwc_toplevel *toplevel,
                         int border_w);
 
@@ -91,6 +101,9 @@ void cwc_container_remove_toplevel(struct cwc_toplevel *toplevel);
 /* the function name should clear enough what it does */
 void cwc_container_remove_toplevel_but_dont_destroy_container_when_empty(
     struct cwc_toplevel *toplevel);
+
+void cwc_container_move_to_output(struct cwc_container *container,
+                                  struct cwc_output *output);
 
 void cwc_container_focusidx(struct cwc_container *container, int idx);
 void cwc_container_swap(struct cwc_container *source,
@@ -107,6 +120,9 @@ void cwc_container_set_position(struct cwc_container *container, int x, int y);
 void cwc_container_set_position_gap(struct cwc_container *container,
                                     int x,
                                     int y);
+void cwc_container_set_position_global(struct cwc_container *container,
+                                       int x,
+                                       int y);
 void cwc_container_set_fullscreen(struct cwc_container *cont, bool set);
 void cwc_container_set_maximized(struct cwc_container *container, bool set);
 void cwc_container_set_minimized(struct cwc_container *container, bool set);

@@ -69,7 +69,7 @@ static void on_surface_map(struct wl_listener *listener, void *data)
         cwc_container_insert_toplevel(server.insert_marked, toplevel);
     } else {
         int bw = g_config.border_width;
-        cwc_container_init(server.layers.toplevel, toplevel,
+        cwc_container_init(server.focused_output, toplevel,
                            cwc_toplevel_is_unmanaged(toplevel) ? 0 : bw);
     }
 
@@ -124,12 +124,10 @@ static void on_surface_commit(struct wl_listener *listener, void *data)
     }
 
     if (!toplevel->container || toplevel->xdg_toplevel->current.resizing
+        || cwc_container_get_front_toplevel(toplevel->container) != toplevel
         || !cwc_output_is_exist(toplevel->container->output)
         || !cwc_toplevel_is_floating(toplevel)
         || !cwc_toplevel_is_mapped(toplevel))
-        return;
-
-    if (cwc_container_get_front_toplevel(toplevel->container) != toplevel)
         return;
 
     struct wlr_box geom = cwc_toplevel_get_geometry(toplevel);
@@ -352,12 +350,13 @@ static void on_popup_commit(struct wl_listener *listener, void *data)
     struct wlr_scene_node *node;
     if (toplevel) {
         parent_stree = toplevel->container->popup_tree;
-        box          = toplevel->container->output->usable_area;
+        box          = toplevel->container->output->output_layout_box;
         node         = &toplevel->container->tree->node;
     } else if (layersurf) {
         struct cwc_layer_surface *l = layersurf->data;
+        struct cwc_output *o        = l->output;
         node                        = &l->scene_layer->tree->node;
-        parent_stree                = server.layers.top;
+        parent_stree                = o->layers.top;
         box.width                   = l->output->wlr_output->width;
         box.height                  = l->output->wlr_output->height;
     } else {
@@ -437,11 +436,9 @@ void cwc_toplevel_focus(struct cwc_toplevel *toplevel, bool raise)
     if (wlr_surface == prev_surface)
         return;
 
-    if (!cwc_toplevel_is_unmanaged(toplevel)) {
-        wl_list_remove(&toplevel->container->link_output_fstack);
-        wl_list_insert(&toplevel->container->output->state->focus_stack,
-                       &toplevel->container->link_output_fstack);
-    }
+    if (!cwc_toplevel_is_unmanaged(toplevel))
+        wl_list_reattach(&toplevel->container->output->state->focus_stack,
+                         &toplevel->container->link_output_fstack);
 
     /* don't emit signal in process cursor motion called from this function
      * because it'll ruin the focus stack as it notify enter any random surface
@@ -470,6 +467,7 @@ struct cwc_toplevel *
 cwc_toplevel_get_nearest_by_direction(struct cwc_toplevel *toplevel,
                                       enum wlr_direction dir)
 {
+    // TODO: add global direction option
     struct cwc_toplevel **toplevels =
         cwc_output_get_visible_toplevels(toplevel->container->output);
 
@@ -634,16 +632,9 @@ static void on_request_configure(struct wl_listener *listener, void *data)
     struct wlr_xwayland_surface *surface               = toplevel->xwsurface;
     struct wlr_xwayland_surface_configure_event *event = data;
 
-    if (!cwc_toplevel_is_mapped(toplevel))
-        return;
-
-    // also don't configure on tiling
-    if (!cwc_toplevel_is_floating(toplevel)
-        || !cwc_toplevel_is_configure_allowed(toplevel))
-        return;
-
-    wlr_scene_node_set_position(&toplevel->container->tree->node, event->x,
-                                event->y);
+    if (toplevel->container)
+        cwc_container_set_position_global(toplevel->container, event->x,
+                                          event->y);
 
     wlr_xwayland_surface_configure(surface, event->x, event->y, event->width,
                                    event->height);
@@ -839,7 +830,7 @@ struct wlr_box cwc_toplevel_get_geometry(struct cwc_toplevel *toplevel)
 
 void cwc_toplevel_set_size_surface(struct cwc_toplevel *toplevel, int w, int h)
 {
-    int gaps = cwc_output_get_current_view_info(toplevel->container->output)
+    int gaps = cwc_output_get_current_tag_info(toplevel->container->output)
                    ->useless_gaps;
     int outside_width =
         (cwc_border_get_thickness(&toplevel->container->border) + gaps) * 2;
@@ -973,7 +964,7 @@ void cwc_toplevel_set_tiled(struct cwc_toplevel *toplevel, uint32_t edges)
 
 bool cwc_toplevel_is_ontop(struct cwc_toplevel *toplevel)
 {
-    if (toplevel->container->tree->node.parent == server.layers.top)
+    if (toplevel->container->tree->node.parent == server.root.top)
         return true;
 
     return false;
@@ -983,17 +974,17 @@ void cwc_toplevel_set_ontop(struct cwc_toplevel *toplevel, bool set)
 {
     if (set) {
         wlr_scene_node_reparent(&toplevel->container->tree->node,
-                                server.layers.top);
+                                server.root.top);
         return;
     }
 
     wlr_scene_node_reparent(&toplevel->container->tree->node,
-                            server.layers.toplevel);
+                            server.root.toplevel);
 }
 
 bool cwc_toplevel_is_above(struct cwc_toplevel *toplevel)
 {
-    if (toplevel->container->tree->node.parent == server.layers.above)
+    if (toplevel->container->tree->node.parent == server.root.above)
         return true;
 
     return false;
@@ -1003,17 +994,17 @@ void cwc_toplevel_set_above(struct cwc_toplevel *toplevel, bool set)
 {
     if (set) {
         wlr_scene_node_reparent(&toplevel->container->tree->node,
-                                server.layers.above);
+                                server.root.above);
         return;
     }
 
     wlr_scene_node_reparent(&toplevel->container->tree->node,
-                            server.layers.toplevel);
+                            server.root.toplevel);
 }
 
 bool cwc_toplevel_is_below(struct cwc_toplevel *toplevel)
 {
-    if (toplevel->container->tree->node.parent == server.layers.below)
+    if (toplevel->container->tree->node.parent == server.root.below)
         return true;
 
     return false;
@@ -1023,12 +1014,12 @@ void cwc_toplevel_set_below(struct cwc_toplevel *toplevel, bool set)
 {
     if (set) {
         wlr_scene_node_reparent(&toplevel->container->tree->node,
-                                server.layers.below);
+                                server.root.below);
         return;
     }
 
     wlr_scene_node_reparent(&toplevel->container->tree->node,
-                            server.layers.toplevel);
+                            server.root.toplevel);
 }
 
 void layout_coord_to_surface_coord(

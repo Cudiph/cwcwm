@@ -30,6 +30,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <wlr/backend/multi.h>
 #include <wlr/backend/session.h>
 #include <xkbcommon/xkbcommon-keysyms.h>
 #include <xkbcommon/xkbcommon.h>
@@ -274,21 +275,19 @@ static void _chvt(void *args)
     wlr_session_change_vt(server.session, (uint64_t)args);
 }
 
-// static void _test(void *args)
-// {
-//     struct cwc_toplevel *toplevel = cwc_toplevel_get_focused();
-//
-//     master_set_master(toplevel);
-// }
+static void _test(void *args)
+{
+    ;
+}
 
 #define WLR_MODIFIER_NONE 0
 void keybind_register_common_key()
 {
-    // keybind_kbd_register(WLR_MODIFIER_NONE, XKB_KEY_F11,
-    //                      (struct cwc_keybind_info){
-    //                          .type     = CWC_KEYBIND_TYPE_C,
-    //                          .on_press = _test,
-    //                      });
+    keybind_kbd_register(WLR_MODIFIER_NONE, XKB_KEY_F11,
+                         (struct cwc_keybind_info){
+                             .type     = CWC_KEYBIND_TYPE_C,
+                             .on_press = _test,
+                         });
 
     for (size_t i = 1; i <= 12; ++i) {
         char keyname[7];

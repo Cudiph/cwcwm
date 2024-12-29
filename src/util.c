@@ -20,6 +20,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <wayland-util.h>
+#include <wlr/util/box.h>
 
 #include "cwc/util.h"
 
@@ -60,6 +61,12 @@ void wl_list_swap(struct wl_list *x, struct wl_list *y)
     wl_list_insert(x_prev, y);
 }
 
+void wl_list_reattach(struct wl_list *older_sibling, struct wl_list *elm)
+{
+    wl_list_remove(elm);
+    wl_list_insert(older_sibling, elm);
+}
+
 bool _cwc_assert(bool condition, const char *format, ...)
 {
     if (condition)
@@ -76,4 +83,14 @@ bool _cwc_assert(bool condition, const char *format, ...)
 #endif
 
     return false;
+}
+
+void normalized_region_at(
+    struct wlr_box *region, double x, double y, double *nx, double *ny)
+{
+    if (nx)
+        *nx = (x - (double)region->x) / region->width;
+
+    if (ny)
+        *ny = (y - (double)region->y) / region->height;
 }

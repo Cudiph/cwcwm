@@ -41,15 +41,17 @@ struct bsp_node {
     int width, height;
 };
 
-/* insert toplevel to the bsp tree */
+/* insert container to the bsp tree, container must not be already in a tree */
 void bsp_insert_container(struct cwc_container *new, int workspace);
 
-/* remove toplevel from the bsp tree */
-void bsp_remove_container(struct cwc_container *container);
+/* remove client from the bsp tree */
+void bsp_remove_container(struct cwc_container *container, bool update);
 
 void bsp_toggle_split(struct bsp_node *node);
 
 void bsp_update_node(struct bsp_node *parent);
+
+void bsp_node_destroy(struct bsp_node *node);
 
 void bsp_node_enable(struct bsp_node *node);
 void bsp_node_disable(struct bsp_node *node);

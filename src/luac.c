@@ -35,6 +35,7 @@
 #include <wayland-server-core.h>
 #include <wayland-util.h>
 #include <wlr/backend/drm.h>
+#include <wlr/backend/headless.h>
 #include <wlr/backend/multi.h>
 #include <wlr/backend/wayland.h>
 #include <wlr/backend/x11.h>
@@ -308,6 +309,37 @@ static int luaC_emit_signal(lua_State *L)
     return 0;
 }
 
+static void create_output(struct wlr_backend *backend, void *data)
+{
+    int *total_output = data;
+
+    if (wl_list_length(&server.outputs) >= *total_output)
+        return;
+
+    if (wlr_backend_is_wl(backend)) {
+        wlr_wl_output_create(backend);
+    } else if (wlr_backend_is_headless(backend)) {
+        wlr_headless_add_output(backend, 1920, 1080);
+    } else if (wlr_backend_is_x11(backend)) {
+        wlr_x11_output_create(backend);
+    }
+}
+
+/* Create new output.
+ *
+ * @function create_output
+ * @tparam integer total_output
+ * @noreturn
+ */
+static int luaC_create_output(lua_State *L)
+{
+    int total_output = luaL_checkint(L, 1);
+
+    wlr_multi_for_each_backend(server.backend, create_output, &total_output);
+
+    return 0;
+}
+
 /* free it after use */
 static char *get_xdg_config_home()
 {
@@ -410,6 +442,9 @@ int luaC_init()
         {"is_nested",         luaC_is_nested        },
         {"is_startup",        luaC_is_startup       },
         {"get_datadir",       luaC_get_datadir      },
+
+        // intended for dev use only
+        {"create_output",     luaC_create_output    },
 
         {NULL,                NULL                  },
     };

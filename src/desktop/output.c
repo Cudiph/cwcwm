@@ -23,6 +23,7 @@
 #include <wayland-server-core.h>
 #include <wayland-util.h>
 #include <wlr/backend.h>
+#include <wlr/backend/headless.h>
 #include <wlr/types/wlr_alpha_modifier_v1.h>
 #include <wlr/types/wlr_layer_shell_v1.h>
 #include <wlr/types/wlr_output_management_v1.h>
@@ -46,34 +47,37 @@
 #include "cwc/util.h"
 
 static inline void insert_tiled_toplevel_to_bsp_tree(struct cwc_output *output,
-                                                     int view)
+                                                     int workspace)
 {
     struct cwc_container *container;
     wl_list_for_each(container, &output->state->containers,
                      link_output_container)
     {
-        if (!cwc_container_is_visible_in_workspace(container, view)
+        if (!cwc_container_is_visible_in_workspace(container, workspace)
             || cwc_container_is_floating(container)
             || container->bsp_node != NULL)
             continue;
 
-        bsp_insert_container(container, view);
+        bsp_insert_container(container, workspace);
         if (cwc_container_is_maximized(container)
             || cwc_container_is_fullscreen(container))
             bsp_node_disable(container->bsp_node);
     }
 }
 
-void cwc_output_tiling_layout_update(struct cwc_output *output, int view)
+void cwc_output_tiling_layout_update(struct cwc_output *output, int workspace)
 {
-    enum cwc_layout_mode mode =
-        cwc_output_get_current_view_info(output)->layout_mode;
+    if (output == server.fallback_output)
+        return;
 
-    view = view ? view : output->state->active_workspace;
+    enum cwc_layout_mode mode =
+        cwc_output_get_current_tag_info(output)->layout_mode;
+
+    workspace = workspace ? workspace : output->state->active_workspace;
 
     switch (mode) {
     case CWC_LAYOUT_BSP:
-        bsp_update_root(output, view);
+        bsp_update_root(output, workspace);
         break;
     case CWC_LAYOUT_MASTER:
         master_arrange_update(output);
@@ -97,12 +101,12 @@ static struct cwc_output_state *cwc_output_state_create()
 
     for (int i = 0; i < MAX_WORKSPACE; i++) {
 
-        state->view_info[i].useless_gaps              = g_config.useless_gaps;
-        state->view_info[i].layout_mode               = CWC_LAYOUT_FLOATING;
-        state->view_info[i].master_state.master_count = 1;
-        state->view_info[i].master_state.column_count = 1;
-        state->view_info[i].master_state.mwfact       = 0.5;
-        state->view_info[i].master_state.current_layout =
+        state->tag_info[i].useless_gaps              = g_config.useless_gaps;
+        state->tag_info[i].layout_mode               = CWC_LAYOUT_FLOATING;
+        state->tag_info[i].master_state.master_count = 1;
+        state->tag_info[i].master_state.column_count = 1;
+        state->tag_info[i].master_state.mwfact       = 0.5;
+        state->tag_info[i].master_state.current_layout =
             get_default_master_layout();
     }
 
@@ -111,7 +115,6 @@ static struct cwc_output_state *cwc_output_state_create()
 
 static inline void cwc_output_state_save(struct cwc_output *output)
 {
-    // TODO: move to fallback output or not needed?
     cwc_hhmap_insert(server.output_state_cache, output->wlr_output->name,
                      output->state);
 }
@@ -126,16 +129,25 @@ static bool cwc_output_state_try_restore(struct cwc_output *output)
         return false;
 
     struct cwc_output *old_output = output->state->old_output;
-    struct cwc_container *container;
 
-    // update the output in the container to the new one
+    /* restore container to old output */
+    struct cwc_container *container;
     wl_list_for_each(container, &server.containers, link)
     {
-        if (container->output == old_output)
-            container->output = output;
+        if (container->old_prop.output != old_output)
+            continue;
+
+        cwc_container_move_to_output(container, output);
+
+        container->bsp_node  = container->old_prop.bsp_node;
+        container->tag       = container->old_prop.tag;
+        container->workspace = container->old_prop.workspace;
+
+        container->old_prop.bsp_node = NULL;
+        container->old_prop.output   = NULL;
     }
 
-    // update for the layer shell
+    /* update output for the layer shell */
     struct cwc_layer_surface *layer_surface;
     wl_list_for_each(layer_surface, &server.layer_shells, link)
     {
@@ -146,6 +158,8 @@ static bool cwc_output_state_try_restore(struct cwc_output *output)
     }
 
     cwc_hhmap_remove(server.output_state_cache, output->wlr_output->name);
+    free(old_output);
+
     return true;
 }
 
@@ -247,9 +261,7 @@ static void output_repaint(struct cwc_output *output,
 static void on_output_frame(struct wl_listener *listener, void *data)
 {
     struct cwc_output *output = wl_container_of(listener, output, frame_l);
-    struct wlr_scene *scene   = server.scene;
-    struct wlr_scene_output *scene_output =
-        wlr_scene_get_scene_output(scene, output->wlr_output);
+    struct wlr_scene_output *scene_output = output->scene_output;
     struct timespec now;
 
     if (!scene_output)
@@ -264,6 +276,55 @@ static void on_output_frame(struct wl_listener *listener, void *data)
     wlr_scene_output_send_frame_done(scene_output, &now);
 }
 
+static void rescue_output_toplevel_container(struct cwc_output *source,
+                                             struct cwc_output *target)
+{
+    struct cwc_container *container;
+    struct cwc_container *tmp;
+    wl_list_for_each_safe(container, tmp, &source->state->containers,
+                          link_output_container)
+    {
+        if (container->old_prop.output == NULL) {
+            container->old_prop.output    = source;
+            container->old_prop.bsp_node  = container->bsp_node;
+            container->old_prop.workspace = container->workspace;
+            container->old_prop.tag       = container->tag;
+
+            container->bsp_node = NULL;
+        }
+
+        cwc_container_move_to_output(container, target);
+    }
+
+    struct cwc_toplevel *toplevel;
+    struct cwc_toplevel *ttmp;
+    wl_list_for_each_safe(toplevel, ttmp, &source->state->toplevels,
+                          link_output_toplevels)
+    {
+        wl_list_reattach(target->state->toplevels.prev,
+                         &toplevel->link_output_toplevels);
+    }
+}
+
+static void server_focus_previous_output(struct cwc_output *reference)
+{
+    if (wl_list_length_at_least(&server.outputs, 2)) {
+        struct cwc_output *o;
+        wl_list_for_each_reverse(o, &reference->link, link)
+        {
+            if (&o->link == &server.outputs)
+                continue;
+
+            server.focused_output = o;
+            return;
+        }
+    }
+
+    server.focused_output = server.fallback_output;
+}
+
+static void output_layers_fini(struct cwc_output *output);
+
 static void on_output_destroy(struct wl_listener *listener, void *data)
 {
     struct cwc_output *output = wl_container_of(listener, output, destroy_l);
@@ -275,17 +336,51 @@ static void on_output_destroy(struct wl_listener *listener, void *data)
     cwc_log(CWC_INFO, "destroying output (%s): %p %p", output->wlr_output->name,
             output, output->wlr_output);
 
+    output_layers_fini(output);
+    wlr_scene_output_destroy(output->scene_output);
+
     wl_list_remove(&output->destroy_l.link);
     wl_list_remove(&output->frame_l.link);
     wl_list_remove(&output->request_state_l.link);
 
     wl_list_remove(&output->config_commit_l.link);
 
-    wl_list_remove(&output->link);
+    // change focus to previous inserted outputs although the order may wrong
+    server_focus_previous_output(output);
+
+    struct cwc_output *focused = server.focused_output;
+
+    // update output layout
+    wlr_output_layout_remove(server.output_layout, output->wlr_output);
+    wlr_output_layout_get_box(server.output_layout, focused->wlr_output,
+                              &focused->output_layout_box);
+
+    rescue_output_toplevel_container(output, focused);
+
+    for (int i = 1; i < MAX_WORKSPACE; i++) {
+        if (focused != server.fallback_output)
+            cwc_output_set_layout_mode(focused, i,
+                                       focused->state->tag_info[i].layout_mode);
+    }
+
+    cwc_output_update_visible(focused);
 
     luaC_object_unregister(g_config_get_lua_State(), output);
+    wl_list_remove(&output->link);
 
-    free(output);
+    // free the output only when restored because the container still need old
+    // output reference to remove bsp node.
+    output->wlr_output = NULL;
+    // free(output);
+}
+
+static void output_layer_set_position(struct cwc_output *output, int x, int y)
+{
+    wlr_scene_node_set_position(&output->layers.background->node, x, y);
+    wlr_scene_node_set_position(&output->layers.bottom->node, x, y);
+    wlr_scene_node_set_position(&output->layers.top->node, x, y);
+    wlr_scene_node_set_position(&output->layers.overlay->node, x, y);
+    wlr_scene_node_set_position(&output->layers.session_lock->node, x, y);
 }
 
 static void update_output_manager_config()
@@ -304,6 +399,9 @@ static void update_output_manager_config()
         config_head->state.enabled = output->wlr_output->enabled;
         config_head->state.x       = output_box.x;
         config_head->state.y       = output_box.y;
+
+        output->output_layout_box = output_box;
+        output_layer_set_position(output, output_box.x, output_box.y);
     }
 
     wlr_output_manager_v1_set_configuration(server.output_manager, cfg);
@@ -332,12 +430,53 @@ static void on_config_commit(struct wl_listener *listener, void *data)
     cwc_output_tiling_layout_update_all_general_workspace(output);
 }
 
+static void output_layers_init(struct cwc_output *output)
+{
+    output->layers.background = wlr_scene_tree_create(server.root.background);
+    output->layers.bottom     = wlr_scene_tree_create(server.root.bottom);
+    output->layers.top        = wlr_scene_tree_create(server.root.top);
+    output->layers.overlay    = wlr_scene_tree_create(server.root.overlay);
+    output->layers.session_lock =
+        wlr_scene_tree_create(server.root.session_lock);
+}
+
+static void output_layers_fini(struct cwc_output *output)
+{
+    wlr_scene_node_destroy(&output->layers.background->node);
+    wlr_scene_node_destroy(&output->layers.bottom->node);
+    wlr_scene_node_destroy(&output->layers.top->node);
+    wlr_scene_node_destroy(&output->layers.overlay->node);
+    wlr_scene_node_destroy(&output->layers.session_lock->node);
+}
+
+static struct cwc_output *cwc_output_create(struct wlr_output *wlr_output)
+{
+    struct cwc_output *output = calloc(1, sizeof(*output));
+    output->type              = DATA_TYPE_OUTPUT;
+    output->wlr_output        = wlr_output;
+    output->tearing_allowed   = false;
+    output->wlr_output->data  = output;
+
+    output->output_layout_box.width  = wlr_output->width;
+    output->output_layout_box.height = wlr_output->height;
+
+    output->usable_area = output->output_layout_box;
+
+    if (!cwc_output_state_try_restore(output))
+        output->state = cwc_output_state_create();
+    else
+        output->restored = true;
+
+    output_layers_init(output);
+
+    return output;
+}
+
 static void on_new_output(struct wl_listener *listener, void *data)
 {
     struct wlr_output *wlr_output = data;
 
-    // TODO: multihead setup
-    if (wl_list_length(&server.outputs) || wlr_output->non_desktop)
+    if (wlr_output == server.fallback_output->wlr_output)
         return;
 
     /* Configures the output created by the backend to use our allocator
@@ -366,17 +505,9 @@ static void on_new_output(struct wl_listener *listener, void *data)
     wlr_output_commit_state(wlr_output, &state);
     wlr_output_state_finish(&state);
 
-    struct cwc_output *output = calloc(1, sizeof(*output));
-    output->type              = DATA_TYPE_OUTPUT;
-    output->wlr_output        = wlr_output;
-    output->tearing_allowed   = false;
-    output->wlr_output->data  = output;
+    struct cwc_output *output = cwc_output_create(wlr_output);
     server.focused_output     = output;
-
-    if (!cwc_output_state_try_restore(output))
-        output->state = cwc_output_state_create();
-    else
-        output->restored = true;
+    rescue_output_toplevel_container(server.fallback_output, output);
 
     output->frame_l.notify         = on_output_frame;
     output->request_state_l.notify = on_request_state;
@@ -401,10 +532,9 @@ static void on_new_output(struct wl_listener *listener, void *data)
      */
     struct wlr_output_layout_output *layout_output =
         wlr_output_layout_add_auto(server.output_layout, wlr_output);
-    struct wlr_scene_output *scene_output =
-        wlr_scene_output_create(server.scene, wlr_output);
+    output->scene_output = wlr_scene_output_create(server.scene, wlr_output);
     wlr_scene_output_layout_add_output(server.scene_layout, layout_output,
-                                       scene_output);
+                                       output->scene_output);
 
     cwc_log(CWC_INFO, "created output (%s): %p %p", wlr_output->name, output,
             output->wlr_output);
@@ -464,7 +594,6 @@ static void output_manager_apply(struct wlr_output_configuration_v1 *config,
 
         update_output_manager_config();
         arrange_layers(output);
-        cwc_output_tiling_layout_update(output, 0);
     }
 
     if (ok)
@@ -543,6 +672,11 @@ static void on_new_tearing_object(struct wl_listener *listener, void *data)
 
 void setup_output(struct cwc_server *s)
 {
+    struct wlr_output *headless =
+        wlr_headless_add_output(s->headless_backend, 1280, 720);
+    wlr_output_set_name(headless, "FALLBACK");
+    s->fallback_output = cwc_output_create(headless);
+
     // wlr output layout
     s->output_layout       = wlr_output_layout_create(s->wl_display);
     s->new_output_l.notify = on_new_output;
@@ -571,6 +705,9 @@ void setup_output(struct cwc_server *s)
 
 void cwc_output_update_visible(struct cwc_output *output)
 {
+    if (output == server.fallback_output)
+        return;
+
     struct cwc_container *container;
     wl_list_for_each(container, &output->state->containers,
                      link_output_container)
@@ -624,6 +761,18 @@ cwc_output_get_newest_focus_toplevel(struct cwc_output *output, bool visible)
             continue;
 
         return toplevel;
+    }
+
+    return NULL;
+}
+
+struct cwc_output *cwc_output_get_by_name(const char *name)
+{
+    struct cwc_output *output;
+    wl_list_for_each(output, &server.outputs, link)
+    {
+        if (strcmp(output->wlr_output->name, name) == 0)
+            return output;
     }
 
     return NULL;
@@ -731,20 +880,21 @@ static void restore_floating_box_for_all(struct cwc_output *output)
 }
 
 void cwc_output_set_layout_mode(struct cwc_output *output,
+                                int workspace,
                                 enum cwc_layout_mode mode)
 {
 
     if (mode < 0 || mode >= CWC_LAYOUT_LENGTH)
         return;
 
-    enum cwc_layout_mode *current_mode =
-        &cwc_output_get_current_view_info(output)->layout_mode;
-    *current_mode = mode;
+    if (!workspace)
+        workspace = output->state->active_workspace;
+
+    output->state->tag_info[workspace].layout_mode = mode;
 
     switch (mode) {
     case CWC_LAYOUT_BSP:
-        insert_tiled_toplevel_to_bsp_tree(output,
-                                          output->state->active_workspace);
+        insert_tiled_toplevel_to_bsp_tree(output, workspace);
         break;
     case CWC_LAYOUT_FLOATING:
         restore_floating_box_for_all(output);
@@ -753,12 +903,12 @@ void cwc_output_set_layout_mode(struct cwc_output *output,
         break;
     }
 
-    cwc_output_tiling_layout_update(output, 0);
+    cwc_output_tiling_layout_update(output, workspace);
 }
 
 void cwc_output_set_strategy_idx(struct cwc_output *output, int idx)
 {
-    struct cwc_view_info *info = cwc_output_get_current_view_info(output);
+    struct cwc_tag_info *info         = cwc_output_get_current_tag_info(output);
     enum cwc_layout_mode current_mode = info->layout_mode;
 
     switch (current_mode) {
@@ -790,7 +940,7 @@ void cwc_output_set_useless_gaps(struct cwc_output *output,
     workspace  = CLAMP(workspace, 1, MAX_WORKSPACE);
     gaps_width = MAX(0, gaps_width);
 
-    output->state->view_info[workspace].useless_gaps = gaps_width;
+    output->state->tag_info[workspace].useless_gaps = gaps_width;
     cwc_output_tiling_layout_update(output, workspace);
 }
 
@@ -804,6 +954,6 @@ void cwc_output_set_mwfact(struct cwc_output *output,
     workspace = CLAMP(workspace, 1, MAX_WORKSPACE);
     factor    = CLAMP(factor, 0.1, 0.9);
 
-    output->state->view_info[workspace].master_state.mwfact = factor;
+    output->state->tag_info[workspace].master_state.mwfact = factor;
     cwc_output_tiling_layout_update(output, workspace);
 }

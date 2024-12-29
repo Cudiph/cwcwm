@@ -88,6 +88,12 @@ bool wl_list_length_at_least(struct wl_list *list, int more_than_or_equal_to);
 
 void wl_list_swap(struct wl_list *x, struct wl_list *y);
 
+void wl_list_reattach(struct wl_list *older_sibling, struct wl_list *elm);
+
+struct wlr_box;
+void normalized_region_at(
+    struct wlr_box *region, double x, double y, double *nx, double *ny);
+
 enum cwc_log_importance {
     CWC_SILENT              = WLR_SILENT,
     CWC_ERROR               = WLR_ERROR,
