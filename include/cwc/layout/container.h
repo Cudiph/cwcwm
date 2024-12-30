@@ -58,6 +58,7 @@ struct cwc_container {
     struct wl_list link;
     struct wlr_scene_tree *tree;
     struct wlr_scene_tree *popup_tree; // or anything that should above toplevel
+    struct wlr_scene_rect *fullscreen_bg;
     struct cwc_border border;
     int width, height;
     float opacity;

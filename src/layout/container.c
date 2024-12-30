@@ -977,6 +977,12 @@ void cwc_container_set_fullscreen(struct cwc_container *container, bool set)
 
         if (bsp_node)
             bsp_node_disable(bsp_node);
+
+        float black[4]           = {0, 0, 0, 1};
+        container->fullscreen_bg = wlr_scene_rect_create(
+            container->tree, container->output->output_layout_box.width,
+            container->output->output_layout_box.height, black);
+        wlr_scene_node_lower_to_bottom(&container->fullscreen_bg->node);
     } else {
         // set first so bsp is allowing it to configure
         container->state &= ~CONTAINER_STATE_FULLSCREEN;
@@ -985,6 +991,11 @@ void cwc_container_set_fullscreen(struct cwc_container *container, bool set)
             cwc_container_restore_floating_box(container);
         else if (container->bsp_node)
             bsp_node_enable(bsp_node);
+
+        if (container->fullscreen_bg) {
+            wlr_scene_node_destroy(&container->fullscreen_bg->node);
+            container->fullscreen_bg = NULL;
+        }
     }
 
     cwc_container_for_each_toplevel(container, all_toplevel_set_fullscreen,
