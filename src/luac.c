@@ -86,6 +86,10 @@ static void reregister_lua_object()
     wl_list_for_each(output, &server.outputs, link)
     {
         luaC_object_screen_register(L, output);
+
+        for (int i = 0; i < MAX_WORKSPACE; i++) {
+            luaC_object_tag_register(L, &output->state->tag_info[i]);
+        }
     }
 }
 

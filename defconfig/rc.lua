@@ -93,7 +93,7 @@ cwc.connect_signal("client::map", function(client)
     if client.appid:match("firefox") then
         client:move_to_tag(2)
         client.maximize = true
-        client.screen:view_only(2)
+        client.screen.active_workspace = 2
     end
 
     if client.appid:match("pcmanfm") then
