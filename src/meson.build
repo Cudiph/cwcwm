@@ -30,6 +30,7 @@ srcs = [
   'objects/client.c',
   'objects/container.c',
   'objects/screen.c',
+  'objects/tag.c',
 
   # Stable upstream protocols
   protocols_server_header['xdg-shell'],

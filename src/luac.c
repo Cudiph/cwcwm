@@ -475,6 +475,9 @@ int luaC_init()
     /* cwc.plugin */
     luaC_plugin_setup(L);
 
+    /* cwc_tag */
+    luaC_tag_setup(L);
+
     char *luarc_default_location = get_luarc_path();
     if (config_path && access(config_path, R_OK) == 0) {
         luaC_loadrc(L, config_path);

@@ -110,5 +110,6 @@ void luaC_register_class(lua_State *L,
 LUAC_CLASS_CREATE(cwc_toplevel, client)
 LUAC_CLASS_CREATE(cwc_container, container)
 LUAC_CLASS_CREATE(cwc_output, screen)
+LUAC_CLASS_CREATE(cwc_tag_info, tag)
 
 #endif // !_CWC_LUACLASS_H

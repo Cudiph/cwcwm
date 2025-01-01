@@ -1,7 +1,6 @@
 -- Test the cwc_screen property
 
 local bit = require("bit")
-local enum = require("cuteful.enum")
 
 local cwc = cwc
 
@@ -33,7 +32,7 @@ local function prop_test(s)
     assert(s.active_workspace == 1)
     assert(s.active_tag == 1)
 
-    s:view_only(5)
+    s:get_tag(5):view_only()
     assert(s:get_active_workspace() == 5)
     assert(s:get_active_tag() == bit.lshift(1, 5 - 1))
 
@@ -43,7 +42,7 @@ local function prop_test(s)
 
     s.active_tag = bit.bor(bit.lshift(1, 5 - 1), bit.lshift(1, 3 - 1))
 
-    s:toggle_tag(4)
+    s:get_tag(4):toggle()
     assert(s.active_tag == bit.bor(bit.lshift(1, 5 - 1), bit.lshift(1, 3 - 1), bit.lshift(1, 4 - 1)))
 
     assert(s.max_general_workspace == 9)
@@ -54,26 +53,12 @@ local function prop_test(s)
     s:set_max_general_workspace(10000)
     assert(s.max_general_workspace == cwc.screen.get_max_workspace())
 
-    assert(s.useless_gaps >= 0)
-    s.useless_gaps = 3
-    assert(s.useless_gaps == 3)
-
-    assert(s.layout_mode >= 0 and s.layout_mode < enum.layout_mode.LENGTH)
-    s.layout_mode = enum.layout_mode.BSP
-    assert(s.layout_mode == enum.layout_mode.BSP)
-
-    assert(s.mwfact == 0.5)
-    s.mwfact = 99999
-    assert(s.mwfact == 0.9)
-
     assert(not s.allow_tearing)
     s.allow_tearing = true
     assert(s.allow_tearing)
 end
 
 local function method_test(s)
-    s:strategy_idx(1)
-    s:view_only(1)
     assert(#s.focus_stack == #s.containers)
     assert(#s.clients == #s:get_clients())
     assert(#s.containers == #s:get_containers())

@@ -50,7 +50,7 @@ end
 -- @noreturn
 function tag.viewnone(screen)
     local s = screen or cwc.screen.focused()
-    s:view_only(0);
+    s.active_workspace = 0;
 end
 
 --- Set layout_mode for tag n.
@@ -63,14 +63,9 @@ end
 -- @see cuteful.enum.layout_mode
 function tag.layout_mode(idx, layout_mode, screen)
     local s = screen or cwc.screen.focused()
-    local last_tag = s.active_tag
-    local last_workspace = s.active_workspace
+    local t = s:get_tag(idx)
 
-    s.active_workspace = idx
-    s.layout_mode = layout_mode
-
-    s.active_tag = last_tag
-    s.active_workspace = last_workspace
+    t.layout_mode = layout_mode
 end
 
 --- Increase gap.
@@ -81,7 +76,8 @@ end
 -- @noreturn
 function tag.incgap(add, screen)
     local s = screen or cwc.screen.focused()
-    s.useless_gaps = s.useless_gaps + add
+    local t = s.selected_tag
+    t.useless_gaps = t.useless_gaps + add
 end
 
 --- Increase master width factor.
@@ -92,7 +88,8 @@ end
 -- @noreturn
 function tag.incmwfact(add, screen)
     local s = screen or cwc.screen.focused()
-    s.mwfact = s.mwfact + add
+    local t = s.selected_tag
+    t.mwfact = t.mwfact + add
 end
 
 return tag

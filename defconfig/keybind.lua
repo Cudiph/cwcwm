@@ -267,15 +267,13 @@ end, { description = "increase client height", group = "client" })
 for i = 1, 9 do
     local i_str = tostring(i)
     kbd.bind(MODKEY, i_str, function()
-        local s = cwc.screen.focused()
-        s:view_only(i_str)
+        local t = cwc.screen.focused():get_tag(i)
+        t:view_only()
     end, { description = "view tag #" .. i_str, group = "tag" })
 
     kbd.bind({ MODKEY, mod.CTRL }, i_str, function()
-        local s = cwc.screen.focused()
-        if not s then return end
-
-        s:toggle_tag(i_str)
+        local t = cwc.screen.focused():get_tag(i)
+        t:toggle()
     end, { description = "toggle tag #" .. i_str, group = "tag" })
 
     kbd.bind({ MODKEY, mod.SHIFT }, i_str, function()
@@ -335,16 +333,16 @@ end, { description = "toggle bsp split", group = "layout" })
 
 --------------- layout commands
 kbd.bind(MODKEY, "space", function()
-    local s = cwc.screen.focused()
-    if s then s.layout_mode = (s.layout_mode + 1) % enum.layout_mode.LENGTH end
+    local tag = cwc.screen.focused().selected_tag
+    tag.layout_mode = (tag.layout_mode + 1) % enum.layout_mode.LENGTH
 end, { description = "cycle to next layout mode in focused screen", group = "layout" })
 kbd.bind({ MODKEY, mod.CTRL }, "space", function()
-    local s = cwc.screen.focused()
-    if s then s:strategy_idx(1) end
+    local tag = cwc.screen.focused().selected_tag
+    tag:strategy_idx(1)
 end, { description = "cycle to next strategy in focused screen", group = "layout" })
 kbd.bind({ MODKEY, mod.CTRL, mod.SHIFT }, "space", function()
-    local s = cwc.screen.focused()
-    if s then s:strategy_idx(-1) end
+    local tag = cwc.screen.focused().selected_tag
+    tag:strategy_idx(-1)
 end, { description = "cycle to previous strategy in focused screen", group = "layout" })
 
 ---------------- launcher

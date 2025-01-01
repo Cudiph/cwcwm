@@ -135,40 +135,6 @@ static int luaC_screen_set_default_useless_gaps(lua_State *L)
     return 0;
 }
 
-/** Toggle tag.
- *
- * @method toggle_tag
- * @tparam integer idx Tag index
- * @noreturn
- */
-static int luaC_screen_toggle_tag(lua_State *L)
-{
-    struct cwc_output *output = luaC_screen_checkudata(L, 1);
-    int tag                   = luaL_checkint(L, 2);
-
-    output->state->active_tag ^= 1 << (tag - 1);
-    cwc_output_update_visible(output);
-    cwc_output_tiling_layout_update(output, 0);
-
-    return 0;
-}
-
-/** Change the layout mode strategy.
- *
- * @method strategy_idx
- * @tparam integer idx
- * @noreturn
- */
-static int luaC_screen_strategy_idx(lua_State *L)
-{
-    struct cwc_output *output = luaC_screen_checkudata(L, 1);
-    int direction             = luaL_checkint(L, 2);
-
-    cwc_output_set_strategy_idx(output, direction);
-
-    return 0;
-}
-
 #define SCREEN_PROPERTY_FORWARD_WLR_OUTPUT_PROP(fieldname, datatype) \
     static int luaC_screen_get_##fieldname(lua_State *L)             \
     {                                                                \
@@ -315,6 +281,27 @@ static int luaC_screen_get_restored(lua_State *L)
     return 1;
 }
 
+/** The current selected tag of the screen.
+ *
+ * If there are 2 or more activated tags, the compositor will use this tag to
+ * get information such as gaps, layout mode or master factor.
+ *
+ * @property selected_tag
+ * @tparam cwc_tag selected_tag
+ * @readonly
+ * @propertydefault the last tag that set by view_only.
+ * @see active_workspace
+ * @see cwc_tag:view_only
+ */
+static int luaC_screen_get_selected_tag(lua_State *L)
+{
+    struct cwc_output *output = luaC_screen_checkudata(L, 1);
+
+    luaC_object_push(L, cwc_output_get_current_tag_info(output));
+
+    return 1;
+}
+
 /** The workarea/usable area of the screen.
  *
  * @property workarea
@@ -334,33 +321,6 @@ static int luaC_screen_get_workarea(lua_State *L)
     struct wlr_box geom = output->usable_area;
 
     luaC_pushbox(L, geom);
-
-    return 1;
-}
-
-/** The layout mode of the active workspace.
- *
- * @property layout_mode
- * @tparam[opt=0] integer layout_mode Layout mode enum from cuteful.
- * @negativeallowed false
- * @see cuteful.enum.layout_mode
- */
-static int luaC_screen_set_layout_mode(lua_State *L)
-{
-    struct cwc_output *output = luaC_screen_checkudata(L, 1);
-    uint32_t layout_mode      = luaL_checkint(L, 2);
-
-    cwc_output_set_layout_mode(output, 0, layout_mode);
-
-    return 0;
-}
-
-static int luaC_screen_get_layout_mode(lua_State *L)
-{
-    struct cwc_output *output = luaC_screen_checkudata(L, 1);
-    struct cwc_tag_info *info = cwc_output_get_current_tag_info(output);
-
-    lua_pushinteger(L, info->layout_mode);
 
     return 1;
 }
@@ -417,12 +377,13 @@ static int luaC_screen_set_active_tag(lua_State *L)
     return 0;
 }
 
-/** Currently active workspace.
+/** The index of the selected_tag.
  *
  * @property active_workspace
  * @tparam integer active_workspace
  * @propertydefault Current active workspace.
  * @negativeallowed false
+ * @see selected_tag
  */
 static int luaC_screen_get_active_workspace(lua_State *L)
 {
@@ -432,16 +393,6 @@ static int luaC_screen_get_active_workspace(lua_State *L)
     return 1;
 }
 
-/** Does the same as setting active_workspace property.
- *
- * Change output view, for tag it'll reset all the activated tag and activate
- * the specified index, for the workspace it'll just regular workspace change.
- *
- * @method view_only
- * @tparam integer idx Index of the view
- * @noreturn
- * @see active_workspace
- */
 static int luaC_screen_set_active_workspace(lua_State *L)
 {
     struct cwc_output *output = luaC_screen_checkudata(L, 1);
@@ -473,58 +424,6 @@ static int luaC_screen_set_max_general_workspace(lua_State *L)
     newmax                    = MAX(MIN(newmax, MAX_WORKSPACE), 1);
 
     output->state->max_general_workspace = newmax;
-
-    return 0;
-}
-
-/** Set useless gaps width in the active workspace.
- *
- * @property useless_gaps
- * @tparam integer useless_gaps
- * @propertydefault 0
- * @rangestart 0
- */
-static int luaC_screen_get_useless_gaps(lua_State *L)
-{
-    struct cwc_output *output = luaC_screen_checkudata(L, 1);
-    lua_pushnumber(L, cwc_output_get_current_tag_info(output)->useless_gaps);
-
-    return 1;
-}
-
-static int luaC_screen_set_useless_gaps(lua_State *L)
-{
-    struct cwc_output *output = luaC_screen_checkudata(L, 1);
-    int width                 = luaL_checkint(L, 2);
-
-    cwc_output_set_useless_gaps(output, 0, width);
-
-    return 0;
-}
-
-/** Master width factor.
- *
- * @property mwfact
- * @tparam number mwfact
- * @propertydefault 0.5
- * @rangestart 0.1
- * @rangestop 0.9
- */
-static int luaC_screen_get_mwfact(lua_State *L)
-{
-    struct cwc_output *output = luaC_screen_checkudata(L, 1);
-    lua_pushnumber(
-        L, cwc_output_get_current_tag_info(output)->master_state.mwfact);
-
-    return 1;
-}
-
-static int luaC_screen_set_mwfact(lua_State *L)
-{
-    struct cwc_output *output = luaC_screen_checkudata(L, 1);
-    double factor             = luaL_checknumber(L, 2);
-
-    cwc_output_set_mwfact(output, 0, factor);
 
     return 0;
 }
@@ -641,13 +540,13 @@ static int luaC_screen_get_focus_stack(lua_State *L)
  * The order is newest minimized to oldest.
  *
  * @method get_minimized
- * @tparam[opt=false] bool active Whether to use active_tag as filter
+ * @tparam[opt=false] bool visible Whether to use active_tag as filter
  * @treturn cwc_client[] array of toplevels
  */
 static int luaC_screen_get_minimized(lua_State *L)
 {
     struct cwc_output *output = luaC_screen_checkudata(L, 1);
-    bool activetag_only       = lua_toboolean(L, 2);
+    bool visible_only         = lua_toboolean(L, 2);
 
     lua_newtable(L);
 
@@ -656,7 +555,7 @@ static int luaC_screen_get_minimized(lua_State *L)
     wl_list_for_each(container, &output->state->minimized,
                      link_output_minimized)
     {
-        if (activetag_only) {
+        if (visible_only) {
             if (container->tag & output->state->active_tag)
                 goto push_toplevel;
         } else {
@@ -669,6 +568,25 @@ static int luaC_screen_get_minimized(lua_State *L)
         luaC_object_push(L, cwc_container_get_front_toplevel(container));
         lua_rawseti(L, -2, i++);
     }
+
+    return 1;
+}
+
+/** Get tag with using the specified index.
+ *
+ * @method get_tag
+ * @tparam integer idx Index of the tag.
+ * @treturn[opt=nil] cwc_tag
+ */
+static int luaC_screen_get_tag(lua_State *L)
+{
+    struct cwc_output *output = luaC_screen_checkudata(L, 1);
+    int tag                   = luaL_checkint(L, 2);
+
+    if (tag >= 0 && tag <= MAX_WORKSPACE)
+        luaC_object_push(L, &output->state->tag_info[tag]);
+    else
+        lua_pushnil(L);
 
     return 1;
 }
@@ -687,15 +605,13 @@ void luaC_screen_setup(lua_State *L)
     };
 
     luaL_Reg screen_methods[] = {
-        {"view_only",       luaC_screen_set_active_workspace},
-        {"toggle_tag",      luaC_screen_toggle_tag          },
-        {"strategy_idx",    luaC_screen_strategy_idx        },
+        {"get_tag",         luaC_screen_get_tag        },
 
-        // ro prop but have arguments
-        {"get_containers",  luaC_screen_get_containers      },
-        {"get_clients",     luaC_screen_get_clients         },
-        {"get_focus_stack", luaC_screen_get_focus_stack     },
-        {"get_minimized",   luaC_screen_get_minimized       },
+        // ro prop but have optional arguments
+        {"get_containers",  luaC_screen_get_containers },
+        {"get_clients",     luaC_screen_get_clients    },
+        {"get_focus_stack", luaC_screen_get_focus_stack},
+        {"get_minimized",   luaC_screen_get_minimized  },
 
         // readonly prop
         SCREEN_REG_READ_ONLY(name),
@@ -713,17 +629,15 @@ void luaC_screen_setup(lua_State *L)
         SCREEN_REG_READ_ONLY(phys_height),
         SCREEN_REG_READ_ONLY(scale),
         SCREEN_REG_READ_ONLY(restored),
+        SCREEN_REG_READ_ONLY(selected_tag),
 
         // rw properties
         SCREEN_REG_PROPERTY(allow_tearing),
-        SCREEN_REG_PROPERTY(layout_mode),
         SCREEN_REG_PROPERTY(active_tag),
         SCREEN_REG_PROPERTY(active_workspace),
         SCREEN_REG_PROPERTY(max_general_workspace),
-        SCREEN_REG_PROPERTY(useless_gaps),
-        SCREEN_REG_PROPERTY(mwfact),
 
-        {NULL,              NULL                            },
+        {NULL,              NULL                       },
     };
 
     luaC_register_class(L, screen_classname, screen_methods,

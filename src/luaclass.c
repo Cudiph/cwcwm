@@ -22,6 +22,7 @@
 const char *const client_classname    = "cwc_client";
 const char *const container_classname = "cwc_container";
 const char *const screen_classname    = "cwc_screen";
+const char *const tag_classname       = "cwc_tag";
 
 /* equivalent lua code:
  * function(t, k)

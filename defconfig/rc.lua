@@ -58,12 +58,12 @@ cwc.connect_signal("screen::new", function(screen)
         tag.layout_mode(i, enum.layout_mode.MASTER, screen)
     end
 
-    -- set workspace 2, 8, and 9 to be floating
+    -- set workspace 2, 8, and 9 to floating mode
     tag.layout_mode(2, enum.layout_mode.FLOATING, screen)
     tag.layout_mode(8, enum.layout_mode.FLOATING, screen)
     tag.layout_mode(9, enum.layout_mode.FLOATING, screen)
 
-    -- set workspace 4, 5, 6 to bsp
+    -- set workspace 4, 5, 6 to bsp mode
     tag.layout_mode(4, enum.layout_mode.BSP, screen)
     tag.layout_mode(5, enum.layout_mode.BSP, screen)
     tag.layout_mode(6, enum.layout_mode.BSP, screen)

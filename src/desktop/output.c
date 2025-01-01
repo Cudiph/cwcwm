@@ -46,25 +46,6 @@
 #include "cwc/types.h"
 #include "cwc/util.h"
 
-static inline void insert_tiled_toplevel_to_bsp_tree(struct cwc_output *output,
-                                                     int workspace)
-{
-    struct cwc_container *container;
-    wl_list_for_each(container, &output->state->containers,
-                     link_output_container)
-    {
-        if (!cwc_container_is_visible_in_workspace(container, workspace)
-            || cwc_container_is_floating(container)
-            || container->bsp_node != NULL)
-            continue;
-
-        bsp_insert_container(container, workspace);
-        if (cwc_container_is_maximized(container)
-            || cwc_container_is_fullscreen(container))
-            bsp_node_disable(container->bsp_node);
-    }
-}
-
 void cwc_output_tiling_layout_update(struct cwc_output *output, int workspace)
 {
     if (output == server.fallback_output)
@@ -87,9 +68,11 @@ void cwc_output_tiling_layout_update(struct cwc_output *output, int workspace)
     }
 }
 
-static struct cwc_output_state *cwc_output_state_create()
+static struct cwc_output_state *
+cwc_output_state_create(struct cwc_output *output)
 {
     struct cwc_output_state *state = calloc(1, sizeof(struct cwc_output_state));
+    state->output                  = output;
 
     state->active_tag            = 1;
     state->active_workspace      = 1;
@@ -99,15 +82,19 @@ static struct cwc_output_state *cwc_output_state_create()
     wl_list_init(&state->containers);
     wl_list_init(&state->minimized);
 
+    lua_State *L = g_config_get_lua_State();
     for (int i = 0; i < MAX_WORKSPACE; i++) {
+        struct cwc_tag_info *tag_info = &state->tag_info[i];
 
-        state->tag_info[i].useless_gaps              = g_config.useless_gaps;
-        state->tag_info[i].layout_mode               = CWC_LAYOUT_FLOATING;
-        state->tag_info[i].master_state.master_count = 1;
-        state->tag_info[i].master_state.column_count = 1;
-        state->tag_info[i].master_state.mwfact       = 0.5;
-        state->tag_info[i].master_state.current_layout =
-            get_default_master_layout();
+        tag_info->index                       = i;
+        tag_info->useless_gaps                = g_config.useless_gaps;
+        tag_info->layout_mode                 = CWC_LAYOUT_FLOATING;
+        tag_info->master_state.master_count   = 1;
+        tag_info->master_state.column_count   = 1;
+        tag_info->master_state.mwfact         = 0.5;
+        tag_info->master_state.current_layout = get_default_master_layout();
+
+        luaC_object_tag_register(L, tag_info);
     }
 
     return state;
@@ -128,6 +115,7 @@ static bool cwc_output_state_try_restore(struct cwc_output *output)
     if (!output->state)
         return false;
 
+    output->state->output         = output;
     struct cwc_output *old_output = output->state->old_output;
 
     /* restore container to old output */
@@ -163,12 +151,13 @@ static bool cwc_output_state_try_restore(struct cwc_output *output)
     return true;
 }
 
-/* actually won't be destroyed since how do I know when the output will
- * come back???
+/* output state will not be destroyed in entire compositor lifetime and used for
+ * restoration
  */
 static inline void cwc_output_state_destroy(struct cwc_output_state *state)
 {
-    free(state);
+    // unreg tag object
+    // free(state);
 }
 
 static void _output_configure_scene(struct cwc_output *output,
@@ -463,7 +452,7 @@ static struct cwc_output *cwc_output_create(struct wlr_output *wlr_output)
     output->usable_area = output->output_layout_box;
 
     if (!cwc_output_state_try_restore(output))
-        output->state = cwc_output_state_create();
+        output->state = cwc_output_state_create(output);
     else
         output->restored = true;
 
@@ -854,13 +843,32 @@ cwc_output_get_visible_containers(struct cwc_output *output)
 
 //================== TAGS OPERATION ===================
 
-/** set to specified view reseting all tagging bits or in short switch to
- * workspace x
- */
-void cwc_output_set_view_only(struct cwc_output *output, int view)
+static inline void insert_tiled_toplevel_to_bsp_tree(struct cwc_output *output,
+                                                     int workspace)
 {
-    output->state->active_tag       = 1 << (view - 1);
-    output->state->active_workspace = view;
+    struct cwc_container *container;
+    wl_list_for_each(container, &output->state->containers,
+                     link_output_container)
+    {
+        if (!cwc_container_is_visible_in_workspace(container, workspace)
+            || cwc_container_is_floating(container)
+            || container->bsp_node != NULL)
+            continue;
+
+        bsp_insert_container(container, workspace);
+        if (cwc_container_is_maximized(container)
+            || cwc_container_is_fullscreen(container))
+            bsp_node_disable(container->bsp_node);
+    }
+}
+
+void cwc_output_set_view_only(struct cwc_output *output, int workspace)
+{
+    if (workspace)
+        output->state->active_tag = 1 << (workspace - 1);
+    else
+        output->state->active_tag = 0;
+    output->state->active_workspace = workspace;
 
     cwc_output_tiling_layout_update(output, 0);
     cwc_output_update_visible(output);

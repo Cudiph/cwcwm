@@ -37,6 +37,7 @@ file                                          = {
     "../src/objects/client.c",
     "../src/objects/container.c",
     "../src/objects/screen.c",
+    "../src/objects/tag.c",
 
     "../src/input/cursor.c",
     "../src/input/keybinding.c",
@@ -2226,7 +2227,9 @@ end
 
 -- These modules merge the doc of their `awful` siblings.
 local coreclassmap = {
-    -- ["cwc.client"] = "cwc.client<span class='listplusign'> + cuteful.client</span>",
+    ["cwc.client"] = "cwc.client<span class='listplusign'> + cwc_client</span>",
+    ["cwc.screen"] = "cwc.client<span class='listplusign'> + cwc_screen</span>",
+    ["cwc.container"] = "cwc.container<span class='listplusign'> + cwc_container</span>",
 }
 
 -- Add the full module name in front.

@@ -20,6 +20,7 @@ struct cwc_output_state {
     struct wl_list containers;  // cwc_container.link_output_container
     struct wl_list minimized;   // cwc_container.link_output_minimized
 
+    struct cwc_output *output;
     struct cwc_output *old_output;
 
     /* the tag used to decide if client visible */
@@ -30,7 +31,7 @@ struct cwc_output_state {
     int max_general_workspace;
 
     /* use array for now too lazy to manage the memory */
-    struct cwc_tag_info tag_info[MAX_WORKSPACE];
+    struct cwc_tag_info tag_info[MAX_WORKSPACE + 1];
 };
 
 /* wlr_output.data == cwc_output */
@@ -96,7 +97,6 @@ void cwc_output_set_useless_gaps(struct cwc_output *output, int tag, int width);
 void cwc_output_set_mwfact(struct cwc_output *output,
                            int workspace,
                            double factor);
-
 void cwc_output_set_view_only(struct cwc_output *output, int view);
 void cwc_output_set_layout_mode(struct cwc_output *output,
                                 int workspace,
@@ -151,6 +151,13 @@ static inline void cwc_output_set_allow_tearing(struct cwc_output *output,
 {
     output->tearing_allowed = set;
 }
+
+#define cwc_output_from_tag_info(ptr)                                       \
+    (struct cwc_output                                                      \
+         *)((struct cwc_output_state *)((char *)(ptr)                       \
+                                        - offsetof(struct cwc_output_state, \
+                                                   tag_info[ptr->index])))  \
+        ->output
 
 #endif // !_CWC_OUTPUT_H
 #define _CWC_OUTPUT_H
