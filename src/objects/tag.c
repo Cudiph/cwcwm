@@ -189,7 +189,6 @@ static int luaC_tag_toggle(lua_State *L)
 /** Set this tag as the only selected tag.
  *
  * @method view_only
- * @tparam integer idx Index of the view
  * @noreturn
  */
 static int luaC_tag_view_only(lua_State *L)
