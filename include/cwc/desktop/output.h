@@ -47,6 +47,8 @@ struct cwc_output {
     bool restored;
     bool tearing_allowed;
 
+    struct timespec last_presentation;
+
     /* direct children of the root with the same name */
     struct {
         struct wlr_scene_tree *background;   // layer_shell
@@ -59,6 +61,7 @@ struct cwc_output {
     struct wl_listener frame_l;
     struct wl_listener request_state_l;
     struct wl_listener destroy_l;
+    struct wl_listener presentation_l;
 
     struct wl_listener config_commit_l;
 };

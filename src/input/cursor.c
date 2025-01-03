@@ -89,7 +89,7 @@ static inline void schedule_resize(struct cwc_toplevel *toplevel,
     }
 
     uint64_t delta_t_msec =
-        timespec_to_msec(now) - cursor->last_resize_time_msec;
+        timespec_to_msec(&now) - cursor->last_resize_time_msec;
 
     if (delta_t_msec > interval_msec) {
         // don't use toplevel_set_container_pos because it'll double configure
@@ -99,7 +99,7 @@ static inline void schedule_resize(struct cwc_toplevel *toplevel,
         cwc_toplevel_set_size_surface(toplevel, new_box->width,
                                       new_box->height);
         clock_gettime(CLOCK_MONOTONIC, &now);
-        cursor->last_resize_time_msec = timespec_to_msec(now);
+        cursor->last_resize_time_msec = timespec_to_msec(&now);
     }
 
     cursor->pending_box = *new_box;
@@ -177,7 +177,7 @@ void process_cursor_motion(struct cwc_cursor *cursor,
     if (!time_msec) {
         struct timespec now;
         clock_gettime(CLOCK_MONOTONIC, &now);
-        time_msec = timespec_to_msec(now);
+        time_msec = timespec_to_msec(&now);
     }
 
     wlr_idle_notifier_v1_notify_activity(server.idle->idle_notifier, wlr_seat);
@@ -390,6 +390,9 @@ void start_interactive_resize(struct cwc_toplevel *toplevel, uint32_t edges)
     if (!cwc_toplevel_is_x11(toplevel))
         wlr_xdg_toplevel_set_resizing(toplevel->xdg_toplevel, true);
 
+    // skip synchronization otherwise it'll make resizing sluggish
+    server.resize_count = -100;
+
     struct wlr_box geo_box = cwc_toplevel_get_geometry(toplevel);
     edges = edges ? edges : decide_which_edge_to_resize(sx, sy, geo_box);
 
@@ -415,7 +418,7 @@ void start_interactive_resize(struct cwc_toplevel *toplevel, uint32_t edges)
     // init resize schedule
     struct timespec now;
     clock_gettime(CLOCK_MONOTONIC, &now);
-    cursor->last_resize_time_msec = timespec_to_msec(now);
+    cursor->last_resize_time_msec = timespec_to_msec(&now);
 }
 
 void stop_interactive()

@@ -2228,7 +2228,7 @@ end
 -- These modules merge the doc of their `awful` siblings.
 local coreclassmap = {
     ["cwc.client"] = "cwc.client<span class='listplusign'> + cwc_client</span>",
-    ["cwc.screen"] = "cwc.client<span class='listplusign'> + cwc_screen</span>",
+    ["cwc.screen"] = "cwc.screen<span class='listplusign'> + cwc_screen</span>",
     ["cwc.container"] = "cwc.container<span class='listplusign'> + cwc_container</span>",
 }
 

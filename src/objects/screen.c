@@ -18,7 +18,10 @@
 
 /** Low-Level API to manage output and the tag/workspace system
  *
- * See also: `cuteful.tag`
+ * See also:
+ *
+ * - `cuteful.tag`
+ * - `cwc_tag`
  *
  * @author Dwi Asmoro Bangun
  * @copyright 2024

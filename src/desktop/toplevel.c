@@ -123,6 +123,13 @@ static void on_surface_commit(struct wl_listener *listener, void *data)
         return;
     }
 
+    if (toplevel->resize_serial
+        && toplevel->resize_serial
+               <= toplevel->xdg_toplevel->base->current.configure_serial) {
+        server.resize_count--;
+        toplevel->resize_serial = 0;
+    }
+
     if (!toplevel->container || toplevel->xdg_toplevel->current.resizing
         || cwc_container_get_front_toplevel(toplevel->container) != toplevel
         || !cwc_output_is_exist(toplevel->container->output)

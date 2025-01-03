@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <time.h>
 #include <wayland-util.h>
 #include <wlr/util/log.h>
 
@@ -126,5 +127,10 @@ bool _cwc_assert(bool condition, const char *format, ...);
         static struct wl_listener _l = {.notify = (H)}; \
         wl_signal_add((E), &_l);                        \
     } while (0)
+
+static inline uint64_t timespec_to_msec(struct timespec *t)
+{
+    return t->tv_sec * 1000 + t->tv_nsec / 1e6;
+}
 
 #endif // !_CWC_UTIL_H

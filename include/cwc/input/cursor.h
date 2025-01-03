@@ -113,9 +113,4 @@ void start_interactive_resize(struct cwc_toplevel *toplevel, uint32_t edges);
 /* no op when is not from interactive */
 void stop_interactive();
 
-static inline uint64_t timespec_to_msec(struct timespec t)
-{
-    return t.tv_sec * 1000 + t.tv_nsec / 1e6;
-}
-
 #endif // !_CWC_INPUT_CURSOR_H

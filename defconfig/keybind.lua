@@ -1,5 +1,4 @@
 -- Keybinding
---
 -- for keyname see https://github.com/xkbcommon/libxkbcommon/blob/master/include/xkbcommon/xkbcommon-keysyms.h
 
 local cful = require("cuteful")

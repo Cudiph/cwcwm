@@ -90,6 +90,7 @@ struct cwc_server {
     // server wide state
     struct cwc_container *insert_marked; // managed by container.c
     struct cwc_output *focused_output;   // managed by output.c
+    int resize_count;                    // frame synchronization
 };
 
 /* global server instance from main */

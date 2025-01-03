@@ -211,12 +211,36 @@ static bool output_can_tear(struct cwc_output *output)
     return false;
 }
 
+static bool allow_render(struct cwc_output *output, struct timespec *now)
+{
+    /* check for resizing toplevel */
+    if (server.resize_count > 0) {
+        uint64_t delta_present = timespec_to_msec(now)
+                                 - timespec_to_msec(&output->last_presentation);
+
+        /* reset if it already more than 1 sec since last presentation */
+        if (delta_present > 1000) {
+            server.resize_count = -1;
+            return true;
+        }
+
+        return false;
+    }
+
+    return true;
+}
+
 static void output_repaint(struct cwc_output *output,
-                           struct wlr_scene_output *scene_output)
+                           struct wlr_scene_output *scene_output,
+                           struct timespec *now)
 {
     _output_configure_scene(output, &server.scene->tree.node, 1.0f);
 
     if (!wlr_scene_output_needs_frame(scene_output))
+        return;
+
+    bool can_tear = output_can_tear(output);
+    if (!allow_render(output, now) && !can_tear)
         return;
 
     struct wlr_output_state pending;
@@ -227,7 +251,7 @@ static void output_repaint(struct cwc_output *output,
         return;
     }
 
-    if (output_can_tear(output)) {
+    if (can_tear) {
         pending.tearing_page_flip = true;
 
         if (!wlr_output_test_state(output->wlr_output, &pending)) {
@@ -256,12 +280,9 @@ static void on_output_frame(struct wl_listener *listener, void *data)
     if (!scene_output)
         return;
 
-    output_repaint(output, scene_output);
-
-    /* Render the scene if needed and commit the output */
-    wlr_scene_output_commit(scene_output, NULL);
-
     clock_gettime(CLOCK_MONOTONIC, &now);
+    output_repaint(output, scene_output, &now);
+
     wlr_scene_output_send_frame_done(scene_output, &now);
 }
 
@@ -331,6 +352,7 @@ static void on_output_destroy(struct wl_listener *listener, void *data)
     wl_list_remove(&output->destroy_l.link);
     wl_list_remove(&output->frame_l.link);
     wl_list_remove(&output->request_state_l.link);
+    wl_list_remove(&output->presentation_l.link);
 
     wl_list_remove(&output->config_commit_l.link);
 
@@ -405,6 +427,15 @@ static void on_request_state(struct wl_listener *listener, void *data)
     wlr_output_commit_state(output->wlr_output, event->state);
     update_output_manager_config();
     arrange_layers(output);
+}
+
+static void on_output_presentation(struct wl_listener *listener, void *data)
+{
+    struct cwc_output *output =
+        wl_container_of(listener, output, presentation_l);
+    struct wlr_output_event_present *event = data;
+
+    output->last_presentation = event->when;
 }
 
 static void on_config_commit(struct wl_listener *listener, void *data)
@@ -500,9 +531,11 @@ static void on_new_output(struct wl_listener *listener, void *data)
 
     output->frame_l.notify         = on_output_frame;
     output->request_state_l.notify = on_request_state;
+    output->presentation_l.notify  = on_output_presentation;
     output->destroy_l.notify       = on_output_destroy;
     wl_signal_add(&wlr_output->events.frame, &output->frame_l);
     wl_signal_add(&wlr_output->events.request_state, &output->request_state_l);
+    wl_signal_add(&wlr_output->events.present, &output->presentation_l);
     wl_signal_add(&wlr_output->events.destroy, &output->destroy_l);
 
     output->config_commit_l.notify = on_config_commit;

@@ -43,6 +43,7 @@ struct cwc_toplevel {
     struct cwc_toplevel_decoration *decoration;
     bool mapped;
     bool tearing_hint;
+    uint32_t resize_serial;
 
     struct wl_list link_output_toplevels; // cwc_output.toplevels
     struct wl_list link_container;        // cwc_container.toplevels
@@ -265,17 +266,17 @@ static inline void cwc_toplevel_set_activated(struct cwc_toplevel *toplevel,
     wlr_xdg_toplevel_set_activated(toplevel->xdg_toplevel, activated);
 }
 
-static inline void
+static inline uint32_t
 cwc_toplevel_set_size(struct cwc_toplevel *toplevel, int w, int h)
 {
     if (cwc_toplevel_is_x11(toplevel)) {
         wlr_xwayland_surface_configure(toplevel->xwsurface,
                                        toplevel->xwsurface->x,
                                        toplevel->xwsurface->y, w, h);
-        return;
+        return 0;
     }
 
-    wlr_xdg_toplevel_set_size(toplevel->xdg_toplevel, w, h);
+    return wlr_xdg_toplevel_set_size(toplevel->xdg_toplevel, w, h);
 }
 
 static inline bool cwc_toplevel_is_mapped(struct cwc_toplevel *toplevel)

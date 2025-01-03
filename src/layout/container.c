@@ -1115,9 +1115,14 @@ static void all_toplevel_set_size(struct cwc_toplevel *toplevel, void *data)
 
         clip.x = geom.x;
         clip.y = geom.y;
+
+        if (cwc_toplevel_is_visible(toplevel) && !toplevel->resize_serial
+            && !toplevel->xdg_toplevel->current.resizing) {
+            server.resize_count = MAX(1, server.resize_count + 1);
+        }
     }
 
-    cwc_toplevel_set_size(toplevel, surf_w, surf_h);
+    toplevel->resize_serial = cwc_toplevel_set_size(toplevel, surf_w, surf_h);
     wlr_scene_subsurface_tree_set_clip(&toplevel->surf_tree->node, &clip);
     box->width  = surf_w;
     box->height = surf_h;
