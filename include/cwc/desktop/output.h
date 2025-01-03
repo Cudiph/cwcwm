@@ -47,7 +47,7 @@ struct cwc_output {
     bool restored;
     bool tearing_allowed;
 
-    struct timespec last_presentation;
+    struct timespec waiting_since;
 
     /* direct children of the root with the same name */
     struct {

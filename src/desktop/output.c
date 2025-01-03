@@ -213,20 +213,26 @@ static bool output_can_tear(struct cwc_output *output)
 
 static bool allow_render(struct cwc_output *output, struct timespec *now)
 {
-    /* check for resizing toplevel */
-    if (server.resize_count > 0) {
-        uint64_t delta_present = timespec_to_msec(now)
-                                 - timespec_to_msec(&output->last_presentation);
+    bool is_waiting = output->waiting_since.tv_sec;
+    if (is_waiting) {
+        uint64_t delta_waiting =
+            timespec_to_msec(now) - timespec_to_msec(&output->waiting_since);
 
-        /* reset if it already more than 1 sec since last presentation */
-        if (delta_present > 1000) {
+        if (delta_waiting > 1000) {
             server.resize_count = -1;
-            return true;
+            goto reset;
         }
+    }
+
+    if (server.resize_count > 0) {
+        if (!is_waiting)
+            clock_gettime(CLOCK_MONOTONIC, &output->waiting_since);
 
         return false;
     }
 
+reset:
+    output->waiting_since.tv_sec = 0;
     return true;
 }
 
@@ -434,8 +440,6 @@ static void on_output_presentation(struct wl_listener *listener, void *data)
     struct cwc_output *output =
         wl_container_of(listener, output, presentation_l);
     struct wlr_output_event_present *event = data;
-
-    output->last_presentation = event->when;
 }
 
 static void on_config_commit(struct wl_listener *listener, void *data)
