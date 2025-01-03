@@ -26,7 +26,7 @@ local enum = {
         MOD5  = bit.lshift(1, 7),
     },
 
-    --- Yoink'd from Linux `input-event-codes.h`
+    --- Extracted from Linux `input-event-codes.h`
     --
     -- @table mouse_btn
     mouse_btn = {
@@ -45,6 +45,20 @@ local enum = {
         DOWN  = bit.lshift(1, 1),
         LEFT  = bit.lshift(1, 2),
         RIGHT = bit.lshift(1, 3),
+    },
+
+    --- Extracted from `wayland-server-protocol.h`
+    --
+    -- @table output_transform
+    output_transform = {
+        TRANSFORM_NORMAL      = 0,
+        TRANSFORM_90          = 1,
+        TRANSFORM_180         = 2,
+        TRANSFORM_270         = 3,
+        TRANSFORM_FLIPPED     = 4,
+        TRANSFORM_FLIPPED_90  = 5,
+        TRANSFORM_FLIPPED_180 = 6,
+        TRANSFORM_FLIPPED_270 = 7,
     },
 
     --- Pointer constant used for configuring pointer device from `libinput.h`

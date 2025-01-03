@@ -34,6 +34,7 @@
 #include <wayland-util.h>
 
 #include "cwc/config.h"
+#include "cwc/desktop/layer_shell.h"
 #include "cwc/desktop/output.h"
 #include "cwc/desktop/toplevel.h"
 #include "cwc/layout/container.h"
@@ -136,6 +137,25 @@ static int luaC_screen_set_default_useless_gaps(lua_State *L)
     cwc_config_set_number_positive(&g_config.useless_gaps, gap_width);
 
     return 0;
+}
+
+/** The screen coordinates in the global position.
+ *
+ * @property geometry
+ * @tparam table geometry
+ * @tparam integer geometry.x
+ * @tparam integer geometry.y
+ * @tparam integer geometry.width
+ * @tparam integer geometry.height
+ * @readonly
+ */
+static int luaC_screen_get_geometry(lua_State *L)
+{
+    struct cwc_output *output = luaC_screen_checkudata(L, 1);
+
+    luaC_pushbox(L, output->output_layout_box);
+
+    return 1;
 }
 
 #define SCREEN_PROPERTY_FORWARD_WLR_OUTPUT_PROP(fieldname, datatype) \
@@ -594,6 +614,177 @@ static int luaC_screen_get_tag(lua_State *L)
     return 1;
 }
 
+/** Set the screen position in the global coordinate.
+ *
+ * @method set_position
+ * @tparam integer x Horizontal position
+ * @tparam integer y Vertical position
+ * @noreturn
+ */
+static int luaC_screen_set_position(lua_State *L)
+{
+    struct cwc_output *output = luaC_screen_checkudata(L, 1);
+    int x                     = luaL_checkint(L, 2);
+    int y                     = luaL_checkint(L, 3);
+
+    cwc_output_set_position(output, x, y);
+
+    return 0;
+}
+
+static void init_state_if_not_yet(struct cwc_output *output)
+{
+    if (output->pending_initialized)
+        return;
+
+    wlr_output_state_init(&output->pending);
+    output->pending_initialized = true;
+}
+
+/** Set the screen mode (commit to apply).
+ *
+ * @method set_mode
+ * @tparam integer width
+ * @tparam integer height
+ * @tparam[opt=0] integer refresh Monitor refresh rate in hz
+ * @noreturn
+ * @see commit
+ */
+static int luaC_screen_set_mode(lua_State *L)
+{
+    struct cwc_output *output = luaC_screen_checkudata(L, 1);
+    int32_t width             = luaL_checkint(L, 2);
+    int32_t height            = luaL_checkint(L, 3);
+    int32_t refresh           = lua_tonumber(L, 4);
+
+    bool found = false;
+    struct wlr_output_mode *mode;
+    wl_list_for_each(mode, &output->wlr_output->modes, link)
+    {
+        if (mode->width == width && mode->height == height) {
+            int diff = abs(refresh - mode->refresh / 1000);
+            if (!refresh) {
+                found = true;
+                break;
+            } else if (diff >= 0 && diff <= 2) {
+                found = true;
+                break;
+            }
+        }
+    }
+
+    if (!found)
+        return 0;
+
+    init_state_if_not_yet(output);
+    wlr_output_state_set_mode(&output->pending, mode);
+
+    return 0;
+}
+
+/** Set adaptive sync (commit to apply).
+ *
+ * @method set_adaptive_sync
+ * @tparam boolean enable True to enable
+ * @noreturn
+ * @see commit
+ */
+static int luaC_screen_set_adaptive_sync(lua_State *L)
+{
+    luaL_checktype(L, 2, LUA_TBOOLEAN);
+    struct cwc_output *output = luaC_screen_checkudata(L, 1);
+    bool set                  = lua_toboolean(L, 2);
+
+    if (!output->wlr_output->adaptive_sync_supported)
+        return 0;
+
+    init_state_if_not_yet(output);
+    wlr_output_state_set_adaptive_sync_enabled(&output->pending, set);
+
+    return 0;
+}
+
+/** Set output enabled state (commit to apply).
+ *
+ * @method set_enabled
+ * @tparam boolean enable True to enable
+ * @noreturn
+ * @see commit
+ */
+static int luaC_screen_set_enabled(lua_State *L)
+{
+    luaL_checktype(L, 2, LUA_TBOOLEAN);
+    struct cwc_output *output = luaC_screen_checkudata(L, 1);
+    bool set                  = lua_toboolean(L, 2);
+
+    init_state_if_not_yet(output);
+    wlr_output_state_set_enabled(&output->pending, set);
+
+    return 0;
+}
+
+/** Set output scale (commit to apply).
+ *
+ * @method set_scale
+ * @tparam number scale
+ * @noreturn
+ * @see commit
+ */
+static int luaC_screen_set_scale(lua_State *L)
+{
+    struct cwc_output *output = luaC_screen_checkudata(L, 1);
+    float scale               = luaL_checknumber(L, 2);
+
+    init_state_if_not_yet(output);
+    wlr_output_state_set_scale(&output->pending, scale);
+
+    return 0;
+}
+
+/** Set output transform rotation (commit to apply).
+ *
+ * @method set_transform
+ * @tparam integer enum Output transform enum
+ * @noreturn
+ * @see cuteful.enum.output_transform
+ * @see commit
+ */
+static int luaC_screen_set_transform(lua_State *L)
+{
+    struct cwc_output *output = luaC_screen_checkudata(L, 1);
+    int transform_enum        = luaL_checkint(L, 2);
+
+    init_state_if_not_yet(output);
+    wlr_output_state_set_transform(&output->pending, transform_enum);
+
+    return 0;
+}
+
+/** Commit pending state.
+ *
+ * @method state_commit
+ * @treturn boolean success Commit result.
+ */
+static int luaC_screen_commit(lua_State *L)
+{
+    struct cwc_output *output = luaC_screen_checkudata(L, 1);
+
+    if (!output->pending_initialized) {
+        lua_pushboolean(L, false);
+        return 1;
+    }
+
+    lua_pushboolean(
+        L, wlr_output_commit_state(output->wlr_output, &output->pending));
+
+    output->pending_initialized = false;
+    wlr_output_state_finish(&output->pending);
+    cwc_output_update_output_manager_config();
+    arrange_layers(output);
+
+    return 1;
+}
+
 #define SCREEN_REG_READ_ONLY(name) {"get_" #name, luaC_screen_get_##name}
 #define SCREEN_REG_SETTER(name)    {"set_" #name, luaC_screen_set_##name}
 #define SCREEN_REG_PROPERTY(name) \
@@ -608,15 +799,25 @@ void luaC_screen_setup(lua_State *L)
     };
 
     luaL_Reg screen_methods[] = {
-        {"get_tag",         luaC_screen_get_tag        },
+        {"get_tag",           luaC_screen_get_tag          },
+        {"set_position",      luaC_screen_set_position     },
+
+        // screen state
+        {"set_mode",          luaC_screen_set_mode         },
+        {"set_adaptive_sync", luaC_screen_set_adaptive_sync},
+        {"set_enabled",       luaC_screen_set_enabled      },
+        {"set_scale",         luaC_screen_set_scale        },
+        {"set_transform",     luaC_screen_set_transform    },
+        {"commit",            luaC_screen_commit           },
 
         // ro prop but have optional arguments
-        {"get_containers",  luaC_screen_get_containers },
-        {"get_clients",     luaC_screen_get_clients    },
-        {"get_focus_stack", luaC_screen_get_focus_stack},
-        {"get_minimized",   luaC_screen_get_minimized  },
+        {"get_containers",    luaC_screen_get_containers   },
+        {"get_clients",       luaC_screen_get_clients      },
+        {"get_focus_stack",   luaC_screen_get_focus_stack  },
+        {"get_minimized",     luaC_screen_get_minimized    },
 
         // readonly prop
+        SCREEN_REG_READ_ONLY(geometry),
         SCREEN_REG_READ_ONLY(name),
         SCREEN_REG_READ_ONLY(description),
         SCREEN_REG_READ_ONLY(make),
@@ -640,7 +841,7 @@ void luaC_screen_setup(lua_State *L)
         SCREEN_REG_PROPERTY(active_workspace),
         SCREEN_REG_PROPERTY(max_general_workspace),
 
-        {NULL,              NULL                       },
+        {NULL,                NULL                         },
     };
 
     luaC_register_class(L, screen_classname, screen_methods,

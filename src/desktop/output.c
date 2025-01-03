@@ -400,7 +400,7 @@ static void output_layer_set_position(struct cwc_output *output, int x, int y)
     wlr_scene_node_set_position(&output->layers.session_lock->node, x, y);
 }
 
-static void update_output_manager_config()
+void cwc_output_update_output_manager_config()
 {
     struct wlr_output_configuration_v1 *cfg =
         wlr_output_configuration_v1_create();
@@ -431,7 +431,7 @@ static void on_request_state(struct wl_listener *listener, void *data)
     struct wlr_output_event_request_state *event = data;
 
     wlr_output_commit_state(output->wlr_output, event->state);
-    update_output_manager_config();
+    cwc_output_update_output_manager_config();
     arrange_layers(output);
 }
 
@@ -565,7 +565,7 @@ static void on_new_output(struct wl_listener *listener, void *data)
     cwc_log(CWC_INFO, "created output (%s): %p %p", wlr_output->name, output,
             output->wlr_output);
 
-    update_output_manager_config();
+    cwc_output_update_output_manager_config();
     arrange_layers(output);
 
     luaC_object_screen_register(g_config_get_lua_State(), output);
@@ -618,7 +618,7 @@ static void output_manager_apply(struct wlr_output_configuration_v1 *config,
 
         wlr_output_state_finish(&state);
 
-        update_output_manager_config();
+        cwc_output_update_output_manager_config();
         arrange_layers(output);
     }
 
@@ -876,6 +876,13 @@ cwc_output_get_visible_containers(struct cwc_output *output)
     }
 
     return list;
+}
+
+void cwc_output_set_position(struct cwc_output *output, int x, int y)
+{
+    wlr_output_layout_add(server.output_layout, output->wlr_output, x, y);
+    cwc_output_update_output_manager_config();
+    arrange_layers(output);
 }
 
 //================== TAGS OPERATION ===================
