@@ -1261,7 +1261,7 @@ void cwc_container_move_to_tag(struct cwc_container *container, int tagidx)
         return;
 
     if (container->bsp_node)
-        bsp_remove_container(container, false);
+        bsp_remove_container(container, true);
 
     container->tag       = 1 << (tagidx - 1);
     container->workspace = tagidx;
