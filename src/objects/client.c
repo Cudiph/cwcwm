@@ -150,6 +150,12 @@
  * @tparam cwc_client c The client object.
  */
 
+/** Property signal.
+ *
+ * @signal client::property::urgent
+ * @tparam cwc_client c The client object.
+ */
+
 //============================ CODE =================================
 
 /** Resize client relative to current size.
@@ -589,6 +595,13 @@ CLIENT_PROPERTY_CREATE_BOOLEAN(below)
  */
 CLIENT_PROPERTY_CREATE_BOOLEAN(allow_tearing)
 
+/** The client need attention.
+ *
+ * @property urgent
+ * @tparam[opt=false] boolean urgent
+ */
+CLIENT_PROPERTY_CREATE_BOOLEAN(urgent)
+
 /** Geometry of the client (border not included).
  *
  * @property geometry
@@ -937,6 +950,7 @@ void luaC_client_setup(lua_State *L)
         CLIENT_REG_PROPERTY(below),
         CLIENT_REG_PROPERTY(opacity),
         CLIENT_REG_PROPERTY(allow_tearing),
+        CLIENT_REG_PROPERTY(urgent),
 
         {NULL,          NULL                     },
     };

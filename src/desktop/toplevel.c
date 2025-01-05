@@ -27,6 +27,7 @@
 #include <wlr/types/wlr_output.h>
 #include <wlr/types/wlr_server_decoration.h>
 #include <wlr/types/wlr_xcursor_manager.h>
+#include <wlr/types/wlr_xdg_activation_v1.h>
 #include <wlr/types/wlr_xdg_decoration_v1.h>
 #include <wlr/util/box.h>
 #include <xcb/xcb.h>
@@ -419,6 +420,23 @@ struct cwc_toplevel *wlr_xdg_popup_get_cwc_toplevel(struct wlr_xdg_popup *popup)
     return NULL;
 }
 
+static void on_activation_request_activate(struct wl_listener *listener,
+                                           void *data)
+{
+    struct wlr_xdg_activation_v1_request_activate_event *event = data;
+
+    struct cwc_toplevel *toplevel =
+        cwc_toplevel_try_from_wlr_surface(event->surface);
+    if (!toplevel)
+        return;
+
+    if (cwc_toplevel_is_mapped(toplevel)) {
+        cwc_toplevel_set_urgent(toplevel, true);
+    } else {
+        toplevel->urgent = true;
+    }
+}
+
 void setup_xdg_shell(struct cwc_server *s)
 {
     s->xdg_shell                 = wlr_xdg_shell_create(s->wl_display, 6);
@@ -426,6 +444,11 @@ void setup_xdg_shell(struct cwc_server *s)
     s->new_xdg_popup_l.notify    = on_new_xdg_popup;
     wl_signal_add(&s->xdg_shell->events.new_toplevel, &s->new_xdg_toplevel_l);
     wl_signal_add(&s->xdg_shell->events.new_popup, &s->new_xdg_popup_l);
+
+    s->xdg_activation            = wlr_xdg_activation_v1_create(s->wl_display);
+    s->request_activate_l.notify = on_activation_request_activate;
+    wl_signal_add(&s->xdg_activation->events.request_activate,
+                  &s->request_activate_l);
 }
 
 void cwc_toplevel_focus(struct cwc_toplevel *toplevel, bool raise)
@@ -452,10 +475,19 @@ void cwc_toplevel_focus(struct cwc_toplevel *toplevel, bool raise)
     struct cwc_cursor *cursor = server.seat->cursor;
     cursor->dont_emit_signal  = true;
 
-    // set_activate first so the keyboard focus change can validate
+    /* set_activate first so the keyboard focus change can validate */
     cwc_toplevel_set_activated(toplevel, true);
     process_cursor_motion(cursor, 0, NULL, 0, 0, 0, 0);
     keyboard_focus_surface(seat->data, wlr_surface);
+
+    cwc_toplevel_set_urgent(toplevel, false);
+
+    /* move to toplevel workspace when its not visible */
+    if (cwc_toplevel_get_focused() == toplevel
+        && !cwc_toplevel_is_visible(toplevel)) {
+        cwc_output_set_view_only(toplevel->container->output,
+                                 toplevel->container->workspace);
+    }
 
     if (raise)
         wlr_scene_node_raise_to_top(&toplevel->container->tree->node);
@@ -1026,6 +1058,18 @@ void cwc_toplevel_set_below(struct cwc_toplevel *toplevel, bool set)
 
     wlr_scene_node_reparent(&toplevel->container->tree->node,
                             server.root.toplevel);
+}
+
+bool cwc_toplevel_is_urgent(struct cwc_toplevel *toplevel)
+{
+    return toplevel->urgent;
+}
+
+void cwc_toplevel_set_urgent(struct cwc_toplevel *toplevel, bool set)
+{
+    toplevel->urgent = set;
+    cwc_object_emit_signal_simple("client::property::urgent",
+                                  g_config_get_lua_State(), toplevel);
 }
 
 void layout_coord_to_surface_coord(

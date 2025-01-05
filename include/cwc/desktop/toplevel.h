@@ -43,6 +43,7 @@ struct cwc_toplevel {
     struct cwc_toplevel_decoration *decoration;
     bool mapped;
     bool tearing_hint;
+    bool urgent;
     uint32_t resize_serial;
 
     struct wl_list link_output_toplevels; // cwc_output.toplevels
@@ -120,6 +121,7 @@ void cwc_toplevel_set_tiled(struct cwc_toplevel *toplevel, uint32_t edges);
 void cwc_toplevel_set_ontop(struct cwc_toplevel *toplevel, bool set);
 void cwc_toplevel_set_above(struct cwc_toplevel *toplevel, bool set);
 void cwc_toplevel_set_below(struct cwc_toplevel *toplevel, bool set);
+void cwc_toplevel_set_urgent(struct cwc_toplevel *toplevel, bool set);
 
 /* move the toplevel surface */
 void cwc_toplevel_set_position(struct cwc_toplevel *toplevel, int x, int y);
@@ -127,6 +129,7 @@ void cwc_toplevel_set_position(struct cwc_toplevel *toplevel, int x, int y);
 bool cwc_toplevel_is_ontop(struct cwc_toplevel *toplevel);
 bool cwc_toplevel_is_above(struct cwc_toplevel *toplevel);
 bool cwc_toplevel_is_below(struct cwc_toplevel *toplevel);
+bool cwc_toplevel_is_urgent(struct cwc_toplevel *toplevel);
 
 /* check if toplevel is visible or rendered on the screen */
 bool cwc_toplevel_is_visible(struct cwc_toplevel *toplevel);

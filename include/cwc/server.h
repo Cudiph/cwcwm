@@ -45,6 +45,9 @@ struct cwc_server {
     struct cwc_session_lock_manager *session_lock;
     struct cwc_idle *idle;
 
+    struct wlr_xdg_activation_v1 *xdg_activation;
+    struct wl_listener request_activate_l;
+
     struct wlr_scene_tree *main_tree;
     struct wlr_scene_tree *temporary_tree;
     // sorted from back to front
