@@ -762,7 +762,7 @@ static int luaC_screen_set_transform(lua_State *L)
 
 /** Commit pending state.
  *
- * @method state_commit
+ * @method commit
  * @treturn boolean success Commit result.
  */
 static int luaC_screen_commit(lua_State *L)

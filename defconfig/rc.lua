@@ -26,8 +26,6 @@ require("keybind")
 
 -- pointer config
 cwc.pointer.set_cursor_size(20)
-cwc.pointer.set_sensitivity(-0.75)      -- between -1 and 1
-cwc.pointer.set_natural_scrolling(true) -- trackpad only
 
 -- keyboard config
 cwc.kbd.set_repeat_rate(30)
@@ -47,6 +45,20 @@ cwc.screen.set_useless_gaps(3)
 if cwc.cwcle then
     cwc.cwcle.set_border_color_raised(gears.color("#d2d6f9"))
 end
+
+-- input device config
+cwc.connect_signal("input::new", function(dev)
+    dev.sensitivity   = -0.75
+    dev.accel_profile = enum.libinput.ACCEL_PROFILE_FLAT
+
+    if dev.name:lower():match("touchpad") then
+        dev.sensitivity    = 0.7
+        dev.natural_scroll = true
+        dev.tap            = true
+        dev.tap_drag       = true
+        dev.dwt            = true
+    end
+end)
 
 ------------------------------- SCREEN SETUP ------------------------------------
 cwc.connect_signal("screen::new", function(screen)

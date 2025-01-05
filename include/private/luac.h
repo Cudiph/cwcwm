@@ -8,3 +8,4 @@ extern void luaC_tag_setup(lua_State *L);
 extern void luaC_pointer_setup(lua_State *L);
 extern void luaC_plugin_setup(lua_State *L);
 extern void luaC_kbd_setup(lua_State *L);
+extern void luaC_input_setup(lua_State *L);

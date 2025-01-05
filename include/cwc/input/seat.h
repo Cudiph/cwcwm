@@ -14,16 +14,12 @@ struct cwc_seat {
     struct cwc_keyboard_group *kbd_group;
     struct cwc_layer_surface *exclusive_kbd_interactive;
 
-    struct wl_list libinput_devs; // cwc_libinput_device.link
-
     struct wl_listener new_input_l;
     struct wl_listener request_selection_l;
     struct wl_listener request_primary_selection_l;
     struct wl_listener request_start_drag_l;
     struct wl_listener start_drag_l;
     struct wl_listener destroy_l;
-
-    struct wl_listener config_commit_l;
 };
 
 struct cwc_drag {
@@ -37,6 +33,7 @@ struct cwc_drag {
 struct cwc_libinput_device {
     struct wl_list link; // cwc_seat.libinput_devs
     struct libinput_device *device;
+    struct wlr_input_device *wlr_input_dev;
 
     struct wl_listener destroy_l;
 };

@@ -103,7 +103,7 @@ with value you want to set. Here is an example when user want to set mouse sensi
 repeat rate to 30hz and set the normal client border to dark grey.
 
 ```lua
-cwc.pointer.set_sensitivity(-0.75)      -- between -1 and 1
+cwc.pointer.set_cursor_size(24)
 
 cwc.kbd.set_repeat_rate(30)
 

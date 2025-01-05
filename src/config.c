@@ -52,21 +52,7 @@ void cwc_config_set_default()
     g_config.warp_cursor_to_edge_on_resize = false;
     g_config.move_cursor_on_focus          = false;
 
-    g_config.cursor_size      = 24;
-    g_config.sensitivity      = 0.0;
-    g_config.scroll_method    = LIBINPUT_CONFIG_SCROLL_2FG;
-    g_config.click_method     = LIBINPUT_CONFIG_CLICK_METHOD_BUTTON_AREAS;
-    g_config.send_events_mode = LIBINPUT_CONFIG_SEND_EVENTS_ENABLED;
-    g_config.accel_profile    = LIBINPUT_CONFIG_ACCEL_PROFILE_FLAT;
-    g_config.tap_button_map   = LIBINPUT_CONFIG_TAP_MAP_LRM;
-
-    g_config.tap_to_click            = true;
-    g_config.tap_and_drag            = true;
-    g_config.drag_lock               = true;
-    g_config.natural_scrolling       = false;
-    g_config.disable_while_typing    = true;
-    g_config.left_handed             = false;
-    g_config.middle_button_emulation = false;
+    g_config.cursor_size = 24;
 
     g_config.repeat_rate  = 30;
     g_config.repeat_delay = 400;

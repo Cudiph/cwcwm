@@ -22,20 +22,6 @@ struct cwc_config {
 
     // pointer device
     int cursor_size;
-    double sensitivity;
-    enum libinput_config_scroll_method scroll_method;
-    enum libinput_config_click_method click_method;
-    enum libinput_config_send_events_mode send_events_mode;
-    enum libinput_config_accel_profile accel_profile;
-    enum libinput_config_tap_button_map tap_button_map;
-    // trackpad
-    bool tap_to_click;
-    bool tap_and_drag;
-    bool drag_lock;
-    bool natural_scrolling;
-    bool disable_while_typing;
-    bool left_handed;
-    bool middle_button_emulation;
 
     // kbd
     int repeat_rate;

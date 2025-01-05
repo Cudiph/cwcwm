@@ -33,54 +33,24 @@
 #include "cwc/input/cursor.h"
 #include "cwc/input/keyboard.h"
 #include "cwc/input/seat.h"
+#include "cwc/luaclass.h"
+#include "cwc/luaobject.h"
 #include "cwc/server.h"
+#include "cwc/signal.h"
 #include "cwc/util.h"
 
 static void on_libinput_device_destroy(struct wl_listener *listener, void *data)
 {
     struct cwc_libinput_device *dev = wl_container_of(listener, dev, destroy_l);
 
+    lua_State *L = g_config_get_lua_State();
+    cwc_object_emit_signal_simple("input::destroy", L, dev);
+    luaC_object_unregister(L, dev);
+
     wl_list_remove(&dev->link);
     wl_list_remove(&dev->destroy_l.link);
 
     free(dev);
-}
-
-static void libinput_device_apply_config(struct libinput_device *dev)
-{
-    // clang-format off
-    if (libinput_device_config_tap_get_finger_count(dev)) {
-        libinput_device_config_tap_set_enabled(dev, g_config.tap_to_click);
-        libinput_device_config_tap_set_drag_enabled(dev, g_config.tap_and_drag);
-        libinput_device_config_tap_set_drag_lock_enabled(dev, g_config.drag_lock);
-        libinput_device_config_tap_set_button_map(dev, g_config.tap_button_map);
-
-        libinput_device_config_scroll_set_natural_scroll_enabled(dev, g_config.natural_scrolling);
-        libinput_device_config_middle_emulation_set_enabled(dev, g_config.middle_button_emulation);
-        libinput_device_config_left_handed_set(dev, g_config.left_handed);
-        libinput_device_config_dwt_set_enabled(dev, g_config.disable_while_typing);
-    }
-
-    libinput_device_config_scroll_set_method(dev, g_config.scroll_method);
-    libinput_device_config_click_set_method(dev, g_config.click_method);
-    libinput_device_config_send_events_set_mode(dev, g_config.send_events_mode);
-    libinput_device_config_accel_set_profile(dev, g_config.accel_profile);
-    libinput_device_config_accel_set_speed(dev, g_config.sensitivity);
-    // clang-format on
-}
-
-static void attach_pointer_device(struct cwc_seat *seat,
-                                  struct wlr_input_device *device)
-{
-    wlr_cursor_attach_input_device(seat->cursor->wlr_cursor, device);
-
-    if (!wlr_input_device_is_libinput(device))
-        return;
-
-    struct libinput_device *libinput_dev =
-        wlr_libinput_get_device_handle(device);
-
-    libinput_device_apply_config(libinput_dev);
 }
 
 static void map_pointer_to_output(struct wlr_input_device *dev)
@@ -106,7 +76,7 @@ static void on_new_input(struct wl_listener *listener, void *data)
 
     switch (device->type) {
     case WLR_INPUT_DEVICE_POINTER:
-        attach_pointer_device(seat, device);
+        wlr_cursor_attach_input_device(seat->cursor->wlr_cursor, device);
         map_pointer_to_output(device);
         break;
     case WLR_INPUT_DEVICE_KEYBOARD:
@@ -121,12 +91,17 @@ static void on_new_input(struct wl_listener *listener, void *data)
     if (wlr_input_device_is_libinput(device)) {
         struct cwc_libinput_device *libinput_dev =
             calloc(1, sizeof(*libinput_dev));
-        libinput_dev->device = wlr_libinput_get_device_handle(device);
+        libinput_dev->device        = wlr_libinput_get_device_handle(device);
+        libinput_dev->wlr_input_dev = device;
 
         libinput_dev->destroy_l.notify = on_libinput_device_destroy;
         wl_signal_add(&device->events.destroy, &libinput_dev->destroy_l);
 
-        wl_list_insert(&seat->libinput_devs, &libinput_dev->link);
+        wl_list_insert(server.input_devices.prev, &libinput_dev->link);
+
+        lua_State *L = g_config_get_lua_State();
+        luaC_object_input_register(L, libinput_dev);
+        cwc_object_emit_signal_simple("input::new", L, libinput_dev);
     }
 }
 
@@ -196,17 +171,6 @@ static void on_start_drag(struct wl_listener *listener, void *data)
     wl_signal_add(&drag->events.destroy, &cwc_drag->on_drag_destroy_l);
 }
 
-static void on_config_commit(struct wl_listener *listener, void *data)
-{
-    struct cwc_seat *seat = wl_container_of(listener, seat, config_commit_l);
-
-    struct cwc_libinput_device *libdev;
-    wl_list_for_each(libdev, &seat->libinput_devs, link)
-    {
-        libinput_device_apply_config(libdev->device);
-    }
-}
-
 static void on_destroy(struct wl_listener *listener, void *data)
 {
     struct cwc_seat *seat = wl_container_of(listener, seat, destroy_l);
@@ -229,8 +193,6 @@ struct cwc_seat *cwc_seat_create()
     seat->cursor         = cwc_cursor_create(seat->wlr_seat);
     seat->kbd_group      = cwc_keyboard_group_create(seat, false);
 
-    wl_list_init(&seat->libinput_devs);
-
     seat->destroy_l.notify = on_destroy;
     wl_signal_add(&seat->wlr_seat->events.destroy, &seat->destroy_l);
 
@@ -247,9 +209,6 @@ struct cwc_seat *cwc_seat_create()
     wl_signal_add(&seat->wlr_seat->events.request_start_drag,
                   &seat->request_start_drag_l);
     wl_signal_add(&seat->wlr_seat->events.start_drag, &seat->start_drag_l);
-
-    seat->config_commit_l.notify = on_config_commit;
-    wl_signal_add(&g_config.events.commit, &seat->config_commit_l);
 
     wlr_seat_set_capabilities(seat->wlr_seat,
                               WL_SEAT_CAPABILITY_POINTER

@@ -75,11 +75,12 @@ struct cwc_server {
     struct wl_listener new_vpointer_l;
 
     // list
-    struct wl_list plugins;      // cwc_plugin.link
-    struct wl_list outputs;      // cwc_output.link
-    struct wl_list toplevels;    // cwc_toplevel.link
-    struct wl_list containers;   // cwc_container.link
-    struct wl_list layer_shells; // cwc_layer_surface.link
+    struct wl_list plugins;       // cwc_plugin.link
+    struct wl_list outputs;       // cwc_output.link
+    struct wl_list toplevels;     // cwc_toplevel.link
+    struct wl_list containers;    // cwc_container.link
+    struct wl_list layer_shells;  // cwc_layer_surface.link
+    struct wl_list input_devices; // cwc_libinput_device.link
 
     // maps
     struct cwc_hhmap *output_state_cache; // struct cwc_output_state

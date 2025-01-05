@@ -45,6 +45,7 @@
 #include "cwc/desktop/toplevel.h"
 #include "cwc/input/cursor.h"
 #include "cwc/input/keyboard.h"
+#include "cwc/input/seat.h"
 #include "cwc/luac.h"
 #include "cwc/luaclass.h"
 #include "cwc/plugin.h"
@@ -90,6 +91,12 @@ static void reregister_lua_object()
         for (int i = 0; i < MAX_WORKSPACE; i++) {
             luaC_object_tag_register(L, &output->state->tag_info[i]);
         }
+    }
+
+    struct cwc_libinput_device *input_dev;
+    wl_list_for_each(input_dev, &server.input_devices, link)
+    {
+        luaC_object_input_register(L, input_dev);
     }
 }
 
@@ -481,6 +488,9 @@ int luaC_init()
 
     /* cwc_tag */
     luaC_tag_setup(L);
+
+    /* cwc.input */
+    luaC_input_setup(L);
 
     char *luarc_default_location = get_luarc_path();
     if (config_path && access(config_path, R_OK) == 0) {

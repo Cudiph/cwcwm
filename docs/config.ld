@@ -36,6 +36,7 @@ file                                          = {
 
     "../src/objects/client.c",
     "../src/objects/container.c",
+    "../src/objects/input.c",
     "../src/objects/screen.c",
     "../src/objects/tag.c",
 

@@ -130,6 +130,7 @@ int server_init(struct cwc_server *s, char *config_path, char *library_path)
     wl_list_init(&s->toplevels);
     wl_list_init(&s->containers);
     wl_list_init(&s->layer_shells);
+    wl_list_init(&s->input_devices);
 
     /* initialize map so that luaC can insert something at startup */
     s->keybind_kbd_map    = cwc_hhmap_create(100);

@@ -421,15 +421,18 @@ kbd.bind({}, "XF86AudioStop", function()
 end)
 
 ------------ Other Extra Keys
-local touchpad_enable = true
 kbd.bind({}, "XF86TouchpadToggle", function()
-    if touchpad_enable then
-        cwc.pointer.set_send_events_mode(enum.pointer.SEND_EVENTS_DISABLED_ON_EXTERNAL_MOUSE)
-    else
-        cwc.pointer.set_send_events_mode(enum.pointer.SEND_EVENTS_ENABLED)
+    local devs = cwc.input.get()
+
+    for _, dev in pairs(devs) do
+        if dev.name:lower():match("touchpad") then
+            if dev.send_events_mode == enum.libinput.SEND_EVENTS_ENABLED then
+                dev.send_events_mode = enum.libinput.SEND_EVENTS_DISABLED
+            else
+                dev.send_events_mode = enum.libinput.SEND_EVENTS_ENABLED
+            end
+        end
     end
-    cwc.commit()
-    touchpad_enable = not touchpad_enable
 end)
 kbd.bind({}, "XF86Calculator", function()
     cwc.spawn_with_shell(TERMINAL .. "-e python ")

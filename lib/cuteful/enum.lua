@@ -61,11 +61,23 @@ local enum = {
         TRANSFORM_FLIPPED_270 = 7,
     },
 
+    --- Input device type extracted from `wlr-input-device.h`
+    --
+    -- @table device_type
+    device_type = {
+        KEYBOARD   = 0,
+        POINTER    = 1,
+        TOUCH      = 2,
+        TABLET     = 3,
+        TABLET_PAD = 4,
+        SWITCH     = 5,
+    },
+
     --- Pointer constant used for configuring pointer device from `libinput.h`
     -- Ref: <https://wayland.freedesktop.org/libinput/doc/latest/api/group__config.html>
     --
-    --@table pointer
-    pointer = {
+    --@table libinput
+    libinput = {
         SCROLL_NO_SCROLL                       = 0,
         SCROLL_2FG                             = bit.lshift(1, 0),
         SCROLL_EDGE                            = bit.lshift(1, 1),
@@ -85,6 +97,11 @@ local enum = {
 
         TAP_MAP_LRM                            = 0,
         TAP_MAP_LMR                            = 1,
+
+        DRAG_LOCK_DISABLED                     = 0,
+        DRAG_LOCK_ENABLED_TIMEOUT              = 1,
+        DRAG_LOCK_ENABLED_STICKY               = 2,
+
     },
 
     --- layout_mode enum extracted from cwc `types.h`.

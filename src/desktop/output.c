@@ -218,7 +218,7 @@ static bool allow_render(struct cwc_output *output, struct timespec *now)
         uint64_t delta_waiting =
             timespec_to_msec(now) - timespec_to_msec(&output->waiting_since);
 
-        if (delta_waiting > 1000) {
+        if (delta_waiting > 500) {
             server.resize_count = -1;
             goto reset;
         }
