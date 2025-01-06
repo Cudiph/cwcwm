@@ -21,6 +21,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <wayland-util.h>
+#include <wlr/types/wlr_foreign_toplevel_management_v1.h>
 #include <wlr/types/wlr_scene.h>
 #include <wlr/util/edges.h>
 
@@ -652,6 +653,28 @@ void cwc_container_for_each_toplevel_top_to_bottom(
     }
 }
 
+static void all_toplevel_send_output_enter(struct cwc_toplevel *toplevel,
+                                           void *data)
+{
+    struct cwc_output *output = data;
+
+    if (toplevel->wlr_foreign_handle) {
+        wlr_foreign_toplevel_handle_v1_output_enter(
+            toplevel->wlr_foreign_handle, output->wlr_output);
+    }
+}
+
+static void all_toplevel_send_output_leave(struct cwc_toplevel *toplevel,
+                                           void *data)
+{
+    struct cwc_output *output = data;
+
+    if (toplevel->wlr_foreign_handle) {
+        wlr_foreign_toplevel_handle_v1_output_leave(
+            toplevel->wlr_foreign_handle, output->wlr_output);
+    }
+}
+
 void cwc_container_move_to_output(struct cwc_container *container,
                                   struct cwc_output *output)
 {
@@ -673,6 +696,11 @@ void cwc_container_move_to_output(struct cwc_container *container,
     if (container->link_output_minimized.next)
         wl_list_reattach(output->state->minimized.prev,
                          &container->link_output_minimized);
+
+    cwc_container_for_each_toplevel(container, all_toplevel_send_output_enter,
+                                    output);
+    cwc_container_for_each_toplevel(container, all_toplevel_send_output_leave,
+                                    old);
 
     /* don't translate position when move to fallback output or vice versa
      * because it'll ruin the layout since the fallback output is not attached
@@ -962,6 +990,10 @@ static void all_toplevel_set_fullscreen(struct cwc_toplevel *toplevel,
     }
 
     __cwc_toplevel_set_fullscreen(toplevel, set);
+
+    if (toplevel->wlr_foreign_handle)
+        wlr_foreign_toplevel_handle_v1_set_fullscreen(
+            toplevel->wlr_foreign_handle, set);
 }
 
 void cwc_container_set_fullscreen(struct cwc_container *container, bool set)
@@ -1019,6 +1051,10 @@ static void all_toplevel_set_maximized(struct cwc_toplevel *toplevel,
         cwc_toplevel_set_position(toplevel, usable_area.x, usable_area.y);
         wlr_scene_subsurface_tree_set_clip(&toplevel->surf_tree->node, NULL);
     }
+
+    if (toplevel->wlr_foreign_handle)
+        wlr_foreign_toplevel_handle_v1_set_maximized(
+            toplevel->wlr_foreign_handle, set);
 }
 
 void cwc_container_set_maximized(struct cwc_container *container, bool set)
@@ -1054,6 +1090,10 @@ static void all_toplevel_set_minimized(struct cwc_toplevel *toplevel,
 {
     bool set = data;
     __cwc_toplevel_set_minimized(toplevel, set);
+
+    if (toplevel->wlr_foreign_handle)
+        wlr_foreign_toplevel_handle_v1_set_minimized(
+            toplevel->wlr_foreign_handle, set);
 }
 
 void cwc_container_set_minimized(struct cwc_container *container, bool set)

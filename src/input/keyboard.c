@@ -18,6 +18,7 @@
 
 #include <wayland-server-core.h>
 #include <wayland-util.h>
+#include <wlr/types/wlr_foreign_toplevel_management_v1.h>
 #include <wlr/types/wlr_keyboard.h>
 #include <wlr/types/wlr_keyboard_group.h>
 #include <wlr/types/wlr_seat.h>
@@ -103,8 +104,18 @@ static void _notify_focus_signal(struct wlr_surface *old_surface,
         if (new->container->bsp_node)
             bsp_last_focused_update(new->container);
 
+        if (new->wlr_foreign_handle)
+            wlr_foreign_toplevel_handle_v1_set_activated(
+                new->wlr_foreign_handle, true);
+
         if (cwc_toplevel_is_unmanaged(new))
             return;
+    }
+
+    if (old) {
+        if (old->wlr_foreign_handle)
+            wlr_foreign_toplevel_handle_v1_set_activated(
+                old->wlr_foreign_handle, false);
     }
 
     // only emit signal when mapped

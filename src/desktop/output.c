@@ -385,6 +385,8 @@ static void on_output_destroy(struct wl_listener *listener, void *data)
     luaC_object_unregister(g_config_get_lua_State(), output);
     wl_list_remove(&output->link);
 
+    cwc_output_update_output_manager_config();
+
     // free the output only when restored because the container still need old
     // output reference to remove bsp node.
     output->wlr_output = NULL;

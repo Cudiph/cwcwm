@@ -39,6 +39,8 @@ struct cwc_toplevel {
     struct wlr_scene_tree *surf_tree;
     struct xwayland_props *xwprops; // NULL if type != xwayland
     struct cwc_container *container;
+    struct wlr_ext_foreign_toplevel_handle_v1 *ext_foreign_handle;
+    struct wlr_foreign_toplevel_handle_v1 *wlr_foreign_handle;
 
     struct cwc_toplevel_decoration *decoration;
     bool mapped;
@@ -53,12 +55,21 @@ struct cwc_toplevel {
     struct wl_listener unmap_l;
     struct wl_listener commit_l;
     struct wl_listener destroy_l;
+    struct wl_listener set_title_l;
+    struct wl_listener set_appid_l;
 
     struct wl_listener request_maximize_l;
     struct wl_listener request_minimize_l;
     struct wl_listener request_fullscreen_l;
     struct wl_listener request_move_l;
     struct wl_listener request_resize_l;
+
+    struct wl_listener foreign_request_maximize_l;
+    struct wl_listener foreign_request_minimize_l;
+    struct wl_listener foreign_request_fullscreen_l;
+    struct wl_listener foreign_request_activate_l;
+    struct wl_listener foreign_request_close_l;
+    struct wl_listener foreign_destroy_l;
 };
 
 struct cwc_popup {

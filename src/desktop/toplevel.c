@@ -24,6 +24,8 @@
 #include <stdlib.h>
 #include <wayland-server-core.h>
 #include <wayland-util.h>
+#include <wlr/types/wlr_ext_foreign_toplevel_list_v1.h>
+#include <wlr/types/wlr_foreign_toplevel_management_v1.h>
 #include <wlr/types/wlr_output.h>
 #include <wlr/types/wlr_server_decoration.h>
 #include <wlr/types/wlr_xcursor_manager.h>
@@ -51,6 +53,132 @@
 //=============== XDG SHELL ====================
 
 /* - */
+static void on_foreign_request_maximize(struct wl_listener *listener,
+                                        void *data)
+{
+    struct wlr_foreign_toplevel_handle_v1_maximized_event *event = data;
+    struct cwc_toplevel *toplevel = event->toplevel->data;
+
+    cwc_toplevel_set_maximized(toplevel, event->maximized);
+}
+
+static void on_foreign_request_minimize(struct wl_listener *listener,
+                                        void *data)
+{
+    struct wlr_foreign_toplevel_handle_v1_minimized_event *event = data;
+    struct cwc_toplevel *toplevel = event->toplevel->data;
+
+    cwc_toplevel_set_minimized(toplevel, event->minimized);
+}
+
+static void on_foreign_request_fullscreen(struct wl_listener *listener,
+                                          void *data)
+{
+    struct wlr_foreign_toplevel_handle_v1_fullscreen_event *event = data;
+    struct cwc_toplevel *toplevel = event->toplevel->data;
+
+    cwc_toplevel_set_fullscreen(toplevel, event->fullscreen);
+}
+
+static void on_foreign_request_activate(struct wl_listener *listener,
+                                        void *data)
+{
+    struct wlr_foreign_toplevel_handle_v1_activated_event *event = data;
+    struct cwc_toplevel *toplevel = event->toplevel->data;
+
+    cwc_toplevel_focus(toplevel, false);
+}
+
+static void on_foreign_request_close(struct wl_listener *listener, void *data)
+{
+    struct cwc_toplevel *toplevel =
+        wl_container_of(listener, toplevel, foreign_request_close_l);
+
+    cwc_toplevel_send_close(toplevel);
+}
+
+static void on_foreign_destroy(struct wl_listener *listener, void *data)
+{
+    struct cwc_toplevel *toplevel =
+        wl_container_of(listener, toplevel, foreign_destroy_l);
+
+    wl_list_remove(&toplevel->foreign_request_maximize_l.link);
+    wl_list_remove(&toplevel->foreign_request_minimize_l.link);
+    wl_list_remove(&toplevel->foreign_request_fullscreen_l.link);
+    wl_list_remove(&toplevel->foreign_request_activate_l.link);
+    wl_list_remove(&toplevel->foreign_request_close_l.link);
+    wl_list_remove(&toplevel->foreign_destroy_l.link);
+}
+
+static inline void _init_mapped_managed_toplevel(struct cwc_toplevel *toplevel)
+{
+    if (cwc_toplevel_is_unmanaged(toplevel))
+        return;
+
+    wl_list_insert(&server.focused_output->state->toplevels,
+                   &toplevel->link_output_toplevels);
+    cwc_toplevel_set_tiled(toplevel, WLR_EDGE_TOP | WLR_EDGE_BOTTOM
+                                         | WLR_EDGE_LEFT | WLR_EDGE_RIGHT);
+
+    struct wlr_ext_foreign_toplevel_handle_v1_state state = {
+        .title  = cwc_toplevel_get_title(toplevel),
+        .app_id = cwc_toplevel_get_app_id(toplevel),
+    };
+    toplevel->ext_foreign_handle = wlr_ext_foreign_toplevel_handle_v1_create(
+        server.foreign_toplevel_list, &state);
+    toplevel->wlr_foreign_handle =
+        wlr_foreign_toplevel_handle_v1_create(server.foreign_toplevel_manager);
+
+    toplevel->ext_foreign_handle->data = toplevel;
+    toplevel->wlr_foreign_handle->data = toplevel;
+
+    wlr_foreign_toplevel_handle_v1_output_enter(
+        toplevel->wlr_foreign_handle, server.focused_output->wlr_output);
+    wlr_foreign_toplevel_handle_v1_set_app_id(toplevel->wlr_foreign_handle,
+                                              state.app_id);
+    wlr_foreign_toplevel_handle_v1_set_title(toplevel->wlr_foreign_handle,
+                                             state.title);
+
+    toplevel->foreign_request_maximize_l.notify = on_foreign_request_maximize;
+    toplevel->foreign_request_minimize_l.notify = on_foreign_request_minimize;
+    toplevel->foreign_request_fullscreen_l.notify =
+        on_foreign_request_fullscreen;
+    toplevel->foreign_request_activate_l.notify = on_foreign_request_activate;
+    toplevel->foreign_request_close_l.notify    = on_foreign_request_close;
+    toplevel->foreign_destroy_l.notify          = on_foreign_destroy;
+    wl_signal_add(&toplevel->wlr_foreign_handle->events.request_maximize,
+                  &toplevel->foreign_request_maximize_l);
+    wl_signal_add(&toplevel->wlr_foreign_handle->events.request_minimize,
+                  &toplevel->foreign_request_minimize_l);
+    wl_signal_add(&toplevel->wlr_foreign_handle->events.request_fullscreen,
+                  &toplevel->foreign_request_fullscreen_l);
+    wl_signal_add(&toplevel->wlr_foreign_handle->events.request_activate,
+                  &toplevel->foreign_request_activate_l);
+    wl_signal_add(&toplevel->wlr_foreign_handle->events.request_close,
+                  &toplevel->foreign_request_close_l);
+    wl_signal_add(&toplevel->wlr_foreign_handle->events.destroy,
+                  &toplevel->foreign_destroy_l);
+}
+
+static inline void _fini_unmap_managed_toplevel(struct cwc_toplevel *toplevel)
+{
+    if (cwc_toplevel_is_unmanaged(toplevel))
+        return;
+
+    wl_list_remove(&toplevel->link_output_toplevels);
+
+    if (toplevel->wlr_foreign_handle) {
+        wlr_foreign_toplevel_handle_v1_destroy(toplevel->wlr_foreign_handle);
+        toplevel->wlr_foreign_handle = NULL;
+    }
+
+    if (toplevel->ext_foreign_handle) {
+        wlr_ext_foreign_toplevel_handle_v1_destroy(
+            toplevel->ext_foreign_handle);
+        toplevel->ext_foreign_handle = NULL;
+    }
+}
+
 static void on_surface_map(struct wl_listener *listener, void *data)
 {
     struct cwc_toplevel *toplevel = wl_container_of(listener, toplevel, map_l);
@@ -59,12 +187,7 @@ static void on_surface_map(struct wl_listener *listener, void *data)
     cwc_log(CWC_DEBUG, "mapping toplevel (%s): %p",
             cwc_toplevel_get_title(toplevel), toplevel);
 
-    if (!cwc_toplevel_is_unmanaged(toplevel)) {
-        wl_list_insert(&server.focused_output->state->toplevels,
-                       &toplevel->link_output_toplevels);
-        cwc_toplevel_set_tiled(toplevel, WLR_EDGE_TOP | WLR_EDGE_BOTTOM
-                                             | WLR_EDGE_LEFT | WLR_EDGE_RIGHT);
-    }
+    _init_mapped_managed_toplevel(toplevel);
 
     if (server.insert_marked && !cwc_toplevel_is_unmanaged(toplevel)) {
         cwc_container_insert_toplevel(server.insert_marked, toplevel);
@@ -91,9 +214,7 @@ static void on_surface_unmap(struct wl_listener *listener, void *data)
     if (cursor->grabbed_toplevel == toplevel)
         stop_interactive();
 
-    if (!cwc_toplevel_is_unmanaged(toplevel)) {
-        wl_list_remove(&toplevel->link_output_toplevels);
-    }
+    _fini_unmap_managed_toplevel(toplevel);
 
     toplevel->mapped = false;
     cwc_object_emit_signal_simple("client::unmap", g_config_get_lua_State(),
@@ -222,6 +343,9 @@ static void on_toplevel_destroy(struct wl_listener *listener, void *data)
     wl_list_remove(&toplevel->request_resize_l.link);
     wl_list_remove(&toplevel->request_move_l.link);
 
+    wl_list_remove(&toplevel->set_appid_l.link);
+    wl_list_remove(&toplevel->set_title_l.link);
+
     if (cwc_toplevel_is_x11(toplevel)) {
         wl_list_remove(&toplevel->xwprops->associate_l.link);
         wl_list_remove(&toplevel->xwprops->dissociate_l.link);
@@ -238,6 +362,43 @@ static void on_toplevel_destroy(struct wl_listener *listener, void *data)
     free(toplevel);
 }
 
+static void ext_foreign_update_handle(struct cwc_toplevel *toplevel)
+{
+    if (!toplevel->ext_foreign_handle)
+        return;
+
+    struct wlr_ext_foreign_toplevel_handle_v1_state state = {
+        .title  = cwc_toplevel_get_title(toplevel),
+        .app_id = cwc_toplevel_get_app_id(toplevel),
+    };
+    wlr_ext_foreign_toplevel_handle_v1_update_state(
+        toplevel->ext_foreign_handle, &state);
+}
+
+static void on_set_title(struct wl_listener *listener, void *data)
+{
+    struct cwc_toplevel *toplevel =
+        wl_container_of(listener, toplevel, set_title_l);
+
+    ext_foreign_update_handle(toplevel);
+
+    if (toplevel->wlr_foreign_handle)
+        wlr_foreign_toplevel_handle_v1_set_title(
+            toplevel->wlr_foreign_handle, cwc_toplevel_get_title(toplevel));
+}
+
+static void on_set_app_id(struct wl_listener *listener, void *data)
+{
+    struct cwc_toplevel *toplevel =
+        wl_container_of(listener, toplevel, set_appid_l);
+
+    ext_foreign_update_handle(toplevel);
+
+    if (toplevel->wlr_foreign_handle)
+        wlr_foreign_toplevel_handle_v1_set_app_id(
+            toplevel->wlr_foreign_handle, cwc_toplevel_get_app_id(toplevel));
+}
+
 /* shared stuff between toplevel for xwayland and xdg_toplevel */
 static void cwc_toplevel_init_common_stuff(struct cwc_toplevel *toplevel)
 {
@@ -247,6 +408,9 @@ static void cwc_toplevel_init_common_stuff(struct cwc_toplevel *toplevel)
     toplevel->request_fullscreen_l.notify = on_request_fullscreen;
     toplevel->request_resize_l.notify     = on_request_resize;
     toplevel->request_move_l.notify       = on_request_move;
+
+    toplevel->set_title_l.notify = on_set_title;
+    toplevel->set_appid_l.notify = on_set_app_id;
 
     if (cwc_toplevel_is_x11(toplevel)) {
         struct wlr_xwayland_surface *xwsurface = toplevel->xwsurface;
@@ -262,6 +426,9 @@ static void cwc_toplevel_init_common_stuff(struct cwc_toplevel *toplevel)
         wl_signal_add(&xwsurface->events.request_move,
                       &toplevel->request_move_l);
 
+        wl_signal_add(&xwsurface->events.set_title, &toplevel->set_title_l);
+        wl_signal_add(&xwsurface->events.set_class, &toplevel->set_appid_l);
+
     } else {
         struct wlr_xdg_toplevel *xdg_toplevel = toplevel->xdg_toplevel;
         wl_signal_add(&xdg_toplevel->events.destroy, &toplevel->destroy_l);
@@ -275,6 +442,9 @@ static void cwc_toplevel_init_common_stuff(struct cwc_toplevel *toplevel)
                       &toplevel->request_resize_l);
         wl_signal_add(&xdg_toplevel->events.request_move,
                       &toplevel->request_move_l);
+
+        wl_signal_add(&xdg_toplevel->events.set_title, &toplevel->set_title_l);
+        wl_signal_add(&xdg_toplevel->events.set_app_id, &toplevel->set_appid_l);
     }
 
     wl_list_insert(&server.toplevels, &toplevel->link);
@@ -454,7 +624,7 @@ void setup_xdg_shell(struct cwc_server *s)
 void cwc_toplevel_focus(struct cwc_toplevel *toplevel, bool raise)
 {
     struct wlr_seat *seat = server.seat->wlr_seat;
-    if (toplevel == NULL) {
+    if (toplevel == NULL || !cwc_toplevel_is_mapped(toplevel)) {
         wlr_seat_keyboard_notify_clear_focus(seat);
         return;
     }
@@ -479,8 +649,12 @@ void cwc_toplevel_focus(struct cwc_toplevel *toplevel, bool raise)
     cwc_toplevel_set_activated(toplevel, true);
     process_cursor_motion(cursor, 0, NULL, 0, 0, 0, 0);
     keyboard_focus_surface(seat->data, wlr_surface);
-
     cwc_toplevel_set_urgent(toplevel, false);
+
+    /* TODO: make this an option */
+    if (cwc_toplevel_is_minimized(toplevel)) {
+        cwc_toplevel_set_minimized(toplevel, false);
+    }
 
     /* move to toplevel workspace when its not visible */
     if (cwc_toplevel_get_focused() == toplevel

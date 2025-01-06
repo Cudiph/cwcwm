@@ -32,6 +32,8 @@
 #include <wlr/types/wlr_data_device.h>
 #include <wlr/types/wlr_drm.h>
 #include <wlr/types/wlr_export_dmabuf_v1.h>
+#include <wlr/types/wlr_ext_foreign_toplevel_list_v1.h>
+#include <wlr/types/wlr_foreign_toplevel_management_v1.h>
 #include <wlr/types/wlr_fractional_scale_v1.h>
 #include <wlr/types/wlr_gamma_control_v1.h>
 #include <wlr/types/wlr_linux_dmabuf_v1.h>
@@ -44,6 +46,9 @@
 #include <wlr/types/wlr_subcompositor.h>
 #include <wlr/types/wlr_viewporter.h>
 #include <wlr/types/wlr_xdg_decoration_v1.h>
+#include <wlr/types/wlr_xdg_foreign_registry.h>
+#include <wlr/types/wlr_xdg_foreign_v1.h>
+#include <wlr/types/wlr_xdg_foreign_v2.h>
 #include <wlr/types/wlr_xdg_output_v1.h>
 
 #include "cwc/config.h"
@@ -156,6 +161,11 @@ int server_init(struct cwc_server *s, char *config_path, char *library_path)
     wlr_scene_set_gamma_control_manager_v1(
         s->scene, wlr_gamma_control_manager_v1_create(dpy));
 
+    struct wlr_xdg_foreign_registry *foreign_registry =
+        wlr_xdg_foreign_registry_create(s->wl_display);
+    wlr_xdg_foreign_v1_create(s->wl_display, foreign_registry);
+    wlr_xdg_foreign_v2_create(s->wl_display, foreign_registry);
+
     // root scene graph
     s->temporary_tree = wlr_scene_tree_create(&s->scene->tree);
     wlr_scene_node_set_enabled(&s->temporary_tree->node, false);
@@ -176,6 +186,11 @@ int server_init(struct cwc_server *s, char *config_path, char *library_path)
     setup_xdg_shell(s);
     setup_decoration_manager(s);
     xwayland_init(s);
+
+    s->foreign_toplevel_list =
+        wlr_ext_foreign_toplevel_list_v1_create(s->wl_display, 1);
+    s->foreign_toplevel_manager =
+        wlr_foreign_toplevel_manager_v1_create(s->wl_display);
 
     s->scene_layout =
         wlr_scene_attach_output_layout(s->scene, s->output_layout);

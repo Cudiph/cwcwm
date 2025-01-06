@@ -48,6 +48,9 @@ struct cwc_server {
     struct wlr_xdg_activation_v1 *xdg_activation;
     struct wl_listener request_activate_l;
 
+    struct wlr_ext_foreign_toplevel_list_v1 *foreign_toplevel_list;
+    struct wlr_foreign_toplevel_manager_v1 *foreign_toplevel_manager;
+
     struct wlr_scene_tree *main_tree;
     struct wlr_scene_tree *temporary_tree;
     // sorted from back to front
