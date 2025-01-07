@@ -1137,6 +1137,9 @@ static void all_toplevel_set_size(struct cwc_toplevel *toplevel, void *data)
     int surf_w = box->width;
     int surf_h = box->height;
 
+    if (geom.width == surf_w && geom.height == surf_h)
+        return;
+
     struct wlr_box clip = {
         .x      = 0,
         .y      = 0,
