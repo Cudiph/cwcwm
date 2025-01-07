@@ -918,8 +918,12 @@ inline bool cwc_container_is_floating(struct cwc_container *cont)
                   == CWC_LAYOUT_FLOATING;
 }
 
-static void all_toplevel_set_minimized(struct cwc_toplevel *toplevel,
-                                       void *data);
+static void all_toplevel_set_suspended(struct cwc_toplevel *toplevel,
+                                       void *data)
+{
+    bool set = data;
+    __cwc_toplevel_set_minimized(toplevel, set);
+}
 
 void cwc_container_set_enabled(struct cwc_container *container, bool set)
 {
@@ -927,7 +931,7 @@ void cwc_container_set_enabled(struct cwc_container *container, bool set)
     if (set) {
         cwc_container_refresh(container);
     } else {
-        cwc_container_for_each_toplevel(container, all_toplevel_set_minimized,
+        cwc_container_for_each_toplevel(container, all_toplevel_set_suspended,
                                         (void *)false);
     }
 }
