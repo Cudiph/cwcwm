@@ -80,6 +80,9 @@ struct cwc_server {
     struct wlr_virtual_pointer_manager_v1 *virtual_pointer_manager;
     struct wl_listener new_vpointer_l;
 
+    struct wlr_keyboard_shortcuts_inhibit_manager_v1 *kbd_inhibit_manager;
+    struct wl_listener new_keyboard_inhibitor_l;
+
     // list
     struct wl_list plugins;       // cwc_plugin.link
     struct wl_list outputs;       // cwc_output.link

@@ -14,6 +14,8 @@ struct cwc_seat {
     struct cwc_keyboard_group *kbd_group;
     struct cwc_layer_surface *exclusive_kbd_interactive;
 
+    struct wlr_keyboard_shortcuts_inhibitor_v1 *kbd_inhibitor;
+
     struct wl_listener new_input_l;
     struct wl_listener request_selection_l;
     struct wl_listener request_primary_selection_l;

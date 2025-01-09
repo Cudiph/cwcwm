@@ -220,7 +220,9 @@ void process_cursor_motion(struct cwc_cursor *cursor,
         wlr_seat_pointer_clear_focus(wlr_seat);
     }
 
-    wlr_cursor_move(wlr_cursor, device, dx, dy);
+    if (dx || dy)
+        wlr_cursor_move(wlr_cursor, device, dx, dy);
+
     cursor->dont_emit_signal = false;
 }
 

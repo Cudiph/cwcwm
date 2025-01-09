@@ -21,6 +21,7 @@
 #include <wlr/types/wlr_foreign_toplevel_management_v1.h>
 #include <wlr/types/wlr_keyboard.h>
 #include <wlr/types/wlr_keyboard_group.h>
+#include <wlr/types/wlr_keyboard_shortcuts_inhibit_v1.h>
 #include <wlr/types/wlr_seat.h>
 #include <wlr/types/wlr_virtual_keyboard_v1.h>
 
@@ -35,6 +36,7 @@
 #include "cwc/layout/bsp.h"
 #include "cwc/server.h"
 #include "cwc/signal.h"
+#include "cwc/util.h"
 
 static void on_kbd_modifiers(struct wl_listener *listener, void *data)
 {
@@ -53,6 +55,13 @@ static void on_kbd_key(struct wl_listener *listener, void *data)
     struct wlr_keyboard *wlr_kbd   = &kbd->wlr_kbd_group->keyboard;
     struct wlr_seat *wlr_seat      = kbd->seat->wlr_seat;
     struct wlr_keyboard_key_event *event = data;
+
+    if (kbd->seat->kbd_inhibitor) {
+        wlr_seat_set_keyboard(wlr_seat, wlr_kbd);
+        wlr_seat_keyboard_notify_key(wlr_seat, event->time_msec, event->keycode,
+                                     event->state);
+        return;
+    }
 
     // translate libinput keycode -> xkbcommon
     int keycode = event->keycode + 8;
@@ -276,6 +285,29 @@ static void on_new_vkbd(struct wl_listener *listener, void *data)
     wl_signal_add(&vkbd->keyboard.base.events.destroy, &kbd_group->destroy_l);
 }
 
+static void on_shortcuts_inhibitor_destroy(struct wl_listener *listener,
+                                           void *data)
+{
+    struct wlr_keyboard_shortcuts_inhibitor_v1 *inhibitor = data;
+    struct cwc_seat *seat = inhibitor->seat->data;
+
+    if (inhibitor == seat->kbd_inhibitor)
+        seat->kbd_inhibitor = NULL;
+}
+
+static void on_new_inhibitor(struct wl_listener *listener, void *data)
+{
+    struct wlr_keyboard_shortcuts_inhibitor_v1 *inhibitor = data;
+
+    wlr_keyboard_shortcuts_inhibitor_v1_activate(inhibitor);
+    LISTEN_STATIC(&inhibitor->events.destroy, on_shortcuts_inhibitor_destroy);
+
+    struct cwc_seat *seat = inhibitor->seat->data;
+
+    if (inhibitor->surface == inhibitor->seat->keyboard_state.focused_surface)
+        seat->kbd_inhibitor = inhibitor;
+}
+
 void setup_keyboard(struct cwc_server *s)
 {
     s->virtual_kbd_manager =
@@ -283,4 +315,10 @@ void setup_keyboard(struct cwc_server *s)
     s->new_vkbd_l.notify = on_new_vkbd;
     wl_signal_add(&s->virtual_kbd_manager->events.new_virtual_keyboard,
                   &s->new_vkbd_l);
+
+    s->kbd_inhibit_manager =
+        wlr_keyboard_shortcuts_inhibit_v1_create(s->wl_display);
+    s->new_keyboard_inhibitor_l.notify = on_new_inhibitor;
+    wl_signal_add(&s->kbd_inhibit_manager->events.new_inhibitor,
+                  &s->new_keyboard_inhibitor_l);
 }
