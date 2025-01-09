@@ -32,6 +32,7 @@
 #include <wlr/types/wlr_tearing_control_v1.h>
 
 #include "cwc/config.h"
+#include "cwc/desktop/idle.h"
 #include "cwc/desktop/layer_shell.h"
 #include "cwc/desktop/output.h"
 #include "cwc/desktop/toplevel.h"
@@ -746,6 +747,8 @@ void cwc_output_update_visible(struct cwc_output *output)
             cwc_container_set_enabled(container, false);
         }
     }
+
+    update_idle_inhibitor(NULL);
 
     cwc_output_focus_newest_focus_visible_toplevel(output);
 }
