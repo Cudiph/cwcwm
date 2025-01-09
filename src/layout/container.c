@@ -1304,7 +1304,7 @@ bool cwc_container_is_visible_in_workspace(struct cwc_container *container,
 
 void cwc_container_move_to_tag(struct cwc_container *container, int tagidx)
 {
-    if (container->tag == tagidx)
+    if (container->workspace == tagidx)
         return;
 
     if (container->bsp_node)
