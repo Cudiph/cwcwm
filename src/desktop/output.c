@@ -30,6 +30,7 @@
 #include <wlr/types/wlr_output_power_management_v1.h>
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_tearing_control_v1.h>
+#include <wlr/types/wlr_xdg_output_v1.h>
 
 #include "cwc/config.h"
 #include "cwc/desktop/idle.h"
@@ -730,6 +731,10 @@ void setup_output(struct cwc_server *s)
     s->new_tearing_object_l.notify = on_new_tearing_object;
     wl_signal_add(&s->tearing_manager->events.new_object,
                   &s->new_tearing_object_l);
+
+    // xdg output
+    s->xdg_output_manager =
+        wlr_xdg_output_manager_v1_create(s->wl_display, s->output_layout);
 }
 
 void cwc_output_update_visible(struct cwc_output *output)

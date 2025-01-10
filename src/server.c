@@ -36,25 +36,33 @@
 #include <wlr/types/wlr_foreign_toplevel_management_v1.h>
 #include <wlr/types/wlr_fractional_scale_v1.h>
 #include <wlr/types/wlr_gamma_control_v1.h>
+#include <wlr/types/wlr_keyboard_shortcuts_inhibit_v1.h>
 #include <wlr/types/wlr_linux_dmabuf_v1.h>
 #include <wlr/types/wlr_linux_drm_syncobj_v1.h>
+#include <wlr/types/wlr_output_management_v1.h>
+#include <wlr/types/wlr_output_power_management_v1.h>
 #include <wlr/types/wlr_presentation_time.h>
 #include <wlr/types/wlr_primary_selection_v1.h>
 #include <wlr/types/wlr_relative_pointer_v1.h>
 #include <wlr/types/wlr_screencopy_v1.h>
+#include <wlr/types/wlr_security_context_v1.h>
 #include <wlr/types/wlr_single_pixel_buffer_v1.h>
 #include <wlr/types/wlr_subcompositor.h>
 #include <wlr/types/wlr_viewporter.h>
+#include <wlr/types/wlr_virtual_keyboard_v1.h>
+#include <wlr/types/wlr_virtual_pointer_v1.h>
 #include <wlr/types/wlr_xdg_decoration_v1.h>
 #include <wlr/types/wlr_xdg_foreign_registry.h>
 #include <wlr/types/wlr_xdg_foreign_v1.h>
 #include <wlr/types/wlr_xdg_foreign_v2.h>
 #include <wlr/types/wlr_xdg_output_v1.h>
+#include <wlr/xwayland/shell.h>
 
 #include "cwc/config.h"
 #include "cwc/desktop/idle.h"
 #include "cwc/desktop/layer_shell.h"
 #include "cwc/desktop/output.h"
+#include "cwc/desktop/session_lock.h"
 #include "cwc/desktop/toplevel.h"
 #include "cwc/input/cursor.h"
 #include "cwc/input/keyboard.h"
@@ -66,6 +74,50 @@
 #include "cwc/util.h"
 #include "private/server.h"
 
+/* sway's implementation */
+static bool is_privileged(const struct wl_global *global)
+{
+    // drm lease check here
+
+    return global == server.output_manager->global
+           || global == server.output_power_manager->global
+           // || global == server.input_method->global
+           || global == server.foreign_toplevel_list->global
+           || global == server.foreign_toplevel_manager->global
+           || global == server.data_control_manager->global
+           || global == server.screencopy_manager->global
+           || global == server.export_dmabuf_manager->global
+           || global == server.security_context_manager->global
+           || global == server.gamma_control_manager->global
+           || global == server.layer_shell->global
+           || global == server.session_lock->manager->global
+           || global == server.kbd_inhibit_manager->global
+           || global == server.virtual_kbd_manager->global
+           || global == server.virtual_pointer_manager->global
+           // || global == server.input->transient_seat_manager->global
+           || global == server.xdg_output_manager->global;
+}
+
+static bool filter_global(const struct wl_client *client,
+                          const struct wl_global *global,
+                          void *data)
+{
+    struct wlr_xwayland *xwayland = server.xwayland;
+    if (xwayland && global == xwayland->shell_v1->global) {
+        return xwayland->server != NULL && client == xwayland->server->client;
+    }
+
+    // Restrict usage of privileged protocols to unsandboxed clients
+    const struct wlr_security_context_v1_state *security_context =
+        wlr_security_context_manager_v1_lookup_client(
+            server.security_context_manager, client);
+
+    if (is_privileged(global))
+        return security_context == NULL;
+
+    return true;
+}
+
 /* Since the server is global and everything depends on wayland global registry
  * this should run before everything else
  */
@@ -73,6 +125,8 @@ static int setup_wayland_core(struct cwc_server *s)
 {
     struct wl_display *dpy = s->wl_display = wl_display_create();
     s->wl_event_loop                       = wl_display_get_event_loop(dpy);
+
+    wl_display_set_global_filter(s->wl_display, filter_global, NULL);
 
     if (!(s->backend = wlr_backend_autocreate(s->wl_event_loop, &s->session))) {
         cwc_log(CWC_ERROR, "Failed to create wlr backend");
@@ -137,7 +191,7 @@ int server_init(struct cwc_server *s, char *config_path, char *library_path)
     wl_list_init(&s->layer_shells);
     wl_list_init(&s->input_devices);
 
-    /* initialize map so that luaC can insert something at startup */
+    // initialize map so that luaC can insert something at startup
     s->keybind_kbd_map    = cwc_hhmap_create(100);
     s->keybind_mouse_map  = cwc_hhmap_create(30);
     s->output_state_cache = cwc_hhmap_create(8);
@@ -149,22 +203,25 @@ int server_init(struct cwc_server *s, char *config_path, char *library_path)
     // wlroots plug and play
     wlr_subcompositor_create(dpy);
     wlr_data_device_manager_create(dpy);
-    wlr_export_dmabuf_manager_v1_create(dpy);
-    wlr_screencopy_manager_v1_create(dpy);
-    wlr_data_control_manager_v1_create(dpy);
     wlr_primary_selection_v1_device_manager_create(dpy);
     wlr_viewporter_create(dpy);
     wlr_single_pixel_buffer_manager_v1_create(dpy);
     wlr_fractional_scale_manager_v1_create(dpy, 1);
     wlr_presentation_create(dpy, s->backend, 2);
     wlr_alpha_modifier_v1_create(dpy);
-    wlr_scene_set_gamma_control_manager_v1(
-        s->scene, wlr_gamma_control_manager_v1_create(dpy));
+
+    s->security_context_manager = wlr_security_context_manager_v1_create(dpy);
+    s->export_dmabuf_manager    = wlr_export_dmabuf_manager_v1_create(dpy);
+    s->screencopy_manager       = wlr_screencopy_manager_v1_create(dpy);
+    s->data_control_manager     = wlr_data_control_manager_v1_create(dpy);
+
+    s->gamma_control_manager = wlr_gamma_control_manager_v1_create(dpy);
+    wlr_scene_set_gamma_control_manager_v1(s->scene, s->gamma_control_manager);
 
     struct wlr_xdg_foreign_registry *foreign_registry =
-        wlr_xdg_foreign_registry_create(s->wl_display);
-    wlr_xdg_foreign_v1_create(s->wl_display, foreign_registry);
-    wlr_xdg_foreign_v2_create(s->wl_display, foreign_registry);
+        wlr_xdg_foreign_registry_create(dpy);
+    wlr_xdg_foreign_v1_create(dpy, foreign_registry);
+    wlr_xdg_foreign_v2_create(dpy, foreign_registry);
 
     // root scene graph
     s->temporary_tree = wlr_scene_tree_create(&s->scene->tree);
@@ -187,14 +244,11 @@ int server_init(struct cwc_server *s, char *config_path, char *library_path)
     setup_decoration_manager(s);
     xwayland_init(s);
 
-    s->foreign_toplevel_list =
-        wlr_ext_foreign_toplevel_list_v1_create(s->wl_display, 1);
-    s->foreign_toplevel_manager =
-        wlr_foreign_toplevel_manager_v1_create(s->wl_display);
+    s->foreign_toplevel_list = wlr_ext_foreign_toplevel_list_v1_create(dpy, 1);
+    s->foreign_toplevel_manager = wlr_foreign_toplevel_manager_v1_create(dpy);
 
     s->scene_layout =
         wlr_scene_attach_output_layout(s->scene, s->output_layout);
-    wlr_xdg_output_manager_v1_create(dpy, s->output_layout);
 
     cwc_idle_init(s);
     setup_cwc_session_lock(s);
