@@ -44,6 +44,7 @@
 static void cairo_buffer_destroy(struct wlr_buffer *wlr_buffer)
 {
     struct border_buffer *border = wl_container_of(wlr_buffer, border, base);
+    wlr_buffer_finish(&border->base);
     cairo_surface_destroy(border->surface);
 }
 
@@ -64,7 +65,10 @@ static bool cairo_buffer_begin_data_ptr_access(struct wlr_buffer *wlr_buffer,
     return true;
 }
 
-static void cairo_buffer_end_data_ptr_access(struct wlr_buffer *wlr_buffer) {}
+static void cairo_buffer_end_data_ptr_access(struct wlr_buffer *wlr_buffer)
+{
+    ;
+}
 
 static const struct wlr_buffer_impl cairo_border_impl = {
     .destroy               = cairo_buffer_destroy,

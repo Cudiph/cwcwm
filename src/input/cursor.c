@@ -597,6 +597,7 @@ static void cairo_buffer_destroy(struct wlr_buffer *wlr_buffer)
     struct hyprcursor_buffer *buffer =
         wl_container_of(wlr_buffer, buffer, base);
 
+    wlr_buffer_finish(&buffer->base);
     free(buffer);
     // the cairo surface is managed by hyprcursor manager no need to free the
     // cairo surface
