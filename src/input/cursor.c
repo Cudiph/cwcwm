@@ -40,6 +40,7 @@
 #include <wlr/types/wlr_cursor_shape_v1.h>
 #include <wlr/types/wlr_output.h>
 #include <wlr/types/wlr_pointer_constraints_v1.h>
+#include <wlr/types/wlr_pointer_gestures_v1.h>
 #include <wlr/types/wlr_relative_pointer_v1.h>
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_virtual_pointer_v1.h>
@@ -506,6 +507,89 @@ static void on_cursor_frame(struct wl_listener *listener, void *data)
     wlr_seat_pointer_notify_frame(cursor->seat);
 }
 
+static void on_swipe_begin(struct wl_listener *listener, void *data)
+{
+    struct cwc_cursor *cursor =
+        wl_container_of(listener, cursor, swipe_begin_l);
+    struct wlr_pointer_swipe_begin_event *event = data;
+
+    wlr_pointer_gestures_v1_send_swipe_begin(server.pointer_gestures,
+                                             cursor->seat, event->time_msec,
+                                             event->fingers);
+}
+
+static void on_swipe_update(struct wl_listener *listener, void *data)
+{
+    struct cwc_cursor *cursor =
+        wl_container_of(listener, cursor, swipe_update_l);
+    struct wlr_pointer_swipe_update_event *event = data;
+
+    wlr_pointer_gestures_v1_send_swipe_update(server.pointer_gestures,
+                                              cursor->seat, event->time_msec,
+                                              event->dx, event->dy);
+}
+
+static void on_swipe_end(struct wl_listener *listener, void *data)
+{
+    struct cwc_cursor *cursor = wl_container_of(listener, cursor, swipe_end_l);
+    struct wlr_pointer_swipe_end_event *event = data;
+
+    wlr_pointer_gestures_v1_send_swipe_end(server.pointer_gestures,
+                                           cursor->seat, event->time_msec,
+                                           event->cancelled);
+}
+
+static void on_pinch_begin(struct wl_listener *listener, void *data)
+{
+    struct cwc_cursor *cursor =
+        wl_container_of(listener, cursor, pinch_begin_l);
+    struct wlr_pointer_pinch_begin_event *event = data;
+
+    wlr_pointer_gestures_v1_send_pinch_begin(server.pointer_gestures,
+                                             cursor->seat, event->time_msec,
+                                             event->fingers);
+}
+
+static void on_pinch_update(struct wl_listener *listener, void *data)
+{
+    struct cwc_cursor *cursor =
+        wl_container_of(listener, cursor, pinch_update_l);
+    struct wlr_pointer_pinch_update_event *event = data;
+
+    wlr_pointer_gestures_v1_send_pinch_update(
+        server.pointer_gestures, cursor->seat, event->time_msec, event->dx,
+        event->dy, event->scale, event->rotation);
+}
+
+static void on_pinch_end(struct wl_listener *listener, void *data)
+{
+    struct cwc_cursor *cursor = wl_container_of(listener, cursor, pinch_end_l);
+    struct wlr_pointer_pinch_end_event *event = data;
+
+    wlr_pointer_gestures_v1_send_pinch_end(server.pointer_gestures,
+                                           cursor->seat, event->time_msec,
+                                           event->cancelled);
+}
+
+static void on_hold_begin(struct wl_listener *listener, void *data)
+{
+    struct cwc_cursor *cursor = wl_container_of(listener, cursor, hold_begin_l);
+    struct wlr_pointer_hold_begin_event *event = data;
+
+    wlr_pointer_gestures_v1_send_hold_begin(server.pointer_gestures,
+                                            cursor->seat, event->time_msec,
+                                            event->fingers);
+}
+
+static void on_hold_end(struct wl_listener *listener, void *data)
+{
+    struct cwc_cursor *cursor = wl_container_of(listener, cursor, hold_end_l);
+    struct wlr_pointer_hold_end_event *event = data;
+
+    wlr_pointer_gestures_v1_send_hold_end(server.pointer_gestures, cursor->seat,
+                                          event->time_msec, event->cancelled);
+}
+
 /* stuff for creating wlr_buffer from cair surface mainly from hypcursor */
 
 static void cairo_buffer_destroy(struct wlr_buffer *wlr_buffer)
@@ -650,6 +734,30 @@ struct cwc_cursor *cwc_cursor_create(struct wlr_seat *seat)
     wl_signal_add(&cursor->wlr_cursor->events.button, &cursor->cursor_button_l);
     wl_signal_add(&cursor->wlr_cursor->events.frame, &cursor->cursor_frame_l);
 
+    cursor->swipe_begin_l.notify  = on_swipe_begin;
+    cursor->swipe_update_l.notify = on_swipe_update;
+    cursor->swipe_end_l.notify    = on_swipe_end;
+    wl_signal_add(&cursor->wlr_cursor->events.swipe_begin,
+                  &cursor->swipe_begin_l);
+    wl_signal_add(&cursor->wlr_cursor->events.swipe_update,
+                  &cursor->swipe_update_l);
+    wl_signal_add(&cursor->wlr_cursor->events.swipe_end, &cursor->swipe_end_l);
+
+    cursor->pinch_begin_l.notify  = on_pinch_begin;
+    cursor->pinch_update_l.notify = on_pinch_update;
+    cursor->pinch_end_l.notify    = on_pinch_end;
+    wl_signal_add(&cursor->wlr_cursor->events.pinch_begin,
+                  &cursor->pinch_begin_l);
+    wl_signal_add(&cursor->wlr_cursor->events.pinch_update,
+                  &cursor->pinch_update_l);
+    wl_signal_add(&cursor->wlr_cursor->events.pinch_end, &cursor->pinch_end_l);
+
+    cursor->hold_begin_l.notify = on_hold_begin;
+    cursor->hold_end_l.notify   = on_hold_end;
+    wl_signal_add(&cursor->wlr_cursor->events.hold_begin,
+                  &cursor->hold_begin_l);
+    wl_signal_add(&cursor->wlr_cursor->events.hold_end, &cursor->hold_end_l);
+
     cursor->config_commit_l.notify = on_config_commit;
     wl_signal_add(&g_config.events.commit, &cursor->config_commit_l);
 
@@ -689,6 +797,17 @@ void cwc_cursor_destroy(struct cwc_cursor *cursor)
     wl_list_remove(&cursor->cursor_axis_l.link);
     wl_list_remove(&cursor->cursor_button_l.link);
     wl_list_remove(&cursor->cursor_frame_l.link);
+
+    wl_list_remove(&cursor->swipe_begin_l.link);
+    wl_list_remove(&cursor->swipe_update_l.link);
+    wl_list_remove(&cursor->swipe_end_l.link);
+
+    wl_list_remove(&cursor->pinch_begin_l.link);
+    wl_list_remove(&cursor->pinch_update_l.link);
+    wl_list_remove(&cursor->pinch_end_l.link);
+
+    wl_list_remove(&cursor->hold_begin_l.link);
+    wl_list_remove(&cursor->hold_end_l.link);
 
     wl_list_remove(&cursor->config_commit_l.link);
 
@@ -954,6 +1073,9 @@ void setup_pointer(struct cwc_server *s)
     wl_signal_add(&mgr->manager->events.request_set_shape,
                   &mgr->request_set_shape_l);
     wl_signal_add(&mgr->manager->events.destroy, &mgr->destroy_l);
+
+    // pointer gestures
+    s->pointer_gestures = wlr_pointer_gestures_v1_create(s->wl_display);
 }
 
 //============= LUA ===============

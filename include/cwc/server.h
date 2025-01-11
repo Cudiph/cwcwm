@@ -90,6 +90,8 @@ struct cwc_server {
     struct wlr_keyboard_shortcuts_inhibit_manager_v1 *kbd_inhibit_manager;
     struct wl_listener new_keyboard_inhibitor_l;
 
+    struct wlr_pointer_gestures_v1 *pointer_gestures;
+
     // list
     struct wl_list plugins;       // cwc_plugin.link
     struct wl_list outputs;       // cwc_output.link

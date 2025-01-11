@@ -59,6 +59,17 @@ struct cwc_cursor {
     struct wl_listener cursor_button_l;
     struct wl_listener cursor_frame_l;
 
+    struct wl_listener swipe_begin_l;
+    struct wl_listener swipe_update_l;
+    struct wl_listener swipe_end_l;
+
+    struct wl_listener pinch_begin_l;
+    struct wl_listener pinch_update_l;
+    struct wl_listener pinch_end_l;
+
+    struct wl_listener hold_begin_l;
+    struct wl_listener hold_end_l;
+
     struct wl_listener config_commit_l;
 };
 
