@@ -469,7 +469,7 @@ static void decide_should_tiled(struct cwc_toplevel *toplevel,
     cont->state &= ~CONTAINER_STATE_FLOATING;
 }
 
-static void
+static inline void
 _update_to_current_active_tag_and_worskpace(struct cwc_container *cont)
 {
     cont->tag       = cont->output->state->active_tag;
@@ -1132,8 +1132,6 @@ void cwc_container_set_minimized(struct cwc_container *container, bool set)
 
         if (bsp_node)
             bsp_node_enable(bsp_node);
-
-        _update_to_current_active_tag_and_worskpace(container);
     }
 
     cwc_container_for_each_toplevel(container, all_toplevel_set_minimized,
