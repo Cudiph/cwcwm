@@ -190,9 +190,9 @@ CWC_TOPLEVEL_FORWARD_BOOLEAN_TO_CONTAINER(fullscreen)
 CWC_TOPLEVEL_FORWARD_BOOLEAN_TO_CONTAINER(sticky)
 
 static inline void cwc_toplevel_move_to_tag(struct cwc_toplevel *toplevel,
-                                            int tagidx)
+                                            int workspace)
 {
-    cwc_container_move_to_tag(toplevel->container, tagidx);
+    cwc_container_move_to_tag(toplevel->container, workspace);
 }
 
 static inline void cwc_toplevel_to_center(struct cwc_toplevel *toplevel)

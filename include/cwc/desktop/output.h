@@ -86,6 +86,7 @@ struct cwc_toplevel *cwc_output_get_newest_toplevel(struct cwc_output *output,
 struct cwc_toplevel *
 cwc_output_get_newest_focus_toplevel(struct cwc_output *output, bool visible);
 
+/* exact name */
 struct cwc_output *cwc_output_get_by_name(const char *name);
 
 struct cwc_output *
@@ -104,14 +105,24 @@ void cwc_output_set_position(struct cwc_output *output, int x, int y);
 
 /* if workspace is 0, it will use the active workspace of the output */
 
-void cwc_output_set_useless_gaps(struct cwc_output *output, int tag, int width);
+/* set inner gap width */
+void cwc_output_set_useless_gaps(struct cwc_output *output,
+                                 int workspace,
+                                 int width);
+
+/* set master width factor */
 void cwc_output_set_mwfact(struct cwc_output *output,
                            int workspace,
                            double factor);
-void cwc_output_set_view_only(struct cwc_output *output, int view);
+
+/* set a tag to be the only active tag */
+void cwc_output_set_view_only(struct cwc_output *output, int workspace);
+
+/* set layout mode at the specified workspace */
 void cwc_output_set_layout_mode(struct cwc_output *output,
                                 int workspace,
                                 enum cwc_layout_mode mode);
+
 void cwc_output_set_strategy_idx(struct cwc_output *output, int idx);
 
 //================== MACRO ==================

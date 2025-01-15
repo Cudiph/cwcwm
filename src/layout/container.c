@@ -1311,20 +1311,21 @@ bool cwc_container_is_visible_in_workspace(struct cwc_container *container,
     return (workspace == container->workspace);
 }
 
-void cwc_container_move_to_tag(struct cwc_container *container, int tagidx)
+void cwc_container_move_to_tag(struct cwc_container *container, int workspace)
 {
-    if (container->workspace == tagidx)
+    if (container->workspace == workspace)
         return;
 
     if (container->bsp_node)
         bsp_remove_container(container, true);
 
-    container->tag       = 1 << (tagidx - 1);
-    container->workspace = tagidx;
+    container->tag       = 1 << (workspace - 1);
+    container->workspace = workspace;
 
-    struct cwc_tag_info *tag_info = &container->output->state->tag_info[tagidx];
+    struct cwc_tag_info *tag_info =
+        &container->output->state->tag_info[workspace];
     if (tag_info->layout_mode == CWC_LAYOUT_BSP)
-        bsp_insert_container(container, tagidx);
+        bsp_insert_container(container, workspace);
 
     cwc_output_tiling_layout_update(container->output, container->workspace);
     cwc_output_update_visible(container->output);
