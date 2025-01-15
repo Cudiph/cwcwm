@@ -1013,7 +1013,6 @@ void cwc_container_set_fullscreen(struct cwc_container *container, bool set)
         // set first so the set_size don't save the fullscreen dimension as
         // floating box
         container->state |= CONTAINER_STATE_FULLSCREEN;
-        container->state &= ~CONTAINER_STATE_MAXIMIZED;
 
         if (bsp_node)
             bsp_node_disable(bsp_node);
@@ -1036,6 +1035,9 @@ void cwc_container_set_fullscreen(struct cwc_container *container, bool set)
             wlr_scene_node_destroy(&container->fullscreen_bg->node);
             container->fullscreen_bg = NULL;
         }
+
+        if (container->state & CONTAINER_STATE_MAXIMIZED)
+            cwc_container_set_maximized(container, true);
     }
 
     cwc_container_for_each_toplevel(container, all_toplevel_set_fullscreen,
@@ -1070,9 +1072,14 @@ void cwc_container_set_maximized(struct cwc_container *container, bool set)
     struct bsp_node *bsp_node = container->bsp_node;
     cwc_border_set_enabled(&container->border, !set);
 
+    if (cwc_container_is_fullscreen(container)) {
+        set = true;
+        cwc_container_set_fullscreen(container, false);
+    }
+
     if (set) {
         container->state |= CONTAINER_STATE_MAXIMIZED;
-        container->state &= ~CONTAINER_STATE_FULLSCREEN;
+
         if (bsp_node)
             bsp_node_disable(bsp_node);
 
