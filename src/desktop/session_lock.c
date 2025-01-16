@@ -118,3 +118,8 @@ void setup_cwc_session_lock(struct cwc_server *s)
     wl_signal_add(&mgr->manager->events.new_lock, &mgr->new_lock_l);
     wl_signal_add(&mgr->manager->events.destroy, &mgr->destroy_l);
 }
+
+void cleanup_cwc_session_lock(struct cwc_server *s)
+{
+    ;
+}

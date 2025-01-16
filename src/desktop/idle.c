@@ -88,6 +88,7 @@ void cwc_idle_init(struct cwc_server *s)
 
 void cwc_idle_fini(struct cwc_server *s)
 {
+    wl_list_remove(&s->idle->new_inhibitor_l.link);
     free(s->idle);
     s->idle = NULL;
 }

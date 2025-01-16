@@ -404,6 +404,9 @@ update_last_focused:
 
 void bsp_remove_container(struct cwc_container *container, bool update)
 {
+    // TODO: container->workspace can be changed when at minimizing focusing.
+    // the bsp_node I guess adding the field of where the real workspace is will
+    // fix
     struct bsp_root_entry *bspentry =
         bsp_entry_get(container->output, container->workspace);
     struct bsp_node *grandparent_node = NULL;

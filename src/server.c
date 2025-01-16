@@ -43,7 +43,6 @@
 #include <wlr/types/wlr_output_power_management_v1.h>
 #include <wlr/types/wlr_presentation_time.h>
 #include <wlr/types/wlr_primary_selection_v1.h>
-#include <wlr/types/wlr_relative_pointer_v1.h>
 #include <wlr/types/wlr_screencopy_v1.h>
 #include <wlr/types/wlr_security_context_v1.h>
 #include <wlr/types/wlr_single_pixel_buffer_v1.h>
@@ -66,6 +65,7 @@
 #include "cwc/desktop/toplevel.h"
 #include "cwc/input/cursor.h"
 #include "cwc/input/keyboard.h"
+#include "cwc/input/manager.h"
 #include "cwc/input/seat.h"
 #include "cwc/luac.h"
 #include "cwc/plugin.h"
@@ -91,9 +91,9 @@ static bool is_privileged(const struct wl_global *global)
            || global == server.gamma_control_manager->global
            || global == server.layer_shell->global
            || global == server.session_lock->manager->global
-           || global == server.kbd_inhibit_manager->global
-           || global == server.virtual_kbd_manager->global
-           || global == server.virtual_pointer_manager->global
+           || global == server.input->kbd_inhibit_manager->global
+           || global == server.input->virtual_kbd_manager->global
+           || global == server.input->virtual_pointer_manager->global
            // || global == server.input->transient_seat_manager->global
            || global == server.xdg_output_manager->global;
 }
@@ -189,7 +189,6 @@ int server_init(struct cwc_server *s, char *config_path, char *library_path)
     wl_list_init(&s->toplevels);
     wl_list_init(&s->containers);
     wl_list_init(&s->layer_shells);
-    wl_list_init(&s->input_devices);
 
     // initialize map so that luaC can insert something at startup
     s->keybind_kbd_map    = cwc_hhmap_create(100);
@@ -255,10 +254,10 @@ int server_init(struct cwc_server *s, char *config_path, char *library_path)
     setup_layer_shell(s);
 
     // inputs
-    s->seat = cwc_seat_create();
-    setup_pointer(s);
-    setup_keyboard(s);
-    s->relative_pointer_manager = wlr_relative_pointer_manager_v1_create(dpy);
+    s->input = cwc_input_manager_get();
+    setup_pointer(s->input);
+    setup_keyboard(s->input);
+    setup_seat(s->input);
 
     const char *socket = wl_display_add_socket_auto(dpy);
     if (!socket)
@@ -280,13 +279,26 @@ void server_fini(struct cwc_server *s)
 {
     cwc_log(CWC_INFO, "Shutting down cwc...");
     wl_display_destroy_clients(s->wl_display);
+
+    cwc_signal_emit_c("cwc::shutdown", NULL);
+
+    cleanup_seat(s->input);
+    cleanup_keyboard(s->input);
+    cleanup_pointer(s->input);
+    cleanup_output(s);
+    cleanup_xdg_shell(s);
+    cleanup_decoration_manager(s);
+    cleanup_layer_shell(s);
+
+    cwc_plugin_stop_plugins(&s->plugins);
+    cwc_input_manager_destroy();
+
     cwc_idle_fini(s);
     xwayland_fini(s);
-    cwc_plugin_stop_plugins(&s->plugins);
+
     wlr_output_layout_destroy(s->output_layout);
     wlr_allocator_destroy(s->allocator);
     wlr_renderer_destroy(s->renderer);
-    wlr_xwayland_destroy(s->xwayland);
     wl_display_destroy(s->wl_display);
     wlr_scene_node_destroy(&s->scene->tree.node);
 }

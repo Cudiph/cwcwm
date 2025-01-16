@@ -16,8 +16,6 @@ struct cwc_keyboard_group {
     struct wl_listener modifiers_l;
     struct wl_listener key_l;
 
-    struct wl_listener seat_keyboard_focus_change_l;
-
     union {
         struct wl_listener config_commit_l; // for native
         struct wl_listener destroy_l;       // for virtual

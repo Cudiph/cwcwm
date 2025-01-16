@@ -31,7 +31,7 @@
 
 #include "cwc/desktop/output.h"
 #include "cwc/desktop/toplevel.h"
-#include "cwc/input/seat.h"
+#include "cwc/input/manager.h"
 #include "cwc/luaclass.h"
 #include "cwc/server.h"
 
@@ -60,7 +60,7 @@ static int luaC_input_get(lua_State *L)
 
     int i = 1;
     struct cwc_libinput_device *input_dev;
-    wl_list_for_each(input_dev, &server.input_devices, link)
+    wl_list_for_each(input_dev, &server.input->devices, link)
     {
         luaC_object_push(L, input_dev);
         lua_rawseti(L, -2, i++);

@@ -50,9 +50,6 @@ struct cwc_cursor {
     struct wlr_pointer_constraint_v1 *active_constraint;
     bool dont_emit_signal;
 
-    struct wl_listener seat_request_cursor_l;
-    struct wl_listener seat_pointer_focus_change_l;
-
     struct wl_listener cursor_motion_l;
     struct wl_listener cursor_motion_abs_l;
     struct wl_listener cursor_axis_l;
@@ -71,6 +68,7 @@ struct cwc_cursor {
     struct wl_listener hold_end_l;
 
     struct wl_listener config_commit_l;
+    struct wl_listener destroy_l;
 };
 
 void process_cursor_motion(struct cwc_cursor *cursor,
@@ -101,14 +99,6 @@ void cwc_cursor_hide_cursor(struct cwc_cursor *cursor);
  */
 bool cwc_cursor_hyprcursor_change_style(
     struct cwc_cursor *cursor, struct hyprcursor_cursor_style_info info);
-
-struct cwc_cursor_shape_manager {
-    struct wlr_cursor_shape_manager_v1 *manager;
-    struct cwc_server *server;
-
-    struct wl_listener request_set_shape_l;
-    struct wl_listener destroy_l;
-};
 
 struct cwc_pointer_constraint {
     struct wlr_pointer_constraint_v1 *constraint;

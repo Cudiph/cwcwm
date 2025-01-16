@@ -621,6 +621,14 @@ void setup_xdg_shell(struct cwc_server *s)
                   &s->request_activate_l);
 }
 
+void cleanup_xdg_shell(struct cwc_server *s)
+{
+    wl_list_remove(&s->new_xdg_toplevel_l.link);
+    wl_list_remove(&s->new_xdg_popup_l.link);
+
+    wl_list_remove(&s->request_activate_l.link);
+}
+
 void cwc_toplevel_focus(struct cwc_toplevel *toplevel, bool raise)
 {
     struct wlr_seat *seat = server.seat->wlr_seat;
@@ -833,6 +841,11 @@ void setup_decoration_manager(struct cwc_server *s)
                   &s->new_decoration_l);
 }
 
+void cleanup_decoration_manager(struct cwc_server *s)
+{
+    wl_list_remove(&s->new_decoration_l.link);
+}
+
 //================ XWAYLAND ==================
 
 /* - */
@@ -948,6 +961,10 @@ void xwayland_init(struct cwc_server *s)
 void xwayland_fini(struct cwc_server *s)
 {
     unsetenv("DISPLAY");
+
+    wl_list_remove(&s->xw_ready_l.link);
+    wl_list_remove(&s->xw_new_surface_l.link);
+
     wlr_xwayland_destroy(s->xwayland);
     s->xwayland = NULL;
 }

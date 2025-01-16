@@ -255,3 +255,8 @@ void setup_layer_shell(struct cwc_server *s)
     wl_signal_add(&s->layer_shell->events.new_surface,
                   &s->layer_shell_surface_l);
 }
+
+void cleanup_layer_shell(struct cwc_server *s)
+{
+    wl_list_remove(&s->layer_shell_surface_l.link);
+}

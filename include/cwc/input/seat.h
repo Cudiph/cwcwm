@@ -3,20 +3,32 @@
 
 #include <wayland-server-core.h>
 #include <wayland-util.h>
+#include <wlr/types/wlr_input_device.h>
 
 struct cwc_server;
 struct cwc_keyboard_group;
+struct cwc_input_manager;
 
 /* wlr_seat.data == cwc_seat */
 struct cwc_seat {
+    struct wl_list link; // struct cwc_input_manager.seats
     struct wlr_seat *wlr_seat;
+
     struct cwc_cursor *cursor;
     struct cwc_keyboard_group *kbd_group;
-    struct cwc_layer_surface *exclusive_kbd_interactive;
 
+    struct cwc_layer_surface *exclusive_kbd_interactive;
     struct wlr_keyboard_shortcuts_inhibitor_v1 *kbd_inhibitor;
 
-    struct wl_listener new_input_l;
+    struct wl_list switch_devs;
+    struct wl_list tablet_devs;
+    struct wl_list tablet_pad_devs;
+    struct wl_list touch_devs;
+
+    struct wl_listener request_set_cursor_l;
+    struct wl_listener pointer_focus_change_l;
+    struct wl_listener keyboard_focus_change_l;
+
     struct wl_listener request_selection_l;
     struct wl_listener request_primary_selection_l;
     struct wl_listener request_start_drag_l;
@@ -32,14 +44,27 @@ struct cwc_drag {
     struct wl_listener on_drag_destroy_l;
 };
 
-struct cwc_libinput_device {
-    struct wl_list link; // cwc_seat.libinput_devs
-    struct libinput_device *device;
-    struct wlr_input_device *wlr_input_dev;
+struct cwc_seat *cwc_seat_create(struct cwc_input_manager *manager,
+                                 const char *name);
 
-    struct wl_listener destroy_l;
-};
+void cwc_seat_destroy(struct cwc_seat *seat);
 
-struct cwc_seat *cwc_seat_create();
+void cwc_seat_add_keyboard_device(struct cwc_seat *seat,
+                                  struct wlr_input_device *dev);
+
+void cwc_seat_add_pointer_device(struct cwc_seat *seat,
+                                 struct wlr_input_device *dev);
+
+void cwc_seat_add_switch_device(struct cwc_seat *seat,
+                                struct wlr_input_device *dev);
+
+void cwc_seat_add_tablet_device(struct cwc_seat *seat,
+                                struct wlr_input_device *dev);
+
+void cwc_seat_add_tablet_pad_device(struct cwc_seat *seat,
+                                    struct wlr_input_device *dev);
+
+void cwc_seat_add_touch_device(struct cwc_seat *seat,
+                               struct wlr_input_device *dev);
 
 #endif // !_CWC_SEAT_H

@@ -737,6 +737,18 @@ void setup_output(struct cwc_server *s)
         wlr_xdg_output_manager_v1_create(s->wl_display, s->output_layout);
 }
 
+void cleanup_output(struct cwc_server *s)
+{
+    wl_list_remove(&s->new_output_l.link);
+
+    wl_list_remove(&s->output_manager_test_l.link);
+    wl_list_remove(&s->output_manager_apply_l.link);
+
+    wl_list_remove(&s->opm_set_mode_l.link);
+
+    wl_list_remove(&s->new_tearing_object_l.link);
+}
+
 void cwc_output_update_visible(struct cwc_output *output)
 {
     if (output == server.fallback_output)

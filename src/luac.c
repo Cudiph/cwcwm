@@ -45,7 +45,7 @@
 #include "cwc/desktop/toplevel.h"
 #include "cwc/input/cursor.h"
 #include "cwc/input/keyboard.h"
-#include "cwc/input/seat.h"
+#include "cwc/input/manager.h"
 #include "cwc/luac.h"
 #include "cwc/luaclass.h"
 #include "cwc/plugin.h"
@@ -94,7 +94,7 @@ static void reregister_lua_object()
     }
 
     struct cwc_libinput_device *input_dev;
-    wl_list_for_each(input_dev, &server.input_devices, link)
+    wl_list_for_each(input_dev, &server.input->devices, link)
     {
         luaC_object_input_register(L, input_dev);
     }

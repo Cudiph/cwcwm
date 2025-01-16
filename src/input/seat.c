@@ -17,93 +17,32 @@
  */
 
 #include <libinput.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <wayland-server-core.h>
 #include <wayland-server-protocol.h>
 #include <wayland-util.h>
-#include <wlr/backend/libinput.h>
 #include <wlr/types/wlr_cursor.h>
 #include <wlr/types/wlr_data_device.h>
+#include <wlr/types/wlr_keyboard_group.h>
 #include <wlr/types/wlr_primary_selection.h>
 #include <wlr/types/wlr_seat.h>
+#include <wlr/types/wlr_touch.h>
+#include <wlr/types/wlr_transient_seat_v1.h>
 
-#include "cwc/config.h"
 #include "cwc/desktop/output.h"
 #include "cwc/desktop/toplevel.h"
 #include "cwc/input/cursor.h"
 #include "cwc/input/keyboard.h"
+#include "cwc/input/manager.h"
 #include "cwc/input/seat.h"
-#include "cwc/luaclass.h"
-#include "cwc/luaobject.h"
+#include "cwc/input/switch.h"
+#include "cwc/input/tablet.h"
+#include "cwc/input/touch.h"
 #include "cwc/server.h"
-#include "cwc/signal.h"
 #include "cwc/util.h"
-
-static void on_libinput_device_destroy(struct wl_listener *listener, void *data)
-{
-    struct cwc_libinput_device *dev = wl_container_of(listener, dev, destroy_l);
-
-    lua_State *L = g_config_get_lua_State();
-    cwc_object_emit_signal_simple("input::destroy", L, dev);
-    luaC_object_unregister(L, dev);
-
-    wl_list_remove(&dev->link);
-    wl_list_remove(&dev->destroy_l.link);
-
-    free(dev);
-}
-
-static void map_pointer_to_output(struct wlr_input_device *dev)
-{
-    struct wlr_pointer *pointer = wlr_pointer_from_input_device(dev);
-
-    if (pointer->output_name == NULL)
-        return;
-
-    struct cwc_output *output = cwc_output_get_by_name(pointer->output_name);
-
-    if (!output)
-        return;
-
-    wlr_cursor_map_input_to_output(server.seat->cursor->wlr_cursor,
-                                   &pointer->base, output->wlr_output);
-}
-
-static void on_new_input(struct wl_listener *listener, void *data)
-{
-    struct cwc_seat *seat = wl_container_of(listener, seat, new_input_l);
-    struct wlr_input_device *device = data;
-
-    switch (device->type) {
-    case WLR_INPUT_DEVICE_POINTER:
-        wlr_cursor_attach_input_device(seat->cursor->wlr_cursor, device);
-        map_pointer_to_output(device);
-        break;
-    case WLR_INPUT_DEVICE_KEYBOARD:
-        cwc_keyboard_group_add_device(seat->kbd_group, device);
-        break;
-    case WLR_INPUT_DEVICE_TOUCH:
-    case WLR_INPUT_DEVICE_TABLET:
-    default:
-        break;
-    }
-
-    if (wlr_input_device_is_libinput(device)) {
-        struct cwc_libinput_device *libinput_dev =
-            calloc(1, sizeof(*libinput_dev));
-        libinput_dev->device        = wlr_libinput_get_device_handle(device);
-        libinput_dev->wlr_input_dev = device;
-
-        libinput_dev->destroy_l.notify = on_libinput_device_destroy;
-        wl_signal_add(&device->events.destroy, &libinput_dev->destroy_l);
-
-        wl_list_insert(server.input_devices.prev, &libinput_dev->link);
-
-        lua_State *L = g_config_get_lua_State();
-        luaC_object_input_register(L, libinput_dev);
-        cwc_object_emit_signal_simple("input::new", L, libinput_dev);
-    }
-}
+#include "private/callback.h"
 
 static void on_request_selection(struct wl_listener *listener, void *data)
 {
@@ -171,37 +110,88 @@ static void on_start_drag(struct wl_listener *listener, void *data)
     wl_signal_add(&drag->events.destroy, &cwc_drag->on_drag_destroy_l);
 }
 
+static void _cwc_seat_destroy(struct cwc_seat *seat)
+{
+    cwc_log(CWC_DEBUG, "destroying seat (%s): %p", seat->wlr_seat->name, seat);
+
+    cwc_cursor_destroy(seat->cursor);
+    cwc_keyboard_group_destroy(seat->kbd_group);
+
+    wl_list_remove(&seat->request_set_cursor_l.link);
+    wl_list_remove(&seat->pointer_focus_change_l.link);
+    wl_list_remove(&seat->keyboard_focus_change_l.link);
+
+    wl_list_remove(&seat->destroy_l.link);
+    wl_list_remove(&seat->request_selection_l.link);
+    wl_list_remove(&seat->request_primary_selection_l.link);
+    wl_list_remove(&seat->request_start_drag_l.link);
+    wl_list_remove(&seat->start_drag_l.link);
+
+    wl_list_remove(&seat->link);
+    free(seat);
+}
+
 static void on_destroy(struct wl_listener *listener, void *data)
 {
     struct cwc_seat *seat = wl_container_of(listener, seat, destroy_l);
 
-    cwc_cursor_destroy(seat->cursor);
-    cwc_keyboard_group_destroy(seat->kbd_group);
-    free(seat);
+    _cwc_seat_destroy(seat);
+}
+
+static void cwc_seat_update_capabilities(struct cwc_seat *seat)
+{
+    uint32_t caps = WL_SEAT_CAPABILITY_POINTER;
+
+    if (wl_list_length_at_least(&seat->kbd_group->wlr_kbd_group->devices, 1))
+        caps |= WL_SEAT_CAPABILITY_KEYBOARD;
+
+    if (wl_list_length_at_least(&seat->touch_devs, 1))
+        caps |= WL_SEAT_CAPABILITY_TOUCH;
+
+    wlr_seat_set_capabilities(seat->wlr_seat, caps);
 }
 
 /* create new seat currently only support one seat
  *
  * automatically freed when wlr_seat destroyed
  */
-struct cwc_seat *cwc_seat_create()
+struct cwc_seat *cwc_seat_create(struct cwc_input_manager *manager,
+                                 const char *name)
 {
     struct cwc_seat *seat = calloc(1, sizeof(*seat));
+    if (!seat)
+        return NULL;
 
-    seat->wlr_seat       = wlr_seat_create(server.wl_display, "seat0");
+    cwc_log(CWC_DEBUG, "creating seat (%s): %p", name, seat);
+
+    seat->wlr_seat       = wlr_seat_create(server.wl_display, name);
     seat->wlr_seat->data = seat;
-    seat->cursor         = cwc_cursor_create(seat->wlr_seat);
-    seat->kbd_group      = cwc_keyboard_group_create(seat, false);
+
+    seat->cursor    = cwc_cursor_create(seat->wlr_seat);
+    seat->kbd_group = cwc_keyboard_group_create(seat, false);
+
+    wl_list_init(&seat->switch_devs);
+    wl_list_init(&seat->tablet_devs);
+    wl_list_init(&seat->tablet_pad_devs);
+    wl_list_init(&seat->touch_devs);
 
     seat->destroy_l.notify = on_destroy;
     wl_signal_add(&seat->wlr_seat->events.destroy, &seat->destroy_l);
 
-    seat->new_input_l.notify                 = on_new_input;
+    seat->request_set_cursor_l.notify    = on_request_set_cursor;
+    seat->pointer_focus_change_l.notify  = on_pointer_focus_change;
+    seat->keyboard_focus_change_l.notify = on_keyboard_focus_change;
+    wl_signal_add(&seat->wlr_seat->events.request_set_cursor,
+                  &seat->request_set_cursor_l);
+    wl_signal_add(&seat->wlr_seat->pointer_state.events.focus_change,
+                  &seat->pointer_focus_change_l);
+    wl_signal_add(&seat->wlr_seat->keyboard_state.events.focus_change,
+                  &seat->keyboard_focus_change_l);
+
     seat->request_selection_l.notify         = on_request_selection;
     seat->request_primary_selection_l.notify = on_request_primary_selection;
     seat->request_start_drag_l.notify        = on_request_start_drag;
     seat->start_drag_l.notify                = on_start_drag;
-    wl_signal_add(&server.backend->events.new_input, &seat->new_input_l);
     wl_signal_add(&seat->wlr_seat->events.request_set_selection,
                   &seat->request_selection_l);
     wl_signal_add(&seat->wlr_seat->events.request_set_primary_selection,
@@ -210,9 +200,145 @@ struct cwc_seat *cwc_seat_create()
                   &seat->request_start_drag_l);
     wl_signal_add(&seat->wlr_seat->events.start_drag, &seat->start_drag_l);
 
-    wlr_seat_set_capabilities(seat->wlr_seat,
-                              WL_SEAT_CAPABILITY_POINTER
-                                  | WL_SEAT_CAPABILITY_KEYBOARD);
+    wl_list_insert(&manager->seats, &seat->link);
+
+    cwc_seat_update_capabilities(seat);
 
     return seat;
+}
+
+void cwc_seat_destroy(struct cwc_seat *seat)
+{
+    wlr_seat_destroy(seat->wlr_seat);
+}
+
+void cwc_seat_add_keyboard_device(struct cwc_seat *seat,
+                                  struct wlr_input_device *dev)
+{
+    cwc_keyboard_group_add_device(server.seat->kbd_group, dev);
+}
+
+static void map_input_device_to_output(struct cwc_seat *seat,
+                                       struct wlr_input_device *dev)
+{
+    const char *output_name = NULL;
+
+    switch (dev->type) {
+    case WLR_INPUT_DEVICE_POINTER:
+        output_name = wlr_pointer_from_input_device(dev)->output_name;
+        break;
+    case WLR_INPUT_DEVICE_TOUCH:
+        output_name = wlr_touch_from_input_device(dev)->output_name;
+        break;
+    default:
+        return;
+    }
+
+    if (output_name == NULL)
+        return;
+
+    struct cwc_output *output = cwc_output_get_by_name(output_name);
+
+    if (!output)
+        return;
+
+    wlr_cursor_map_input_to_output(seat->cursor->wlr_cursor, dev,
+                                   output->wlr_output);
+}
+
+void cwc_seat_add_pointer_device(struct cwc_seat *seat,
+                                 struct wlr_input_device *dev)
+{
+    wlr_cursor_attach_input_device(seat->cursor->wlr_cursor, dev);
+    map_input_device_to_output(seat, dev);
+    cwc_seat_update_capabilities(seat);
+}
+
+void cwc_seat_add_switch_device(struct cwc_seat *seat,
+                                struct wlr_input_device *dev)
+{
+    cwc_switch_create(seat, dev);
+}
+
+void cwc_seat_add_tablet_device(struct cwc_seat *seat,
+                                struct wlr_input_device *dev)
+{
+    cwc_tablet_create(seat, dev);
+}
+
+void cwc_seat_add_tablet_pad_device(struct cwc_seat *seat,
+                                    struct wlr_input_device *dev)
+{
+    cwc_tablet_pad_create(seat, dev);
+}
+
+void cwc_seat_add_touch_device(struct cwc_seat *seat,
+                               struct wlr_input_device *dev)
+{
+    map_input_device_to_output(seat, dev);
+    cwc_touch_create(seat, dev);
+    cwc_seat_update_capabilities(seat);
+}
+
+static void generate_seat_name(struct cwc_input_manager *mgr,
+                               bool transient,
+                               char *buf,
+                               int len)
+{
+    int count = 0;
+    struct cwc_seat *seat;
+
+    if (transient) {
+        wl_list_for_each(seat, &mgr->seats, link)
+        {
+            if (strncmp(seat->wlr_seat->name, "tseat", 5) == 0)
+                count++;
+        }
+
+        snprintf(buf, len, "tseat%d", count);
+        return;
+    }
+
+    wl_list_for_each(seat, &mgr->seats, link)
+    {
+        if (strncmp(seat->wlr_seat->name, "seat", 4) == 0)
+            count++;
+    }
+    snprintf(buf, len, "seat%d", count);
+}
+
+static void on_create_tseat(struct wl_listener *listener, void *data)
+{
+    struct cwc_input_manager *input_mgr =
+        wl_container_of(listener, input_mgr, create_seat_l);
+    struct wlr_transient_seat_v1 *t_seat = data;
+
+    char name[50];
+    generate_seat_name(input_mgr, true, name, sizeof(name) - 1);
+
+    struct cwc_seat *seat = cwc_seat_create(input_mgr, name);
+
+    if (seat && seat->wlr_seat) {
+        wlr_transient_seat_v1_ready(t_seat, seat->wlr_seat);
+    } else {
+        wlr_transient_seat_v1_deny(t_seat);
+    }
+}
+
+void setup_seat(struct cwc_input_manager *input_mgr)
+{
+    // main seat
+    server.seat = cwc_seat_create(input_mgr, "seat0");
+
+    // transient seat
+    input_mgr->transient_seat_manager =
+        wlr_transient_seat_manager_v1_create(server.wl_display);
+    input_mgr->create_seat_l.notify = on_create_tseat;
+    wl_signal_add(&input_mgr->transient_seat_manager->events.create_seat,
+                  &input_mgr->create_seat_l);
+}
+
+void cleanup_seat(struct cwc_input_manager *input_mgr)
+{
+    wl_list_remove(&input_mgr->create_seat_l.link);
 }

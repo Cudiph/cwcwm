@@ -19,9 +19,13 @@ srcs = [
   'desktop/toplevel.c',
 
   'input/cursor.c',
+  'input/manager.c',
   'input/keybinding.c',
   'input/keyboard.c',
   'input/seat.c',
+  'input/switch.c',
+  'input/tablet.c',
+  'input/touch.c',
 
   'layout/bsp.c',
   'layout/master.c',
@@ -35,6 +39,7 @@ srcs = [
 
   # Stable upstream protocols
   protocols_server_header['xdg-shell'],
+  protocols_server_header['tablet-v2'],
 
   # Staging upstream protocols
   protocols_server_header['cursor-shape-v1'],

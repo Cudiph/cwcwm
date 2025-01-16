@@ -75,30 +75,15 @@ struct cwc_server {
     struct wl_listener layer_shell_surface_l;
 
     // inputs
+    struct cwc_input_manager *input;
     struct cwc_seat *seat;
-    struct cwc_cursor_shape_manager *cursor_shape_manager;
-    struct wlr_relative_pointer_manager_v1 *relative_pointer_manager;
-
-    struct wlr_pointer_constraints_v1 *pointer_constraints;
-    struct wl_listener new_pointer_constraint_l;
-
-    struct wlr_virtual_keyboard_manager_v1 *virtual_kbd_manager;
-    struct wl_listener new_vkbd_l;
-    struct wlr_virtual_pointer_manager_v1 *virtual_pointer_manager;
-    struct wl_listener new_vpointer_l;
-
-    struct wlr_keyboard_shortcuts_inhibit_manager_v1 *kbd_inhibit_manager;
-    struct wl_listener new_keyboard_inhibitor_l;
-
-    struct wlr_pointer_gestures_v1 *pointer_gestures;
 
     // list
-    struct wl_list plugins;       // cwc_plugin.link
-    struct wl_list outputs;       // cwc_output.link
-    struct wl_list toplevels;     // cwc_toplevel.link
-    struct wl_list containers;    // cwc_container.link
-    struct wl_list layer_shells;  // cwc_layer_surface.link
-    struct wl_list input_devices; // cwc_libinput_device.link
+    struct wl_list plugins;      // cwc_plugin.link
+    struct wl_list outputs;      // cwc_output.link
+    struct wl_list toplevels;    // cwc_toplevel.link
+    struct wl_list containers;   // cwc_container.link
+    struct wl_list layer_shells; // cwc_layer_surface.link
 
     // maps
     struct cwc_hhmap *output_state_cache; // struct cwc_output_state

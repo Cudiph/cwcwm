@@ -20,6 +20,9 @@
  *
  * `lua::reload` (NULL) - the lua_State is reinitialize, if you save object in
  * the lua state you need to register it back.
+ *
+ * `cwc::shutdown` (NULL) - the event loop has exited and you may need to do
+ * some cleaning up
  */
 
 #include <stdarg.h>

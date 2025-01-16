@@ -32,6 +32,7 @@
 #include "cwc/desktop/toplevel.h"
 #include "cwc/input/cursor.h"
 #include "cwc/input/keyboard.h"
+#include "cwc/input/manager.h"
 #include "cwc/input/seat.h"
 #include "cwc/layout/bsp.h"
 #include "cwc/server.h"
@@ -137,18 +138,17 @@ static void _notify_focus_signal(struct wlr_surface *old_surface,
                                       g_config_get_lua_State(), old);
     }
 
-    if (new &&cwc_toplevel_is_mapped(new)) {
+    if (new && cwc_toplevel_is_mapped(new)) {
         cwc_object_emit_signal_simple("client::focus", g_config_get_lua_State(),
                                       new);
     }
 }
 
-static void on_keyboard_focus_change(struct wl_listener *listener, void *data)
+void on_keyboard_focus_change(struct wl_listener *listener, void *data)
 {
-    struct cwc_keyboard_group *kbd =
-        wl_container_of(listener, kbd, seat_keyboard_focus_change_l);
+    struct cwc_seat *seat =
+        wl_container_of(listener, seat, keyboard_focus_change_l);
     struct wlr_seat_keyboard_focus_change_event *event = data;
-    struct cwc_seat *seat                              = event->seat->data;
 
     // check for exclusive focus
     if (server.session_lock->locked) {
@@ -187,16 +187,14 @@ struct cwc_keyboard_group *cwc_keyboard_group_create(struct cwc_seat *seat,
     kbd_group->seat                      = seat;
     struct wlr_keyboard *wlr_kbd         = &kbd_group->wlr_kbd_group->keyboard;
 
+    cwc_log(CWC_DEBUG, "creating keyboard group: %p", kbd_group);
+
     kbd_group->modifiers_l.notify = on_kbd_modifiers;
     kbd_group->key_l.notify       = on_kbd_key;
-    wl_signal_add(&kbd_group->wlr_kbd_group->keyboard.events.key,
-                  &kbd_group->key_l);
     wl_signal_add(&kbd_group->wlr_kbd_group->keyboard.events.modifiers,
                   &kbd_group->modifiers_l);
-
-    kbd_group->seat_keyboard_focus_change_l.notify = on_keyboard_focus_change;
-    wl_signal_add(&seat->wlr_seat->keyboard_state.events.focus_change,
-                  &kbd_group->seat_keyboard_focus_change_l);
+    wl_signal_add(&kbd_group->wlr_kbd_group->keyboard.events.key,
+                  &kbd_group->key_l);
 
     if (!virtual) {
         kbd_group->config_commit_l.notify = on_config_commit;
@@ -220,10 +218,10 @@ struct cwc_keyboard_group *cwc_keyboard_group_create(struct cwc_seat *seat,
 
 void cwc_keyboard_group_destroy(struct cwc_keyboard_group *kbd_group)
 {
+    cwc_log(CWC_DEBUG, "destroying keyboard group: %p", kbd_group);
+
     wl_list_remove(&kbd_group->modifiers_l.link);
     wl_list_remove(&kbd_group->key_l.link);
-
-    wl_list_remove(&kbd_group->seat_keyboard_focus_change_l.link);
 
     // destroy_l is a wl_list union no need to worry
     wl_list_remove(&kbd_group->config_commit_l.link);
@@ -275,7 +273,8 @@ static void on_new_vkbd(struct wl_listener *listener, void *data)
     struct cwc_keyboard_group *kbd_group =
         cwc_keyboard_group_create(seat, true);
 
-    cwc_log(WLR_DEBUG, "new virtual keyboard: %p", kbd_group);
+    cwc_log(WLR_DEBUG, "new virtual keyboard (%s): %p", seat->wlr_seat->name,
+            kbd_group);
 
     if (vkbd->has_keymap)
         wlr_keyboard_set_keymap(&kbd_group->wlr_kbd_group->keyboard,
@@ -308,17 +307,24 @@ static void on_new_inhibitor(struct wl_listener *listener, void *data)
         seat->kbd_inhibitor = inhibitor;
 }
 
-void setup_keyboard(struct cwc_server *s)
+void setup_keyboard(struct cwc_input_manager *input_mgr)
 {
-    s->virtual_kbd_manager =
-        wlr_virtual_keyboard_manager_v1_create(s->wl_display);
-    s->new_vkbd_l.notify = on_new_vkbd;
-    wl_signal_add(&s->virtual_kbd_manager->events.new_virtual_keyboard,
-                  &s->new_vkbd_l);
+    input_mgr->virtual_kbd_manager =
+        wlr_virtual_keyboard_manager_v1_create(server.wl_display);
+    input_mgr->new_vkbd_l.notify = on_new_vkbd;
+    wl_signal_add(&input_mgr->virtual_kbd_manager->events.new_virtual_keyboard,
+                  &input_mgr->new_vkbd_l);
 
-    s->kbd_inhibit_manager =
-        wlr_keyboard_shortcuts_inhibit_v1_create(s->wl_display);
-    s->new_keyboard_inhibitor_l.notify = on_new_inhibitor;
-    wl_signal_add(&s->kbd_inhibit_manager->events.new_inhibitor,
-                  &s->new_keyboard_inhibitor_l);
+    input_mgr->kbd_inhibit_manager =
+        wlr_keyboard_shortcuts_inhibit_v1_create(server.wl_display);
+    input_mgr->new_keyboard_inhibitor_l.notify = on_new_inhibitor;
+    wl_signal_add(&input_mgr->kbd_inhibit_manager->events.new_inhibitor,
+                  &input_mgr->new_keyboard_inhibitor_l);
+}
+
+void cleanup_keyboard(struct cwc_input_manager *input_mgr)
+{
+    wl_list_remove(&input_mgr->new_vkbd_l.link);
+
+    wl_list_remove(&input_mgr->new_keyboard_inhibitor_l.link);
 }
