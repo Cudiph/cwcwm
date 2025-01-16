@@ -66,7 +66,7 @@ endif
 # install script
 install_subdir('lib', install_dir: cwc_datadir)
 install_subdir('defconfig', install_dir: cwc_datadir)
-install_subdir('doc', install_dir: cwc_datadir)
+install_subdir('doc', install_dir: '/usr/share/doc/cwc')
 install_subdir('include/cwc', install_dir: '/usr/include')
 install_data('cwc.desktop', install_dir: '/usr/share/wayland-sessions')
 install_data('cwc-portals.conf', install_dir: '/usr/share/xdg-desktop-portal')
