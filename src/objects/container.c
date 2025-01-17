@@ -260,11 +260,11 @@ static int luaC_container_get(lua_State *L)
 {
     lua_newtable(L);
 
-    struct cwc_toplevel *toplevel;
+    struct cwc_container *container;
     int i = 1;
-    wl_list_for_each(toplevel, &server.toplevels, link)
+    wl_list_for_each(container, &server.containers, link)
     {
-        luaC_object_push(L, toplevel);
+        luaC_object_push(L, container);
         lua_rawseti(L, -2, i++);
     }
 

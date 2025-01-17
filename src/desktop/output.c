@@ -930,6 +930,10 @@ static inline void insert_tiled_toplevel_to_bsp_tree(struct cwc_output *output,
 
 void cwc_output_set_view_only(struct cwc_output *output, int workspace)
 {
+    if (output->state->active_workspace == workspace
+        && output->state->active_tag == workspace)
+        return;
+
     if (workspace)
         output->state->active_tag = 1 << (workspace - 1);
     else
@@ -938,6 +942,25 @@ void cwc_output_set_view_only(struct cwc_output *output, int workspace)
 
     cwc_output_tiling_layout_update(output, 0);
     cwc_output_update_visible(output);
+
+    lua_State *L = g_config_get_lua_State();
+    cwc_object_emit_signal_simple("screen::prop::active_tag", L, output);
+    cwc_object_emit_signal_simple("screen::prop::active_workspace", L, output);
+    cwc_object_emit_signal_simple("screen::prop::selected_tag", L,
+                                  cwc_output_get_current_tag_info(output));
+}
+
+void cwc_output_set_active_tag(struct cwc_output *output, tag_bitfield_t newtag)
+{
+    if (newtag == output->state->active_tag)
+        return;
+
+    output->state->active_tag = newtag;
+    cwc_output_update_visible(output);
+    cwc_output_tiling_layout_update(output, 0);
+
+    cwc_object_emit_signal_simple("screen::prop::active_tag",
+                                  g_config_get_lua_State(), output);
 }
 
 static void restore_floating_box_for_all(struct cwc_output *output)

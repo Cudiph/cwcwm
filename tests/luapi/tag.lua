@@ -31,6 +31,8 @@ local function test()
     tag.mwfact = 99999
     assert(tag.mwfact == 0.9)
 
+    assert(tostring(tag.screen):match("cwc_screen"))
+
     print("cwc_tag test PASSED")
 end
 

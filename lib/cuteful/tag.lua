@@ -7,9 +7,13 @@
 -- @module cuteful.tag
 ---------------------------------------------------------------------------
 
+local gears = require("gears")
+local gtable = gears.table
 local cwc = cwc
 
-local tag = {}
+local tag = {
+    history = {},
+}
 
 --- Select a tag relative to the currently selected one will cycle between the general workspace range.
 --
@@ -90,6 +94,48 @@ function tag.incmwfact(add, screen)
     local s = screen or cwc.screen.focused()
     local t = s.selected_tag
     t.mwfact = t.mwfact + add
+end
+
+------------------ HISTORY -------------------
+
+-- the end of the array is the top of the stack
+local stacks = {}
+
+cwc.connect_signal("screen::new", function(s)
+    if not stacks[s.name] then
+        stacks[s.name] = { 1 }
+    end
+end)
+
+cwc.connect_signal("screen::prop::active_tag", function(s)
+    local sel_stack = stacks[s.name]
+    local k = gtable.hasitem(sel_stack, s.active_tag)
+
+    if k then
+        table.remove(sel_stack, k)
+    end
+
+    table.insert(sel_stack, s.active_tag)
+end)
+
+--- Revert tag history.
+--
+-- @staticfct history.restore
+-- @tparam[opt] cwc_screen screen The screen.
+-- @tparam[opt] integer idx Index in the history stack. Default to previous (idx number 1).
+-- @noreturn
+function tag.history.restore(screen, idx)
+    local s = screen or cwc.screen.focused()
+    idx = idx or 1
+    idx = idx + 1
+
+    local sel_stack = stacks[s.name]
+    local selected = sel_stack[idx]
+    if not selected then return end
+
+    -- make the newest at the start of the array
+    local reversed = gtable.reverse(sel_stack)
+    s.active_tag = reversed[idx]
 end
 
 return tag

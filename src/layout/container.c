@@ -1296,8 +1296,7 @@ bool cwc_container_is_visible(struct cwc_container *container)
         || cwc_container_is_minimized(container))
         return false;
 
-    return (container->output->state->active_workspace == container->workspace)
-           || (container->output->state->active_tag & container->tag);
+    return (container->output->state->active_tag & container->tag);
 }
 
 bool cwc_container_is_visible_in_workspace(struct cwc_container *container,

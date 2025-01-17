@@ -305,6 +305,10 @@ kbd.bind(MODKEY, "period", function()
     cful.tag.viewnext()
 end, { description = "view prev workspace/tag", group = "tag" })
 
+-- backtick/tilde key
+kbd.bind(MODKEY, "grave", cful.tag.history.restore,
+    { description = "activate last activated tag", group = "tag" })
+
 -------------------- tag config
 kbd.bind(MODKEY, "equal", function()
     cful.tag.incgap(1)

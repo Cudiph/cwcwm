@@ -124,8 +124,6 @@
 
 //================= PROPERTIES ===========================
 
-/* just to keep track whats already done */
-
 /** Property signal.
  *
  * @signal client::property::fullscreen

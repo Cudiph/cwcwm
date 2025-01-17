@@ -37,6 +37,7 @@
 
 #include "cwc/desktop/output.h"
 #include "cwc/luaclass.h"
+#include "cwc/luaobject.h"
 
 /** Index of the tag in the screen.
  *
@@ -52,6 +53,23 @@ static int luaC_tag_get_index(lua_State *L)
 {
     struct cwc_tag_info *tag = luaC_tag_checkudata(L, 1);
     lua_pushnumber(L, tag->index);
+
+    return 1;
+}
+
+/** The screen where this tag belongs.
+ *
+ * @property screen
+ * @tparam cwc_screen screen
+ * @readonly
+ * @see cwc.screen
+ * @propertydefault static
+ */
+static int luaC_tag_get_screen(lua_State *L)
+{
+    struct cwc_tag_info *tag  = luaC_tag_checkudata(L, 1);
+    struct cwc_output *output = cwc_output_from_tag_info(tag);
+    luaC_object_push(L, output);
 
     return 1;
 }
@@ -179,9 +197,9 @@ static int luaC_tag_toggle(lua_State *L)
     struct cwc_tag_info *tag  = luaC_tag_checkudata(L, 1);
     struct cwc_output *output = cwc_output_from_tag_info(tag);
 
-    output->state->active_tag ^= 1 << (tag->index - 1);
-    cwc_output_update_visible(output);
-    cwc_output_tiling_layout_update(output, 0);
+    tag_bitfield_t newtag = output->state->active_tag;
+    newtag ^= 1 << (tag->index - 1);
+    cwc_output_set_active_tag(output, newtag);
 
     return 0;
 }
@@ -237,6 +255,7 @@ void luaC_tag_setup(lua_State *L)
 
         // ro prop
         TAG_REG_READ_ONLY(index),
+        TAG_REG_READ_ONLY(screen),
 
         // properties
         TAG_REG_PROPERTY(selected),

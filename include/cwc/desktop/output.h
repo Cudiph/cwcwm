@@ -118,6 +118,10 @@ void cwc_output_set_mwfact(struct cwc_output *output,
 /* set a tag to be the only active tag */
 void cwc_output_set_view_only(struct cwc_output *output, int workspace);
 
+/* update active tag of the output */
+void cwc_output_set_active_tag(struct cwc_output *output,
+                               tag_bitfield_t newtag);
+
 /* set layout mode at the specified workspace */
 void cwc_output_set_layout_mode(struct cwc_output *output,
                                 int workspace,

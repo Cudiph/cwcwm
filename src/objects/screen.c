@@ -57,6 +57,24 @@
  * @tparam cwc_screen s The screen object.
  */
 
+/** Property signal.
+ *
+ * @signal screen::prop::active_tag
+ * @tparam cwc_screen s The screen object.
+ */
+
+/** Property signal.
+ *
+ * @signal screen::prop::active_workspace
+ * @tparam cwc_screen s The screen object.
+ */
+
+/** Property signal.
+ *
+ * @signal screen::prop::selected_tag
+ * @tparam cwc_screen s The screen object.
+ */
+
 //============= CODE ================
 
 /** Get all screen in the server.
@@ -391,11 +409,9 @@ static int luaC_screen_get_active_tag(lua_State *L)
 static int luaC_screen_set_active_tag(lua_State *L)
 {
     struct cwc_output *output = luaC_screen_checkudata(L, 1);
-
     tag_bitfield_t newtag     = luaL_checkint(L, 2);
-    output->state->active_tag = newtag;
 
-    cwc_output_update_visible(output);
+    cwc_output_set_active_tag(output, newtag);
 
     return 0;
 }

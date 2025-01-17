@@ -4,9 +4,55 @@ local enum = require("cuteful.enum")
 
 local cwc = cwc
 
+local signal_list = {
+    "client::new",
+    "client::destroy",
+    "client::map",
+    "client::unmap",
+    "client::focus",
+    "client::unfocus",
+    "client::swap",
+    -- "client::mouse_enter", -- require interaction
+    -- "client::mouse_leave", -- require interaction
+    "client::raised",
+    "client::lowered",
+    "client::property::fullscreen",
+    "client::property::maximized",
+    "client::property::minimized",
+    "client::property::floating",
+    "client::property::urgent",
+}
+
+local triggered_list = {}
+
+for _, signame in pairs(signal_list) do
+    cwc.connect_signal(signame, function()
+        triggered_list[signame] = true
+    end)
+end
+
+local function signal_check()
+    local count = 0
+    for _, signame in pairs(signal_list) do
+        if not triggered_list[signame] then
+            local template = string.format("signal %s is not triggered", signame)
+            print(template)
+            count = count + 1
+        end
+    end
+
+    if count > 0 then
+        print(string.format("%d cwc_client signal test FAILED", count))
+    else
+        print("cwc_client signal test PASSED")
+    end
+end
+
+
+
 local function static_test()
     local cls = cwc.client.get()
-    assert(#cls == 9)
+    assert(#cls == 20)
 end
 
 local function readonly_test(c)
@@ -20,10 +66,6 @@ local function readonly_test(c)
     assert(type(c.title) == "string")
     assert(type(c.appid) == "string")
     assert(string.find(tostring(c.container), "cwc_container"))
-
-    print(c.title)
-    print(c.pid)
-    print(c.appid)
 end
 
 local function property_test(c)
@@ -40,6 +82,8 @@ local function property_test(c)
     assert(not c.maximized)
 
     assert(type(c.floating) == "boolean")
+    c.floating = true
+    assert(c.floating)
 
     assert(c.minimized == false)
     c.minimized = true
@@ -81,15 +125,18 @@ local function property_test(c)
 end
 
 local function method_test(c)
+    local cls = cwc.client.get()
+    local rand = cls[math.random(#cls)]
     c:raise()
     c:lower()
     c:focus()
-    c:swap(c)
+    c:swap(rand)
     c:center()
     c:move_to_tag(c.workspace)
-    assert(c:get_nearest(enum.direction.LEFT) == nil)
     c:toggle_split()
     c:toggle_tag(c.workspace + 1)
+    c:close()
+    rand:kill()
 end
 
 local function test()
@@ -104,4 +151,7 @@ local function test()
 end
 
 
-return test
+return {
+    api = test,
+    signal = signal_check,
+}

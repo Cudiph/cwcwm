@@ -4,6 +4,39 @@ local bit = require("bit")
 
 local cwc = cwc
 
+local signal_list = {
+    "screen::new",
+    -- "screen::destroy", -- currently there's no way to destroy screen programmatically
+    "screen::prop::active_tag",
+    "screen::prop::active_workspace",
+    "screen::prop::selected_tag",
+}
+
+local triggered_list = {}
+
+for _, signame in pairs(signal_list) do
+    cwc.connect_signal(signame, function()
+        triggered_list[signame] = true
+    end)
+end
+
+local function signal_check()
+    local count = 0
+    for _, signame in pairs(signal_list) do
+        if not triggered_list[signame] then
+            local template = string.format("signal %s is not triggered", signame)
+            print(template)
+            count = count + 1
+        end
+    end
+
+    if count > 0 then
+        print(string.format("%d cwc_screen signal test FAILED", count))
+    else
+        print("cwc_screen signal test PASSED")
+    end
+end
+
 local function ro_test(s)
     assert(s.width > 0)
     assert(s.height > 0)
@@ -68,6 +101,8 @@ end
 local function test()
     local s = cwc.screen.focused()
 
+    s:get_tag(1):view_only()
+
     ro_test(s)
     prop_test(s)
     method_test(s)
@@ -75,4 +110,7 @@ local function test()
     print("cwc_screen test PASSED")
 end
 
-return test
+return {
+    api = test,
+    signal = signal_check,
+}
