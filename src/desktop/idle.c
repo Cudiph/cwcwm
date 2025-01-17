@@ -53,6 +53,7 @@ void update_idle_inhibitor(void *data)
 
 static void on_destroy_inhibitor(struct wl_listener *listener, void *data)
 {
+    LISTEN_DESTROY(listener);
     cwc_log(CWC_DEBUG, "idle inhibitor destroyed: %p", data);
 
     /* let wlroots remove the inhibitors in the list first before updating */
@@ -63,12 +64,12 @@ static void on_new_inhibitor(struct wl_listener *listener, void *data)
 {
     struct cwc_idle *idle = wl_container_of(listener, idle, new_inhibitor_l);
     struct wlr_idle_inhibitor_v1 *wlr_inhibitor = data;
+    wlr_inhibitor->data                         = idle;
 
     cwc_log(CWC_DEBUG, "idle inhibitor created: %p %p", wlr_inhibitor,
             wlr_inhibitor->surface);
 
-    wlr_inhibitor->data = idle;
-    LISTEN_STATIC(&wlr_inhibitor->events.destroy, on_destroy_inhibitor);
+    LISTEN_CREATE(&wlr_inhibitor->events.destroy, on_destroy_inhibitor);
 
     update_idle_inhibitor(NULL);
 }

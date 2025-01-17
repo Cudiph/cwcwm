@@ -290,6 +290,10 @@ static void on_shortcuts_inhibitor_destroy(struct wl_listener *listener,
     struct wlr_keyboard_shortcuts_inhibitor_v1 *inhibitor = data;
     struct cwc_seat *seat = inhibitor->seat->data;
 
+    cwc_log(CWC_DEBUG, "destroying shortcut inhibitor: %p", inhibitor);
+
+    LISTEN_DESTROY(listener);
+
     if (inhibitor == seat->kbd_inhibitor)
         seat->kbd_inhibitor = NULL;
 }
@@ -298,11 +302,12 @@ static void on_new_inhibitor(struct wl_listener *listener, void *data)
 {
     struct wlr_keyboard_shortcuts_inhibitor_v1 *inhibitor = data;
 
+    cwc_log(CWC_DEBUG, "new shortcut inhibitor: %p", inhibitor);
+
     wlr_keyboard_shortcuts_inhibitor_v1_activate(inhibitor);
-    LISTEN_STATIC(&inhibitor->events.destroy, on_shortcuts_inhibitor_destroy);
+    LISTEN_CREATE(&inhibitor->events.destroy, on_shortcuts_inhibitor_destroy);
 
     struct cwc_seat *seat = inhibitor->seat->data;
-
     if (inhibitor->surface == inhibitor->seat->keyboard_state.focused_surface)
         seat->kbd_inhibitor = inhibitor;
 }

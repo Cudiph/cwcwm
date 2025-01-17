@@ -122,10 +122,17 @@ bool _cwc_assert(bool condition, const char *format, ...);
 #define MAX(A, B)            ((A) > (B) ? (A) : (B))
 #define CLAMP(val, min, max) MIN(MAX(val, min), max)
 #define LENGTH(X)            (sizeof X / sizeof X[0])
-#define LISTEN_STATIC(E, H)                             \
-    do {                                                \
-        static struct wl_listener _l = {.notify = (H)}; \
-        wl_signal_add((E), &_l);                        \
+#define LISTEN_CREATE(E, H)                           \
+    do {                                              \
+        struct wl_listener *_l = malloc(sizeof(*_l)); \
+        _l->notify             = (H);                 \
+        wl_signal_add((E), _l);                       \
+    } while (0)
+
+#define LISTEN_DESTROY(L)           \
+    do {                            \
+        wl_list_remove(&(L)->link); \
+        free(L);                    \
     } while (0)
 
 static inline uint64_t timespec_to_msec(struct timespec *t)
