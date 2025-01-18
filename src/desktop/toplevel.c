@@ -1143,6 +1143,14 @@ void cwc_toplevel_set_position(struct cwc_toplevel *toplevel, int x, int y)
     cwc_container_set_position(toplevel->container, x - bw, y - bw);
 }
 
+void cwc_toplevel_set_position_global(struct cwc_toplevel *toplevel,
+                                      int x,
+                                      int y)
+{
+    int bw = cwc_border_get_thickness(&toplevel->container->border);
+    cwc_container_set_position_global(toplevel->container, x - bw, y - bw);
+}
+
 inline bool cwc_toplevel_is_visible(struct cwc_toplevel *toplevel)
 {
     if (cwc_container_is_visible(toplevel->container)

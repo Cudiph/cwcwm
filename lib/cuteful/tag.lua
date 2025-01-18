@@ -120,7 +120,7 @@ end)
 
 --- Revert tag history.
 --
--- @staticfct history.restore
+-- @staticfct cuteful.tag.history.restore
 -- @tparam[opt] cwc_screen screen The screen.
 -- @tparam[opt] integer idx Index in the history stack. Default to previous (idx number 1).
 -- @noreturn

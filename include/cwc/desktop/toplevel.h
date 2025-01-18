@@ -136,6 +136,9 @@ void cwc_toplevel_set_urgent(struct cwc_toplevel *toplevel, bool set);
 
 /* move the toplevel surface */
 void cwc_toplevel_set_position(struct cwc_toplevel *toplevel, int x, int y);
+void cwc_toplevel_set_position_global(struct cwc_toplevel *toplevel,
+                                      int x,
+                                      int y);
 
 bool cwc_toplevel_is_ontop(struct cwc_toplevel *toplevel);
 bool cwc_toplevel_is_above(struct cwc_toplevel *toplevel);

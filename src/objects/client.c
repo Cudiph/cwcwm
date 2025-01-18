@@ -208,12 +208,14 @@ static int luaC_client_move(lua_State *L)
     int y = luaL_checkint(L, 3);
 
     struct wlr_box box = cwc_toplevel_get_box(toplevel);
-    cwc_toplevel_set_position(toplevel, box.x + x, box.y + y);
+    cwc_toplevel_set_position_global(toplevel, box.x + x, box.y + y);
 
     return 0;
 }
 
-/** Move client to the x y coordinates.
+/** Move client to the x y coordinates relative to the screen.
+ *
+ * `move_to(0, 0)` will put the client at the top left of the `client.screen`.
  *
  * @method move_to
  * @tparam integer x X coordinate
@@ -600,7 +602,7 @@ CLIENT_PROPERTY_CREATE_BOOLEAN(allow_tearing)
  */
 CLIENT_PROPERTY_CREATE_BOOLEAN(urgent)
 
-/** Geometry of the client (border not included).
+/** Geometry of the client in the global coordinate (border not included).
  *
  * @property geometry
  * @tparam table geometry
@@ -610,6 +612,10 @@ CLIENT_PROPERTY_CREATE_BOOLEAN(urgent)
  * @tparam integer geometry.height
  * @propertydefault current client geometry with structure {x,y,width,height}.
  * @see cwc.container.geometry
+ * @see move
+ * @see move_to
+ * @see resize
+ * @see resize_to
  */
 static int luaC_client_get_geometry(lua_State *L)
 {
@@ -647,7 +653,7 @@ static int luaC_client_set_geometry(lua_State *L)
         box.height = luaL_checkint(L, -1);
     lua_pop(L, 1);
 
-    cwc_toplevel_set_position(toplevel, box.x, box.y);
+    cwc_toplevel_set_position_global(toplevel, box.x, box.y);
     cwc_toplevel_set_size(toplevel, box.width, box.height);
 
     return 0;

@@ -679,8 +679,9 @@ static void all_toplevel_send_output_leave(struct cwc_toplevel *toplevel,
     }
 }
 
-void cwc_container_move_to_output(struct cwc_container *container,
-                                  struct cwc_output *output)
+static void __cwc_container_move_to_output(struct cwc_container *container,
+                                           struct cwc_output *output,
+                                           bool translate)
 {
     struct cwc_output *old = container->output;
     if (old == output)
@@ -710,7 +711,8 @@ void cwc_container_move_to_output(struct cwc_container *container,
      * because it'll ruin the layout since the fallback output is not attached
      * to scene output
      */
-    if (old == server.fallback_output || output == server.fallback_output)
+    if (!translate || old == server.fallback_output
+        || output == server.fallback_output)
         return;
 
     struct wlr_box oldbox = cwc_container_get_box(container);
@@ -731,6 +733,18 @@ void cwc_container_move_to_output(struct cwc_container *container,
         cwc_container_move_to_tag(container, output->state->active_workspace);
         container->state |= CONTAINER_STATE_FLOATING;
     }
+}
+
+void cwc_container_move_to_output_without_translate(
+    struct cwc_container *container, struct cwc_output *output)
+{
+    __cwc_container_move_to_output(container, output, false);
+}
+
+void cwc_container_move_to_output(struct cwc_container *container,
+                                  struct cwc_output *output)
+{
+    __cwc_container_move_to_output(container, output, true);
 }
 
 void cwc_container_for_each_bottom_to_top(
@@ -1202,7 +1216,7 @@ static inline void update_container_output(struct cwc_container *container)
     if (!output || output == container->output)
         return;
 
-    cwc_container_move_to_output(container, output);
+    cwc_container_move_to_output_without_translate(container, output);
 }
 
 void cwc_container_set_size(struct cwc_container *container, int w, int h)
