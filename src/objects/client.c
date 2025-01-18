@@ -44,6 +44,7 @@
 #include "cwc/luaclass.h"
 #include "cwc/luaobject.h"
 #include "cwc/server.h"
+#include "cwc/util.h"
 
 /** Emitted when a client is created.
  *
@@ -314,7 +315,7 @@ static int luaC_client_focused(lua_State *L)
  * @tparam integer width Width in pixels
  * @noreturn
  */
-static int luaC_client_set_border_width(lua_State *L)
+static int luaC_client_set_border_width_cfg(lua_State *L)
 {
     int bw = luaL_checkint(L, 1);
 
@@ -747,6 +748,58 @@ static int luaC_client_set_opacity(lua_State *L)
     return 0;
 }
 
+/** The client border color rotation in degree.
+ *
+ * @property border_rotation
+ * @rangestart 0
+ * @rangestop 360
+ * @tparam[opt=0] number border_rotation
+ */
+static int luaC_client_get_border_rotation(lua_State *L)
+{
+    struct cwc_toplevel *toplevel = luaC_client_checkudata(L, 1);
+
+    lua_pushnumber(L, toplevel->container->border.pattern_rotation);
+
+    return 1;
+}
+
+static int luaC_client_set_border_rotation(lua_State *L)
+{
+    struct cwc_toplevel *toplevel = luaC_client_checkudata(L, 1);
+
+    int rotation = luaL_checkint(L, 2);
+    cwc_border_set_pattern_rotation(&toplevel->container->border, rotation);
+
+    return 0;
+}
+
+/** The thickness of border around client.
+ *
+ * @property border_width
+ * @negativeallowed false
+ * @tparam[opt=1] number border_width
+ */
+static int luaC_client_get_border_width(lua_State *L)
+{
+    struct cwc_toplevel *toplevel = luaC_client_checkudata(L, 1);
+
+    lua_pushnumber(L, cwc_border_get_thickness(&toplevel->container->border));
+
+    return 1;
+}
+
+static int luaC_client_set_border_width(lua_State *L)
+{
+    struct cwc_toplevel *toplevel = luaC_client_checkudata(L, 1);
+
+    int width = luaL_checkint(L, 2);
+    width     = MAX(width, 0);
+    cwc_border_set_thickness(&toplevel->container->border, width);
+
+    return 0;
+}
+
 /** The client parent.
  *
  * @property parent
@@ -956,6 +1009,9 @@ void luaC_client_setup(lua_State *L)
         CLIENT_REG_PROPERTY(allow_tearing),
         CLIENT_REG_PROPERTY(urgent),
 
+        CLIENT_REG_PROPERTY(border_rotation),
+        CLIENT_REG_PROPERTY(border_width),
+
         {NULL,          NULL                     },
     };
 
@@ -967,7 +1023,7 @@ void luaC_client_setup(lua_State *L)
         {"at",                        luaC_client_at                       },
         {"focused",                   luaC_client_focused                  },
 
-        {"set_border_width",          luaC_client_set_border_width         },
+        {"set_border_width",          luaC_client_set_border_width_cfg     },
         {"set_border_color_focus",    luaC_client_set_border_color_focus   },
         {"set_border_color_normal",   luaC_client_set_border_color_normal  },
         {"set_border_color_rotation", luaC_client_set_border_color_rotation},

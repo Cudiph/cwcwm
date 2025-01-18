@@ -26,14 +26,18 @@ struct cwc_border {
     enum cwc_data_type type;
     int thickness;     // border_width
     int width, height; // rectangle
+
+    int pattern_rotation; // in degree
     struct _cairo_pattern *pattern;
     bool enabled;
+
     struct wlr_scene_tree *attached_tree;
     struct border_buffer *buffer[4]; // clockwise top to left
 };
 
 void cwc_border_init(struct cwc_border *border,
                      struct _cairo_pattern *pattern,
+                     int pattern_rotation,
                      int rect_w,
                      int rect_h,
                      int thickness);
@@ -48,7 +52,10 @@ void cwc_border_set_enabled(struct cwc_border *border, bool enabled);
 void cwc_border_set_pattern(struct cwc_border *border,
                             struct _cairo_pattern *pattern);
 
+void cwc_border_set_pattern_rotation(struct cwc_border *border, int rotation);
+
 int cwc_border_get_thickness(struct cwc_border *border);
+void cwc_border_set_thickness(struct cwc_border *border, int thickness);
 
 /* noop if the surface width unchanged */
 void cwc_border_resize(struct cwc_border *border, int rect_w, int rect_h);

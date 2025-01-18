@@ -122,6 +122,14 @@ local function property_test(c)
     assert(not c.allow_tearing)
     c.allow_tearing = true
     assert(c.allow_tearing)
+
+    assert(type(c.border_width) == "number")
+    c.border_width = 2
+    assert(c.border_width == 2)
+
+    assert(type(c.border_rotation) == "number")
+    c.border_rotation = 90
+    assert(c.border_rotation == 90)
 end
 
 local function method_test(c)

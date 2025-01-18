@@ -116,6 +116,7 @@ find_start_coord(int degree_rot, double radius, double *x, double *y)
 }
 
 static cairo_pattern_t *process_pattern(cairo_pattern_t *reference_pattern,
+                                        int rotation,
                                         int bw,
                                         int bh,
                                         int full_w,
@@ -133,8 +134,7 @@ static cairo_pattern_t *process_pattern(cairo_pattern_t *reference_pattern,
 
     double start_x = 0;
     double start_y = 0;
-    find_start_coord(g_config.border_color_rotation_degree, min_width / 2.0,
-                     &start_x, &start_y);
+    find_start_coord(rotation, min_width / 2.0, &start_x, &start_y);
 
     // the end is the reflection of the start point with the center of the
     // square is the origin
@@ -228,6 +228,7 @@ static inline void _draw_border(cairo_surface_t *cr_surf,
 
 static void draw_border(struct border_buffer **border,
                         cairo_pattern_t *pattern,
+                        int rotation,
                         int bw,
                         int bh,
                         int full_w,
@@ -243,7 +244,7 @@ static void draw_border(struct border_buffer **border,
         return;
 
     cairo_pattern_t *processed_pattern =
-        process_pattern(pattern, bw, bh, full_w, full_h, dir);
+        process_pattern(pattern, rotation, bw, bh, full_w, full_h, dir);
     _draw_border(bb->surface, processed_pattern, bw, bh, dir);
     cairo_pattern_destroy(processed_pattern);
 }
@@ -252,17 +253,17 @@ static void border_buffer_init(struct cwc_border *border,
                                cairo_pattern_t *pattern,
                                int w,
                                int h,
-                               int border_w)
+                               int thickness)
 {
     // clockwise top to left
-    draw_border(&border->buffer[0], pattern, w, border_w, w, h,
-                WLR_DIRECTION_UP);
-    draw_border(&border->buffer[1], pattern, border_w, h - border_w * 2, w, h,
-                WLR_DIRECTION_RIGHT);
-    draw_border(&border->buffer[2], pattern, w, border_w, w, h,
-                WLR_DIRECTION_DOWN);
-    draw_border(&border->buffer[3], pattern, border_w, h - border_w * 2, w, h,
-                WLR_DIRECTION_LEFT);
+    draw_border(&border->buffer[0], pattern, border->pattern_rotation, w,
+                thickness, w, h, WLR_DIRECTION_UP);
+    draw_border(&border->buffer[1], pattern, border->pattern_rotation,
+                thickness, h - thickness * 2, w, h, WLR_DIRECTION_RIGHT);
+    draw_border(&border->buffer[2], pattern, border->pattern_rotation, w,
+                thickness, w, h, WLR_DIRECTION_DOWN);
+    draw_border(&border->buffer[3], pattern, border->pattern_rotation,
+                thickness, h - thickness * 2, w, h, WLR_DIRECTION_LEFT);
 }
 
 static bool is_border_valid(struct cwc_border *border)
@@ -288,14 +289,11 @@ static void border_buffer_fini(struct cwc_border *border)
     }
 }
 
-static void border_buffer_redraw(struct cwc_border *border,
-                                 cairo_pattern_t *pattern,
-                                 int w,
-                                 int h,
-                                 int border_w)
+static void border_buffer_redraw(struct cwc_border *border)
 {
     border_buffer_fini(border);
-    border_buffer_init(border, pattern, w, h, border_w);
+    border_buffer_init(border, border->pattern, border->width, border->height,
+                       cwc_border_get_thickness(border));
 
     if (border->attached_tree)
         cwc_border_attach_to_scene(border, border->attached_tree);
@@ -305,6 +303,7 @@ static void border_buffer_redraw(struct cwc_border *border,
 
 void cwc_border_init(struct cwc_border *border,
                      cairo_pattern_t *pattern,
+                     int pattern_rotation,
                      int rect_w,
                      int rect_h,
                      int thickness)
@@ -312,13 +311,14 @@ void cwc_border_init(struct cwc_border *border,
     if (thickness == 0)
         return;
 
-    border->type          = DATA_TYPE_BORDER;
-    border->thickness     = thickness;
-    border->width         = rect_w;
-    border->height        = rect_h;
-    border->pattern       = cairo_pattern_reference(pattern);
-    border->enabled       = true;
-    border->attached_tree = NULL;
+    border->type             = DATA_TYPE_BORDER;
+    border->thickness        = thickness;
+    border->width            = rect_w;
+    border->height           = rect_h;
+    border->pattern_rotation = pattern_rotation;
+    border->pattern          = cairo_pattern_reference(pattern);
+    border->enabled          = true;
+    border->attached_tree    = NULL;
 
     border_buffer_init(border, pattern, rect_w, rect_h, thickness);
 }
@@ -377,8 +377,58 @@ void cwc_border_set_pattern(struct cwc_border *border,
 
     cairo_pattern_destroy(border->pattern);
     border->pattern = cairo_pattern_reference(pattern);
-    border_buffer_redraw(border, pattern, border->width, border->height,
-                         cwc_border_get_thickness(border));
+    border_buffer_redraw(border);
+}
+
+void cwc_border_set_pattern_rotation(struct cwc_border *border, int rotation)
+{
+
+    if (!is_border_valid(border))
+        return;
+
+    if (rotation == border->pattern_rotation)
+        return;
+
+    rotation                 = CLAMP(rotation, -315, INT_MAX);
+    border->pattern_rotation = rotation;
+    border_buffer_redraw(border);
+}
+
+static void all_toplevel_reposition_tree(struct cwc_toplevel *toplevel,
+                                         void *data)
+{
+    int thickness = *(int *)data;
+
+    wlr_scene_node_set_position(&toplevel->surf_tree->node, thickness,
+                                thickness);
+}
+
+static void
+cwc_container_reposition_client_tree(struct cwc_container *container)
+{
+    int thickness = container->border.thickness;
+    wlr_scene_node_set_position(&container->popup_tree->node, thickness,
+                                thickness);
+
+    cwc_container_for_each_toplevel(container, all_toplevel_reposition_tree,
+                                    &thickness);
+}
+
+void cwc_border_set_thickness(struct cwc_border *border, int thickness)
+{
+    if (!is_border_valid(border))
+        return;
+
+    if (thickness == border->thickness)
+        return;
+
+    border->thickness = thickness;
+    border_buffer_redraw(border);
+
+    struct cwc_container *container =
+        wl_container_of(border, container, border);
+    cwc_container_reposition_client_tree(container);
+    cwc_output_tiling_layout_update(container->output, 0);
 }
 
 int cwc_border_get_thickness(struct cwc_border *border)
@@ -399,8 +449,7 @@ void cwc_border_resize(struct cwc_border *border, int rect_w, int rect_h)
 
     border->width  = rect_w;
     border->height = rect_h;
-    border_buffer_redraw(border, border->pattern, rect_w, rect_h,
-                         cwc_border_get_thickness(border));
+    border_buffer_redraw(border);
 }
 
 //===================== CONTAINER ==========================
@@ -504,10 +553,10 @@ void cwc_container_init(struct cwc_output *output,
     wl_list_init(&cont->toplevels);
     wl_list_insert(&server.containers, &cont->link);
 
-    wlr_scene_node_set_position(&cont->popup_tree->node, border_w, border_w);
     wlr_scene_node_raise_to_top(&cont->popup_tree->node);
 
-    cwc_border_init(&cont->border, g_config.border_color_normal, cont->width,
+    cwc_border_init(&cont->border, g_config.border_color_normal,
+                    g_config.border_color_rotation_degree, cont->width,
                     cont->height, border_w);
     cwc_border_attach_to_scene(&cont->border, cont->tree);
 
@@ -517,7 +566,7 @@ void cwc_container_init(struct cwc_output *output,
     wl_list_insert(&cont->toplevels, &toplevel->link_container);
 
     init_surf_tree(toplevel, cont);
-    wlr_scene_node_set_position(&toplevel->surf_tree->node, border_w, border_w);
+    cwc_container_reposition_client_tree(cont);
 
     if (cwc_toplevel_is_unmanaged(toplevel)) {
         cont->state |= CONTAINER_STATE_UNMANAGED;

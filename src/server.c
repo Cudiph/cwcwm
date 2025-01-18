@@ -47,6 +47,7 @@
 #include <wlr/types/wlr_security_context_v1.h>
 #include <wlr/types/wlr_single_pixel_buffer_v1.h>
 #include <wlr/types/wlr_subcompositor.h>
+#include <wlr/types/wlr_transient_seat_v1.h>
 #include <wlr/types/wlr_viewporter.h>
 #include <wlr/types/wlr_virtual_keyboard_v1.h>
 #include <wlr/types/wlr_virtual_pointer_v1.h>
@@ -94,7 +95,7 @@ static bool is_privileged(const struct wl_global *global)
            || global == server.input->kbd_inhibit_manager->global
            || global == server.input->virtual_kbd_manager->global
            || global == server.input->virtual_pointer_manager->global
-           // || global == server.input->transient_seat_manager->global
+           || global == server.input->transient_seat_manager->global
            || global == server.xdg_output_manager->global;
 }
 
