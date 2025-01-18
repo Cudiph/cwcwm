@@ -85,12 +85,15 @@ static inline int luaC_pushbox(lua_State *L, struct wlr_box box)
 /* check if the color is a cairo pattern */
 static inline cairo_pattern_t *luaC_checkcolor(lua_State *L, int idx)
 {
-    luaL_checktype(L, 1, LUA_TUSERDATA);
+    if (idx < 0)
+        idx = lua_gettop(L) + idx + 1;
+
+    luaL_checktype(L, idx, LUA_TUSERDATA);
     int last_stack_size = lua_gettop(L);
 
     // tostring(arg1)
     lua_getglobal(L, "tostring");
-    lua_pushvalue(L, 1);
+    lua_pushvalue(L, idx);
     lua_pcall(L, 1, 1, 0);
 
     // check if returned string has word cairo
@@ -99,7 +102,7 @@ static inline cairo_pattern_t *luaC_checkcolor(lua_State *L, int idx)
         return NULL;
     }
 
-    cairo_pattern_t **pattern = lua_touserdata(L, 1);
+    cairo_pattern_t **pattern = lua_touserdata(L, idx);
 
     lua_settop(L, last_stack_size);
     return *pattern;

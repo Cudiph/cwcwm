@@ -899,24 +899,6 @@ static int luaC_client_get_container(lua_State *L)
     return luaC_object_push(L, toplevel->container);
 }
 
-/** Get nearest client relative to this client.
- *
- * @method get_nearest
- * @tparam integer enum Direction
- * @treturn cwc_client
- * @see cuteful.enum.direction
- */
-static int luaC_client_get_nearest(lua_State *L)
-{
-    struct cwc_toplevel *toplevel = luaC_client_checkudata(L, 1);
-    int direction                 = luaL_checkinteger(L, 2);
-
-    luaC_object_push(
-        L, cwc_toplevel_get_nearest_by_direction(toplevel, direction));
-
-    return 1;
-}
-
 /** Toggle vsplit to hsplit or otherwise for bsp layout.
  *
  * @method toggle_split
@@ -946,6 +928,41 @@ static int luaC_client_toggle_tag(lua_State *L)
     cwc_output_update_visible(toplevel->container->output);
 
     return 0;
+}
+
+/** Get nearest client relative to this client.
+ *
+ * @method get_nearest
+ * @tparam integer enum Direction
+ * @treturn cwc_client
+ * @see cuteful.enum.direction
+ */
+static int luaC_client_get_nearest(lua_State *L)
+{
+    struct cwc_toplevel *toplevel = luaC_client_checkudata(L, 1);
+    int direction                 = luaL_checkinteger(L, 2);
+
+    luaC_object_push(
+        L, cwc_toplevel_get_nearest_by_direction(toplevel, direction));
+
+    return 1;
+}
+
+/** Set the border color to this client.
+ *
+ * @method set_border_color
+ * @tparam cairo_pattern_t color
+ * @noreturn
+ * @see gears.color
+ */
+static int luaC_client_set_border_color(lua_State *L)
+{
+    struct cwc_toplevel *toplevel = luaC_client_checkudata(L, 1);
+    cairo_pattern_t *color        = luaC_checkcolor(L, 2);
+
+    cwc_border_set_pattern(&toplevel->container->border, color);
+
+    return 1;
 }
 
 #define CLIENT_METHOD(name)        {#name, luaC_client_##name}
@@ -978,8 +995,9 @@ void luaC_client_setup(lua_State *L)
         CLIENT_METHOD(toggle_split),
         CLIENT_METHOD(toggle_tag),
 
-        {"move_to_tag", luaC_client_set_workspace},
-        {"get_nearest", luaC_client_get_nearest  },
+        {"move_to_tag",      luaC_client_set_workspace   },
+        {"get_nearest",      luaC_client_get_nearest     },
+        {"set_border_color", luaC_client_set_border_color},
 
         // read only properties
         CLIENT_REG_READ_ONLY(pid),
@@ -1012,7 +1030,7 @@ void luaC_client_setup(lua_State *L)
         CLIENT_REG_PROPERTY(border_rotation),
         CLIENT_REG_PROPERTY(border_width),
 
-        {NULL,          NULL                     },
+        {NULL,               NULL                        },
     };
 
     luaC_register_class(L, client_classname, client_methods,
