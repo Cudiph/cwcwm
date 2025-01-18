@@ -86,7 +86,7 @@ static void on_foreign_request_activate(struct wl_listener *listener,
     struct wlr_foreign_toplevel_handle_v1_activated_event *event = data;
     struct cwc_toplevel *toplevel = event->toplevel->data;
 
-    cwc_toplevel_focus(toplevel, false);
+    cwc_toplevel_jump_to(toplevel, false);
 }
 
 static void on_foreign_request_close(struct wl_listener *listener, void *data)
@@ -659,20 +659,28 @@ void cwc_toplevel_focus(struct cwc_toplevel *toplevel, bool raise)
     keyboard_focus_surface(seat->data, wlr_surface);
     cwc_toplevel_set_urgent(toplevel, false);
 
-    /* TODO: make this an option */
-    if (cwc_toplevel_is_minimized(toplevel)) {
-        cwc_toplevel_set_minimized(toplevel, false);
-    }
-
-    /* move to toplevel workspace when its not visible */
-    if (cwc_toplevel_get_focused() == toplevel
-        && !cwc_toplevel_is_visible(toplevel)) {
-        cwc_output_set_view_only(toplevel->container->output,
-                                 toplevel->container->workspace);
-    }
-
     if (raise)
         wlr_scene_node_raise_to_top(&toplevel->container->tree->node);
+}
+
+void cwc_toplevel_jump_to(struct cwc_toplevel *toplevel, bool merge)
+{
+    cwc_toplevel_focus(toplevel, true);
+
+    /* change the tag if its not visible */
+    if (!cwc_toplevel_is_visible(toplevel)) {
+        if (merge) {
+            struct cwc_output *output = toplevel->container->output;
+            cwc_output_set_active_tag(output, output->state->active_tag
+                                                  | toplevel->container->tag);
+        } else {
+            cwc_output_set_view_only(toplevel->container->output,
+                                     toplevel->container->workspace);
+        }
+    }
+
+    if (cwc_toplevel_is_minimized(toplevel))
+        cwc_toplevel_set_minimized(toplevel, false);
 }
 
 static inline double distance(int lx, int ly, int lx2, int ly2)

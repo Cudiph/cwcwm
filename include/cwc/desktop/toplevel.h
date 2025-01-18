@@ -86,6 +86,8 @@ void on_new_xdg_popup(struct wl_listener *listener, void *data);
 void cwc_toplevel_focus(struct cwc_toplevel *toplevel, bool raise);
 struct cwc_toplevel *cwc_toplevel_get_focused();
 
+void cwc_toplevel_jump_to(struct cwc_toplevel *toplevel, bool merge);
+
 /* find shortest toplevel within 90deg field of view */
 struct cwc_toplevel *
 cwc_toplevel_get_nearest_by_direction(struct cwc_toplevel *toplevel,

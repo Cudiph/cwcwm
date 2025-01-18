@@ -439,6 +439,25 @@ static int luaC_client_focus(lua_State *L)
     return 0;
 }
 
+/** Jump to the given client.
+ *
+ * Takes care of focussing the screen, the right tag, etc.
+ *
+ * @method jump_to
+ * @tparam[opt=false] boolean merge If true then merge current active tags and
+ * the given client tags.
+ * @noreturn
+ */
+static int luaC_client_jump_to(lua_State *L)
+{
+    struct cwc_toplevel *toplevel = luaC_client_checkudata(L, 1);
+    bool merge                    = lua_toboolean(L, 2);
+
+    cwc_toplevel_jump_to(toplevel, merge);
+
+    return 0;
+}
+
 /** Swap client with another client.
  *
  * @method swap
@@ -989,6 +1008,7 @@ void luaC_client_setup(lua_State *L)
         CLIENT_METHOD(raise),
         CLIENT_METHOD(lower),
         CLIENT_METHOD(focus),
+        CLIENT_METHOD(jump_to),
         CLIENT_METHOD(swap),
         CLIENT_METHOD(center),
 

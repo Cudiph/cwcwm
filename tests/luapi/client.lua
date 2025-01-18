@@ -1,6 +1,7 @@
 -- Test the cwc_client property
 local bit = require("bit")
 local enum = require("cuteful.enum")
+local gears = require("gears")
 
 local cwc = cwc
 
@@ -135,9 +136,12 @@ end
 local function method_test(c)
     local cls = cwc.client.get()
     local rand = cls[math.random(#cls)]
+    c:set_border_color(gears.color("#ffffff"))
     c:raise()
     c:lower()
     c:focus()
+    c:jump_to(true)
+    c:jump_to()
     c:swap(rand)
     c:center()
     c:move_to_tag(c.workspace)
