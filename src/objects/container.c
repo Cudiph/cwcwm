@@ -50,12 +50,14 @@
  *
  * @signal container::insert
  * @tparam cwc_container cont The container object.
+ * @tparam cwc_client client The inserted client.
  */
 
 /** Emitted when a client is removed from the container.
  *
  * @signal container::remove
  * @tparam cwc_container cont The container object.
+ * @tparam cwc_client client The removed client.
  */
 
 /** Emitted when a container is swapped.
@@ -94,6 +96,28 @@ static int luaC_container_swap(lua_State *L)
     struct cwc_container *container2 = luaC_container_checkudata(L, 2);
 
     cwc_container_swap(container, container2);
+
+    return 0;
+}
+
+/** Insert client to this container.
+ *
+ * @method insert_client
+ * @tparam cwc_client client Client to insert.
+ * @noreturn
+ */
+static int luaC_container_insert_client(lua_State *L)
+{
+    struct cwc_container *container = luaC_container_checkudata(L, 1);
+    struct cwc_toplevel *toplevel   = luaC_client_checkudata(L, 2);
+
+    if (container == toplevel->container)
+        return 0;
+
+    if (toplevel->container)
+        cwc_container_remove_toplevel(toplevel);
+
+    cwc_container_insert_toplevel(container, toplevel);
 
     return 0;
 }
@@ -299,6 +323,7 @@ void luaC_container_setup(lua_State *L)
     luaL_Reg container_methods[] = {
         {"focusidx",         luaC_container_focusidx        },
         {"swap",             luaC_container_swap            },
+        {"insert_client",    luaC_container_insert_client   },
 
         // ro props but argument available
         {"get_client_stack", luaC_container_get_client_stack},

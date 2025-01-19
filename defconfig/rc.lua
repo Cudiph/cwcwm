@@ -167,7 +167,10 @@ cwc.connect_signal("client::mouse_enter", function(c)
     c:focus()
 end)
 
-cwc.connect_signal("container::insert", function()
+cwc.connect_signal("container::insert", function(cont, client)
     -- reset mark after first insertion in case forgot to toggle off mark
     cwc.container.reset_mark()
+
+    -- focus to the newly inserted client
+    client:focus()
 end)

@@ -53,10 +53,12 @@ end
 
 local function method_test(cont)
     local cts = cwc.container.get()
+    local cls = cwc.client.get()
     local rand_cont = cts[math.random(#cts)]
-    print(rand_cont)
+    local rand_client = cls[math.random(#cls)]
     cont:focusidx(1)
     cont:swap(rand_cont)
+    cont:insert_client(rand_client)
     assert(#cont.client_stack == #cont:get_client_stack(true))
 end
 

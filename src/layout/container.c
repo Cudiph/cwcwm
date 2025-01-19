@@ -609,8 +609,8 @@ void cwc_container_insert_toplevel(struct cwc_container *c,
     wlr_scene_node_set_position(&toplevel->surf_tree->node, bw, bw);
 
     cwc_container_set_size(c, c->width, c->height);
-    cwc_object_emit_signal_simple("container::insert", g_config_get_lua_State(),
-                                  c);
+    cwc_object_emit_signal_varr("container::insert", g_config_get_lua_State(),
+                                2, c, toplevel);
 }
 
 static void _destroy_container(struct cwc_container *container)
@@ -655,8 +655,8 @@ static void _destroy_container(struct cwc_container *container)
 
 static void _clear_container_stuff_in_toplevel(struct cwc_toplevel *toplevel)
 {
-    cwc_object_emit_signal_simple("container::remove", g_config_get_lua_State(),
-                                  toplevel->container);
+    cwc_object_emit_signal_varr("container::remove", g_config_get_lua_State(),
+                                2, toplevel->container, toplevel);
 
     // toplevel should be inserted to container again when removing from
     // container
