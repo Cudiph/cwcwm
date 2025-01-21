@@ -17,6 +17,8 @@ enum bsp_split_type {
     BSP_SPLIT_HORIZONTAL,
 };
 
+enum Position { LEFT, RIGHT, ROOT };
+
 struct bsp_node {
     enum bsp_node_type type;
 
@@ -41,8 +43,15 @@ struct bsp_node {
     int width, height;
 };
 
-/* insert container to the bsp tree, container must not be already in a tree */
+/* insert container to the bsp tree, container must not be already in a tree.
+ * The new container is always inserted to the right node
+ */
 void bsp_insert_container(struct cwc_container *new, int workspace);
+
+/* insert container to bsp tree with explicit position */
+void bsp_insert_container_pos(struct cwc_container *new,
+                              int workspace,
+                              enum Position pos);
 
 /* remove client from the bsp tree */
 void bsp_remove_container(struct cwc_container *container, bool update);
@@ -71,5 +80,13 @@ struct bsp_root_entry *bsp_entry_get(struct cwc_output *output, int workspace);
 
 /* deinitialize */
 void bsp_entry_fini(struct cwc_output *output, int workspace);
+
+/* decide with node position should be inserted.
+ * It create an origin in the middle of region and compare the point if
+ * the box is wide and the point on the right of the origin, it return RIGHT.
+ * If the box is tall and it below the origin then it will return RIGHT.
+ */
+enum Position
+wlr_box_bsp_should_insert_at_position(struct wlr_box *region, int x, int y);
 
 #endif // !_CWC_BSP_H

@@ -121,11 +121,16 @@ struct wlr_box cwc_toplevel_get_box(struct cwc_toplevel *toplevel);
 struct cwc_toplevel *
 cwc_toplevel_try_from_wlr_surface(struct wlr_surface *surface);
 
+/* return NULL if not found */
 struct cwc_toplevel *
 cwc_toplevel_at(double lx, double ly, double *sx, double *sy);
 
+/* get toplevel with additional test if a part is belong to a toplevel */
 struct cwc_toplevel *
 cwc_toplevel_at_with_deep_check(double lx, double ly, double *sx, double *sy);
+
+/* get toplevel at specified coordinate for only tiled toplevel */
+struct cwc_toplevel *cwc_toplevel_at_tiled(double lx, double ly);
 
 /* resize the toplevel surface  */
 void cwc_toplevel_set_size_surface(struct cwc_toplevel *toplevel, int w, int h);
@@ -354,10 +359,6 @@ static inline bool cwc_toplevel_wants_minimized(struct cwc_toplevel *toplevel)
 static inline bool
 cwc_toplevel_can_enter_interactive(struct cwc_toplevel *toplevel)
 {
-    // TODO: interactive move/resize for tiling
-    if (!cwc_toplevel_is_floating(toplevel))
-        return false;
-
     return !cwc_toplevel_is_fullscreen(toplevel)
            && !cwc_toplevel_is_maximized(toplevel)
            && !cwc_toplevel_is_unmanaged(toplevel);

@@ -24,8 +24,6 @@
 #include "cwc/layout/bsp.h"
 #include "cwc/util.h"
 
-enum Position { LEFT, RIGHT, ROOT };
-
 static inline struct bsp_node *
 bsp_node_get_sibling(struct bsp_node *parent_node, struct bsp_node *me)
 {
@@ -319,33 +317,34 @@ static struct bsp_node *bsp_node_leaf_create(struct bsp_node *parent,
 
 static void _bsp_insert_container(struct bsp_root_entry *root_entry,
                                   struct cwc_container *sibling,
-                                  struct cwc_container *new)
+                                  struct cwc_container *new,
+                                  enum Position pos)
 {
-    struct bsp_node *left = sibling->bsp_node;
+    struct bsp_node *sibling_node = sibling->bsp_node;
 
     struct wlr_box old_geom = {
-        .x      = left->x,
-        .y      = left->y,
-        .width  = left->width,
-        .height = left->height,
+        .x      = sibling_node->x,
+        .y      = sibling_node->y,
+        .width  = sibling_node->width,
+        .height = sibling_node->height,
     };
 
     enum bsp_split_type split = old_geom.width >= old_geom.height
                                     ? BSP_SPLIT_VERTICAL
                                     : BSP_SPLIT_HORIZONTAL;
 
-    struct bsp_node *grandparent_node = left->parent;
+    struct bsp_node *grandparent_node = sibling_node->parent;
 
     // parent internal node
     struct bsp_node *parent_node = NULL;
 
     // update grandparent left/right node to point to new parent
     if (grandparent_node) {
-        if (grandparent_node->left == left)
+        if (grandparent_node->left == sibling_node)
             parent_node = bsp_node_internal_create(
                 grandparent_node, old_geom.x, old_geom.y, old_geom.width,
                 old_geom.height, split, LEFT);
-        else if (grandparent_node->right == left)
+        else if (grandparent_node->right == sibling_node)
             parent_node = bsp_node_internal_create(
                 grandparent_node, old_geom.x, old_geom.y, old_geom.width,
                 old_geom.height, split, RIGHT);
@@ -358,7 +357,7 @@ static void _bsp_insert_container(struct bsp_root_entry *root_entry,
     }
 
     // set parent_tree to root if the sibling is the root
-    if (left == root_entry->root) {
+    if (sibling_node == root_entry->root) {
         parent_node->x          = new->output->usable_area.x;
         parent_node->y          = new->output->usable_area.y;
         parent_node->width      = new->output->usable_area.width;
@@ -367,18 +366,21 @@ static void _bsp_insert_container(struct bsp_root_entry *root_entry,
         root_entry->root        = parent_node;
     }
 
-    struct bsp_node *right = new->bsp_node =
-        bsp_node_leaf_create(parent_node, new, RIGHT);
+    if (pos == RIGHT) {
+        new->bsp_node = bsp_node_leaf_create(parent_node, new, RIGHT);
+        bsp_node_reparent(parent_node, sibling_node, LEFT);
+    } else {
+        new->bsp_node = bsp_node_leaf_create(parent_node, new, LEFT);
+        bsp_node_reparent(parent_node, sibling_node, RIGHT);
+    }
 
-    bsp_node_reparent(parent_node, left, LEFT);
-    left->parent       = parent_node;
-    parent_node->left  = left;
-    parent_node->right = right;
-
-    bsp_node_enable(right);
+    sibling_node->parent = parent_node;
+    bsp_node_enable(new->bsp_node);
 }
 
-void bsp_insert_container(struct cwc_container *new, int workspace)
+void _bsp_insert_container_entry(struct cwc_container *new,
+                                 int workspace,
+                                 enum Position pos)
 {
     struct cwc_output *output         = new->output;
     struct bsp_root_entry *root_entry = bsp_entry_get(output, workspace);
@@ -396,10 +398,22 @@ void bsp_insert_container(struct cwc_container *new, int workspace)
     }
 
     struct cwc_container *sibling = root_entry->last_focused;
-    _bsp_insert_container(root_entry, sibling, new);
+    _bsp_insert_container(root_entry, sibling, new, pos);
 
 update_last_focused:
     root_entry->last_focused = new;
+}
+
+void bsp_insert_container(struct cwc_container *new, int workspace)
+{
+    _bsp_insert_container_entry(new, workspace, RIGHT);
+}
+
+void bsp_insert_container_pos(struct cwc_container *new,
+                              int workspace,
+                              enum Position pos)
+{
+    _bsp_insert_container_entry(new, workspace, pos);
 }
 
 void bsp_remove_container(struct cwc_container *container, bool update)
@@ -498,4 +512,21 @@ void bsp_entry_fini(struct cwc_output *output, int workspace)
         entry->root         = NULL;
         entry->last_focused = NULL;
     }
+}
+
+enum Position
+wlr_box_bsp_should_insert_at_position(struct wlr_box *region, int x, int y)
+{
+    bool is_wide = region->width >= region->height;
+    if (is_wide) {
+        if (x > region->x + region->width / 2)
+            return RIGHT;
+
+        return LEFT;
+    }
+
+    if (y > region->y + region->height / 2)
+        return RIGHT;
+
+    return LEFT;
 }

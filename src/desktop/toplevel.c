@@ -212,7 +212,7 @@ static void on_surface_unmap(struct wl_listener *listener, void *data)
     // stop interactive when the grabbed toplevel is gone
     struct cwc_cursor *cursor = server.seat->cursor;
     if (cursor->grabbed_toplevel == toplevel)
-        stop_interactive();
+        stop_interactive(cursor);
 
     _fini_unmap_managed_toplevel(toplevel);
 
@@ -1143,6 +1143,24 @@ cwc_toplevel_at_with_deep_check(double lx, double ly, double *sx, double *sy)
         *sy = ly - toplevel->container->tree->node.y;
 
     return toplevel;
+}
+
+struct cwc_toplevel *cwc_toplevel_at_tiled(double lx, double ly)
+{
+    struct cwc_container *container;
+    wl_list_for_each(container, &server.containers, link)
+    {
+        if (cwc_container_is_floating(container)
+            || !cwc_container_is_visible(container))
+            continue;
+
+        struct wlr_box box = cwc_container_get_box(container);
+
+        if (wlr_box_contains_point(&box, lx, ly))
+            return cwc_container_get_front_toplevel(container);
+    }
+
+    return NULL;
 }
 
 void cwc_toplevel_set_position(struct cwc_toplevel *toplevel, int x, int y)

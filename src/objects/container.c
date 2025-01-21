@@ -199,7 +199,7 @@ static int luaC_container_get_front(lua_State *L)
     return luaC_object_push(L, top);
 }
 
-/** Geometry of the container.
+/** Geometry of the container in global coordinate.
  *
  * @property geometry
  * @tparam table geometry

@@ -57,6 +57,9 @@
 #include "cwc/input/keyboard.h"
 #include "cwc/input/manager.h"
 #include "cwc/input/seat.h"
+#include "cwc/layout/bsp.h"
+#include "cwc/layout/container.h"
+#include "cwc/layout/master.h"
 #include "cwc/server.h"
 #include "cwc/signal.h"
 #include "cwc/util.h"
@@ -167,6 +170,8 @@ void process_cursor_motion(struct cwc_cursor *cursor,
 
     switch (cursor->state) {
     case CWC_CURSOR_STATE_MOVE:
+    case CWC_CURSOR_STATE_MOVE_MASTER:
+    case CWC_CURSOR_STATE_MOVE_BSP:
         wlr_cursor_move(wlr_cursor, device, dx, dy);
         return process_cursor_move(cursor);
     case CWC_CURSOR_STATE_RESIZE:
@@ -337,6 +342,26 @@ void start_interactive_move(struct cwc_toplevel *toplevel)
     if (!toplevel || !cwc_toplevel_can_enter_interactive(toplevel))
         return;
 
+    if (cwc_toplevel_is_floating(toplevel)) {
+        cursor->state = CWC_CURSOR_STATE_MOVE;
+    } else {
+        struct cwc_tag_info *tag_info =
+            cwc_output_get_current_tag_info(toplevel->container->output);
+        if (tag_info->layout_mode == CWC_LAYOUT_BSP) {
+            if (toplevel->container->bsp_node)
+                bsp_remove_container(toplevel->container, true);
+            cursor->state = CWC_CURSOR_STATE_MOVE_BSP;
+        } else {
+            cursor->state = CWC_CURSOR_STATE_MOVE_MASTER;
+        }
+
+        struct wlr_box geom = cwc_toplevel_get_geometry(toplevel);
+
+        /* grab the middle point of the toplevel */
+        cwc_toplevel_set_position_global(toplevel, cx - geom.width / 2.0,
+                                         cy - geom.height / 2.0);
+    }
+
     cursor->grab_x                  = cx - toplevel->container->tree->node.x;
     cursor->grab_y                  = cy - toplevel->container->tree->node.y;
     cursor->grabbed_toplevel        = toplevel;
@@ -344,7 +369,6 @@ void start_interactive_move(struct cwc_toplevel *toplevel)
 
     // set image first before changing the state
     cwc_cursor_set_image_by_name(cursor, "grabbing");
-    cursor->state = CWC_CURSOR_STATE_MOVE;
 }
 
 /* geo_box is wlr_surface box */
@@ -420,7 +444,17 @@ void start_interactive_resize(struct cwc_toplevel *toplevel, uint32_t edges)
     cursor->resize_edges = edges;
 
     cwc_cursor_set_image_by_name(cursor, wlr_xcursor_get_resize_name(edges));
-    cursor->state = CWC_CURSOR_STATE_RESIZE;
+    if (cwc_toplevel_is_floating(toplevel)) {
+        cursor->state = CWC_CURSOR_STATE_RESIZE;
+    } else {
+        struct cwc_tag_info *tag_info =
+            cwc_output_get_current_tag_info(toplevel->container->output);
+        if (tag_info->layout_mode == CWC_LAYOUT_BSP) {
+            cursor->state = CWC_CURSOR_STATE_RESIZE_BSP;
+        } else {
+            cursor->state = CWC_CURSOR_STATE_RESIZE_MASTER;
+        }
+    }
 
     // init resize schedule
     struct timespec now;
@@ -428,19 +462,87 @@ void start_interactive_resize(struct cwc_toplevel *toplevel, uint32_t edges)
     cursor->last_resize_time_msec = timespec_to_msec(&now);
 }
 
-void stop_interactive()
+static void end_interactive_resize_floating(struct cwc_cursor *cursor)
 {
-    struct cwc_cursor *cursor = server.seat->cursor;
+    // apply pending change from schedule
+    struct wlr_box pending = cursor->pending_box;
+    cwc_container_set_position_global(cursor->grabbed_toplevel->container,
+                                      pending.x, pending.y);
+    cwc_toplevel_set_size_surface(cursor->grabbed_toplevel, pending.width,
+                                  pending.height);
+}
+
+static void end_interactive_move_master(struct cwc_cursor *cursor)
+{
+    struct cwc_container *grabbed = cursor->grabbed_toplevel->container;
+
+    // set the grabbed to float so that its filtered out
+    grabbed->state |= CONTAINER_STATE_FLOATING;
+    struct cwc_toplevel *toplevel_under_cursor =
+        cwc_toplevel_at_tiled(cursor->wlr_cursor->x, cursor->wlr_cursor->y);
+    grabbed->state &= ~CONTAINER_STATE_FLOATING;
+
+    if (toplevel_under_cursor && cwc_toplevel_is_visible(toplevel_under_cursor))
+        wl_list_swap(&toplevel_under_cursor->container->link_output_container,
+                     &grabbed->link_output_container);
+
+    master_arrange_update(grabbed->output);
+}
+
+static void end_interactive_move_bsp(struct cwc_cursor *cursor)
+{
+    struct cwc_container *grabbed = cursor->grabbed_toplevel->container;
+    double cx                     = cursor->wlr_cursor->x;
+    double cy                     = cursor->wlr_cursor->y;
+
+    grabbed->state |= CONTAINER_STATE_FLOATING;
+    struct cwc_toplevel *toplevel_under_cursor = cwc_toplevel_at_tiled(cx, cy);
+    grabbed->state &= ~CONTAINER_STATE_FLOATING;
+
+    if (!toplevel_under_cursor || !toplevel_under_cursor->container->bsp_node
+        || grabbed->workspace != toplevel_under_cursor->container->workspace) {
+        bsp_insert_container(grabbed, grabbed->workspace);
+        return;
+    }
+
+    struct cwc_tag_info *tag_info = cwc_output_get_current_tag_info(
+        toplevel_under_cursor->container->output);
+
+    tag_info->bsp_root_entry.last_focused = toplevel_under_cursor->container;
+
+    struct wlr_box box =
+        cwc_container_get_box(toplevel_under_cursor->container);
+    enum Position pos = wlr_box_bsp_should_insert_at_position(&box, cx, cy);
+    bsp_insert_container_pos(grabbed,
+                             toplevel_under_cursor->container->workspace, pos);
+}
+
+void stop_interactive(struct cwc_cursor *cursor)
+{
+    if (!cursor)
+        cursor = server.seat->cursor;
+
     if (cursor->state == CWC_CURSOR_STATE_NORMAL)
         return;
 
-    // apply pending change from schedule
-    if (cursor->state == CWC_CURSOR_STATE_RESIZE) {
-        struct wlr_box pending = cursor->pending_box;
-        cwc_container_set_position_global(cursor->grabbed_toplevel->container,
-                                          pending.x, pending.y);
-        cwc_toplevel_set_size_surface(cursor->grabbed_toplevel, pending.width,
-                                      pending.height);
+    switch (cursor->state) {
+    case CWC_CURSOR_STATE_RESIZE:
+        end_interactive_resize_floating(cursor);
+        break;
+    case CWC_CURSOR_STATE_MOVE_BSP:
+        end_interactive_move_bsp(cursor);
+        break;
+    case CWC_CURSOR_STATE_RESIZE_BSP:
+        // TODO: xxx
+        break;
+    case CWC_CURSOR_STATE_MOVE_MASTER:
+        end_interactive_move_master(cursor);
+        break;
+    case CWC_CURSOR_STATE_RESIZE_MASTER:
+        // TODO: implement this after revamp in the master api layout.
+        break;
+    default:
+        break;
     }
 
     // cursor fallback
@@ -450,7 +552,7 @@ void stop_interactive()
     else
         cwc_cursor_set_image_by_name(cursor, "default");
 
-    struct cwc_toplevel **grabbed = &server.seat->cursor->grabbed_toplevel;
+    struct cwc_toplevel **grabbed = &cursor->grabbed_toplevel;
 
     if (!cwc_toplevel_is_x11(*grabbed))
         wlr_xdg_toplevel_set_resizing((*grabbed)->xdg_toplevel, false);
@@ -489,7 +591,7 @@ static void on_cursor_button(struct wl_listener *listener, void *data)
         struct wlr_keyboard *kbd = wlr_seat_get_keyboard(cursor->seat);
         uint32_t modifiers       = kbd ? wlr_keyboard_get_modifiers(kbd) : 0;
 
-        stop_interactive();
+        stop_interactive(cursor);
 
         // same as keyboard binding always pass release button to client
         keybind_mouse_execute(modifiers, event->button, false);
@@ -1206,7 +1308,7 @@ static int luaC_pointer_resize_interactive(lua_State *L)
  */
 static int luaC_pointer_stop_interactive(lua_State *L)
 {
-    stop_interactive();
+    stop_interactive(NULL);
     return 0;
 }
 

@@ -11,8 +11,15 @@ struct cwc_server;
 
 enum cwc_cursor_state {
     CWC_CURSOR_STATE_NORMAL,
+
     CWC_CURSOR_STATE_MOVE,
     CWC_CURSOR_STATE_RESIZE,
+
+    CWC_CURSOR_STATE_MOVE_BSP,
+    CWC_CURSOR_STATE_RESIZE_BSP,
+
+    CWC_CURSOR_STATE_MOVE_MASTER,
+    CWC_CURSOR_STATE_RESIZE_MASTER,
 };
 
 struct hyprcursor_buffer {
@@ -112,6 +119,6 @@ void start_interactive_move(struct cwc_toplevel *toplevel);
 void start_interactive_resize(struct cwc_toplevel *toplevel, uint32_t edges);
 
 /* no op when is not from interactive */
-void stop_interactive();
+void stop_interactive(struct cwc_cursor *cursor);
 
 #endif // !_CWC_INPUT_CURSOR_H
