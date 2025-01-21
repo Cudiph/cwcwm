@@ -14,7 +14,6 @@ cc = meson.get_compiler('c')
 proj_dir = meson.current_source_dir()
 
 # dependencies (required)
-wlr = dependency('wlroots-0.19')
 wayland_server = dependency('wayland-server')
 hyprcursor = dependency('hyprcursor')
 cairo = dependency('cairo')
@@ -26,11 +25,15 @@ xcb = dependency('xcb')
 libm = cc.find_library('m', required : true)
 libdl = cc.find_library('dl', required : true)
 
-# # for testing custom wlroots commits
-# wlr_inc = include_directories('./wlroots/include/')
-# wlr_lib = cc.find_library('wlroots-0.19', required : true, dirs : proj_dir / 'wlroots/build')
-# wlr = declare_dependency(dependencies: wlr_lib, include_directories: [wlr_inc, '/usr/include/libdrm'])
-
+# wlroots as subproject, if any
+wlroots_version = ['>=0.19.0', '<0.20.0']
+subproject(
+	'wlroots',
+	default_options: ['examples=false'],
+	required: false,
+	version: wlroots_version,
+)
+wlr = dependency('wlroots-0.19', version: wlroots_version, fallback: 'wlroots')
 
 all_deps = [
   wayland_server,

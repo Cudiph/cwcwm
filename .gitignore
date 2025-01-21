@@ -2,11 +2,11 @@
 build/
 .cache/
 core.cwc*
+subprojects/
 
 # tests
 .gdb_history
 *.log
-wlroots/
 
 # generated docs
 doc/
