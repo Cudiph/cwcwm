@@ -379,6 +379,9 @@ void spawn_with_shell(const char *const command)
 static void _update_border_focus(void *data)
 {
     struct cwc_toplevel *toplevel = data;
+    if (!toplevel->container)
+        return;
+
     cwc_border_set_pattern(&toplevel->container->border,
                            g_config.border_color_focus
                                ? g_config.border_color_focus
@@ -388,6 +391,9 @@ static void _update_border_focus(void *data)
 static void _update_border_unfocus(void *data)
 {
     struct cwc_toplevel *toplevel = data;
+    if (!toplevel->container)
+        return;
+
     cwc_border_set_pattern(&toplevel->container->border,
                            g_config.border_color_normal);
 }
