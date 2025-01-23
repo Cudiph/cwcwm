@@ -97,17 +97,18 @@ static inline void schedule_resize(struct cwc_toplevel *toplevel,
         timespec_to_msec(&now) - cursor->last_resize_time_msec;
 
     if (delta_t_msec > interval_msec) {
-        // don't use toplevel_set_container_pos because it'll double configure
-        // and cause flicking
-        wlr_scene_node_set_position(&toplevel->container->tree->node,
-                                    new_box->x, new_box->y);
-        cwc_toplevel_set_size_surface(toplevel, new_box->width,
-                                      new_box->height);
-        clock_gettime(CLOCK_MONOTONIC, &now);
-        cursor->last_resize_time_msec = timespec_to_msec(&now);
-    }
+        if (new_box) {
+            cwc_container_set_box_global(toplevel->container, new_box);
+            clock_gettime(CLOCK_MONOTONIC, &now);
+        } else {
+            bsp_update_root(toplevel->container->output,
+                            toplevel->container->workspace);
+        }
 
-    cursor->pending_box = *new_box;
+        cursor->last_resize_time_msec = timespec_to_msec(&now);
+    } else if (new_box) {
+        cursor->pending_box = *new_box;
+    }
 }
 
 static void process_cursor_resize(struct cwc_cursor *cursor)
@@ -118,10 +119,10 @@ static void process_cursor_resize(struct cwc_cursor *cursor)
 
     double border_x = cx - cursor->grab_x;
     double border_y = cy - cursor->grab_y;
-    int new_left    = cursor->grab_geobox.x;
-    int new_right   = cursor->grab_geobox.x + cursor->grab_geobox.width;
-    int new_top     = cursor->grab_geobox.y;
-    int new_bottom  = cursor->grab_geobox.y + cursor->grab_geobox.height;
+    int new_left    = cursor->grab_float.x;
+    int new_right   = cursor->grab_float.x + cursor->grab_float.width;
+    int new_top     = cursor->grab_float.y;
+    int new_bottom  = cursor->grab_float.y + cursor->grab_float.height;
 
     if (cursor->resize_edges & WLR_EDGE_TOP) {
         new_top = border_y;
@@ -143,16 +144,41 @@ static void process_cursor_resize(struct cwc_cursor *cursor)
             new_right = new_left + 1;
     }
 
-    struct wlr_box geo_box = cwc_toplevel_get_geometry(toplevel);
-
     struct wlr_box new_box = {
-        .x      = new_left - geo_box.x,
-        .y      = new_top - geo_box.y,
+        .x      = new_left,
+        .y      = new_top,
         .width  = new_right - new_left,
         .height = new_bottom - new_top,
     };
 
     schedule_resize(toplevel, cursor, &new_box);
+}
+
+static void process_cursor_resize_bsp(struct cwc_cursor *cursor)
+{
+    struct cwc_toplevel *toplevel = cursor->grabbed_toplevel;
+    double cx                     = cursor->wlr_cursor->x;
+    double cy                     = cursor->wlr_cursor->y;
+
+    double diff_x = cx - cursor->grab_x;
+    double diff_y = cy - cursor->grab_y;
+
+    struct bsp_grab *grab_bsp   = &cursor->grab_bsp;
+    struct bsp_node *horizontal = grab_bsp->horizontal;
+    struct bsp_node *vertical   = grab_bsp->vertical;
+
+    if (horizontal) {
+        double newfact =
+            grab_bsp->wfact_horizontal + diff_x / horizontal->width;
+        horizontal->left_wfact = CLAMP(newfact, 0.05, 0.95);
+    }
+
+    if (vertical) {
+        double newfact = grab_bsp->wfact_vertical + diff_y / vertical->height;
+        vertical->left_wfact = CLAMP(newfact, 0.05, 0.95);
+    }
+
+    schedule_resize(toplevel, cursor, NULL);
 }
 
 void process_cursor_motion(struct cwc_cursor *cursor,
@@ -175,8 +201,14 @@ void process_cursor_motion(struct cwc_cursor *cursor,
         wlr_cursor_move(wlr_cursor, device, dx, dy);
         return process_cursor_move(cursor);
     case CWC_CURSOR_STATE_RESIZE:
+        // skip synchronization otherwise it'll make resizing sluggish
+        server.resize_count = -1e6;
         wlr_cursor_move(wlr_cursor, device, dx, dy);
         return process_cursor_resize(cursor);
+    case CWC_CURSOR_STATE_RESIZE_BSP:
+        server.resize_count = -1e6;
+        wlr_cursor_move(wlr_cursor, device, dx, dy);
+        return process_cursor_resize_bsp(cursor);
     default:
         break;
     }
@@ -406,6 +438,54 @@ decide_which_edge_to_resize(double sx, double sy, struct wlr_box geo_box)
     return edges;
 }
 
+static void start_interactive_resize_floating(struct cwc_cursor *cursor,
+                                              uint32_t edges,
+                                              double cx,
+                                              double cy)
+{
+    struct cwc_toplevel *toplevel = cursor->grabbed_toplevel;
+    struct wlr_box geo_box        = cwc_container_get_box(toplevel->container);
+
+    cursor->grab_float = geo_box;
+
+    double border_x =
+        geo_box.x + ((edges & WLR_EDGE_RIGHT) ? geo_box.width : 0);
+    double border_y =
+        geo_box.y + ((edges & WLR_EDGE_BOTTOM) ? geo_box.height : 0);
+    cursor->grab_x = cx - border_x;
+    cursor->grab_y = cy - border_y;
+
+    cursor->state = CWC_CURSOR_STATE_RESIZE;
+}
+
+static void start_interactive_resize_bsp(struct cwc_cursor *cursor,
+                                         uint32_t edges,
+                                         double cx,
+                                         double cy)
+{
+    struct cwc_toplevel *toplevel = cursor->grabbed_toplevel;
+
+    cursor->grab_x = cx;
+    cursor->grab_y = cy;
+
+    struct bsp_node *vertical   = NULL;
+    struct bsp_node *horizontal = NULL;
+    bsp_find_resize_fence(toplevel->container->bsp_node, cursor->resize_edges,
+                          &vertical, &horizontal);
+
+    if (vertical) {
+        cursor->grab_bsp.vertical       = vertical;
+        cursor->grab_bsp.wfact_vertical = vertical->left_wfact;
+    }
+
+    if (horizontal) {
+        cursor->grab_bsp.horizontal       = horizontal;
+        cursor->grab_bsp.wfact_horizontal = horizontal->left_wfact;
+    }
+
+    cursor->state = CWC_CURSOR_STATE_RESIZE_BSP;
+}
+
 void start_interactive_resize(struct cwc_toplevel *toplevel, uint32_t edges)
 {
     struct cwc_cursor *cursor = server.seat->cursor;
@@ -421,39 +501,24 @@ void start_interactive_resize(struct cwc_toplevel *toplevel, uint32_t edges)
     if (!cwc_toplevel_is_x11(toplevel))
         wlr_xdg_toplevel_set_resizing(toplevel->xdg_toplevel, true);
 
-    // skip synchronization otherwise it'll make resizing sluggish
-    server.resize_count = -100;
-
     struct wlr_box geo_box = cwc_toplevel_get_geometry(toplevel);
     edges = edges ? edges : decide_which_edge_to_resize(sx, sy, geo_box);
 
     cursor->grabbed_toplevel        = toplevel;
     cursor->name_before_interactive = cursor->current_name;
-
-    double border_x = (toplevel->container->tree->node.x + geo_box.x)
-                      + ((edges & WLR_EDGE_RIGHT) ? geo_box.width : 0);
-    double border_y = (toplevel->container->tree->node.y + geo_box.y)
-                      + ((edges & WLR_EDGE_BOTTOM) ? geo_box.height : 0);
-    cursor->grab_x = cx - border_x;
-    cursor->grab_y = cy - border_y;
-
-    cursor->grab_geobox = geo_box;
-    cursor->grab_geobox.x += toplevel->container->tree->node.x;
-    cursor->grab_geobox.y += toplevel->container->tree->node.y;
-
-    cursor->resize_edges = edges;
+    cursor->resize_edges            = edges;
 
     cwc_cursor_set_image_by_name(cursor, wlr_xcursor_get_resize_name(edges));
+
+    struct cwc_tag_info *tag_info =
+        cwc_output_get_current_tag_info(toplevel->container->output);
+
     if (cwc_toplevel_is_floating(toplevel)) {
-        cursor->state = CWC_CURSOR_STATE_RESIZE;
-    } else {
-        struct cwc_tag_info *tag_info =
-            cwc_output_get_current_tag_info(toplevel->container->output);
-        if (tag_info->layout_mode == CWC_LAYOUT_BSP) {
-            cursor->state = CWC_CURSOR_STATE_RESIZE_BSP;
-        } else {
-            cursor->state = CWC_CURSOR_STATE_RESIZE_MASTER;
-        }
+        start_interactive_resize_floating(cursor, edges, cx, cy);
+    } else if (tag_info->layout_mode == CWC_LAYOUT_BSP) {
+        start_interactive_resize_bsp(cursor, edges, cx, cy);
+    } else if (tag_info->layout_mode == CWC_LAYOUT_MASTER) {
+        cursor->state = CWC_CURSOR_STATE_RESIZE_MASTER;
     }
 
     // init resize schedule
@@ -466,10 +531,14 @@ static void end_interactive_resize_floating(struct cwc_cursor *cursor)
 {
     // apply pending change from schedule
     struct wlr_box pending = cursor->pending_box;
+
+    // use set pos instead of set box so that it'll update container output
     cwc_container_set_position_global(cursor->grabbed_toplevel->container,
                                       pending.x, pending.y);
     cwc_toplevel_set_size_surface(cursor->grabbed_toplevel, pending.width,
                                   pending.height);
+
+    cursor->grab_float = (struct wlr_box){0};
 }
 
 static void end_interactive_move_master(struct cwc_cursor *cursor)
@@ -517,6 +586,11 @@ static void end_interactive_move_bsp(struct cwc_cursor *cursor)
                              toplevel_under_cursor->container->workspace, pos);
 }
 
+static void end_interactive_resize_bsp(struct cwc_cursor *cursor)
+{
+    cursor->grab_bsp = (struct bsp_grab){0};
+}
+
 void stop_interactive(struct cwc_cursor *cursor)
 {
     if (!cursor)
@@ -533,7 +607,7 @@ void stop_interactive(struct cwc_cursor *cursor)
         end_interactive_move_bsp(cursor);
         break;
     case CWC_CURSOR_STATE_RESIZE_BSP:
-        // TODO: xxx
+        end_interactive_resize_bsp(cursor);
         break;
     case CWC_CURSOR_STATE_MOVE_MASTER:
         end_interactive_move_master(cursor);

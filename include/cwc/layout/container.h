@@ -135,6 +135,17 @@ void cwc_container_set_position_gap(struct cwc_container *container,
 void cwc_container_set_position_global(struct cwc_container *container,
                                        int x,
                                        int y);
+
+/* combine set position and set size to make it more efficient */
+void cwc_container_set_box_global(struct cwc_container *container,
+                                  struct wlr_box *box);
+void cwc_container_set_box_global_gap(struct cwc_container *container,
+                                      struct wlr_box *box);
+void cwc_container_set_box(struct cwc_container *container,
+                           struct wlr_box *box);
+void cwc_container_set_box_gap(struct cwc_container *container,
+                               struct wlr_box *box);
+
 void cwc_container_set_fullscreen(struct cwc_container *cont, bool set);
 void cwc_container_set_maximized(struct cwc_container *container, bool set);
 void cwc_container_set_minimized(struct cwc_container *container, bool set);

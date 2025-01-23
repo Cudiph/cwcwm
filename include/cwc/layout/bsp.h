@@ -13,8 +13,8 @@ enum bsp_node_type {
 
 enum bsp_split_type {
     BSP_SPLIT_AUTO, // leaf only
-    BSP_SPLIT_VERTICAL,
     BSP_SPLIT_HORIZONTAL,
+    BSP_SPLIT_VERTICAL,
 };
 
 enum Position { LEFT, RIGHT, ROOT };
@@ -88,5 +88,13 @@ void bsp_entry_fini(struct cwc_output *output, int workspace);
  */
 enum Position
 wlr_box_bsp_should_insert_at_position(struct wlr_box *region, int x, int y);
+
+/* return the vertical split node or horizontal split node if find any.
+ * Return pointer cannot be NULL.
+ */
+void bsp_find_resize_fence(struct bsp_node *me,
+                           uint32_t edges,
+                           struct bsp_node **vertical,
+                           struct bsp_node **horizontal);
 
 #endif // !_CWC_BSP_H

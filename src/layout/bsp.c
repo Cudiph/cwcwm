@@ -22,7 +22,9 @@
 #include "cwc/desktop/output.h"
 #include "cwc/desktop/toplevel.h"
 #include "cwc/layout/bsp.h"
+#include "cwc/layout/container.h"
 #include "cwc/util.h"
+#include "wlr/util/edges.h"
 
 static inline struct bsp_node *
 bsp_node_get_sibling(struct bsp_node *parent_node, struct bsp_node *me)
@@ -101,8 +103,8 @@ static inline void bsp_node_leaf_configure(
 
     // set size first so that the floating box not save the new x y
     if (!cwc_container_is_floating(container)) {
-        cwc_container_set_size(container, width, height);
-        cwc_container_set_position_gap(container, x, y);
+        struct wlr_box box = {x, y, width, height};
+        cwc_container_set_box_gap(container, &box);
     }
 
     bsp_node_set_position(node, x, y);
@@ -140,7 +142,7 @@ void bsp_update_node(struct bsp_node *parent)
     // calculate width and height for left and right according to left width
     // factor
     switch (parent->split_type) {
-    case BSP_SPLIT_VERTICAL:
+    case BSP_SPLIT_HORIZONTAL:
         left->width  = parent->width * parent->left_wfact;
         left->height = parent->height;
 
@@ -149,7 +151,7 @@ void bsp_update_node(struct bsp_node *parent)
         right->x      = left->x + left->width;
         right->y      = left->y;
         break;
-    case BSP_SPLIT_HORIZONTAL:
+    case BSP_SPLIT_VERTICAL:
         left->width  = parent->width;
         left->height = parent->height * parent->left_wfact;
 
@@ -330,8 +332,8 @@ static void _bsp_insert_container(struct bsp_root_entry *root_entry,
     };
 
     enum bsp_split_type split = old_geom.width >= old_geom.height
-                                    ? BSP_SPLIT_VERTICAL
-                                    : BSP_SPLIT_HORIZONTAL;
+                                    ? BSP_SPLIT_HORIZONTAL
+                                    : BSP_SPLIT_VERTICAL;
 
     struct bsp_node *grandparent_node = sibling_node->parent;
 
@@ -476,10 +478,10 @@ void bsp_toggle_split(struct bsp_node *node)
     if (node->type == BSP_NODE_LEAF)
         node = node->parent;
 
-    if (node->split_type == BSP_SPLIT_VERTICAL)
-        node->split_type = BSP_SPLIT_HORIZONTAL;
-    else
+    if (node->split_type == BSP_SPLIT_HORIZONTAL)
         node->split_type = BSP_SPLIT_VERTICAL;
+    else
+        node->split_type = BSP_SPLIT_HORIZONTAL;
 
     bsp_update_node(node);
 }
@@ -529,4 +531,65 @@ wlr_box_bsp_should_insert_at_position(struct wlr_box *region, int x, int y)
         return RIGHT;
 
     return LEFT;
+}
+
+static struct bsp_node *
+find_fence(struct bsp_node *node, enum bsp_split_type split, enum Position pos)
+{
+    struct bsp_node *parent = node->parent;
+    while (parent) {
+        if (parent->split_type == split) {
+            switch (pos) {
+            case RIGHT:
+                if (parent->right == node)
+                    return parent;
+                break;
+            case LEFT:
+                if (parent->left == node)
+                    return parent;
+                break;
+            default:
+                break;
+            }
+        }
+
+        node   = parent;
+        parent = parent->parent;
+    }
+
+    return NULL;
+}
+
+void bsp_find_resize_fence(struct bsp_node *reference,
+                           uint32_t edges,
+                           struct bsp_node **vertical,
+                           struct bsp_node **horizontal)
+{
+    struct bsp_node *parent = reference->parent;
+    if (!parent)
+        return;
+
+    if (edges & WLR_EDGE_TOP) {
+        struct bsp_node *fence_node =
+            find_fence(reference, BSP_SPLIT_VERTICAL, RIGHT);
+        if (fence_node)
+            *vertical = fence_node;
+    } else if (edges & WLR_EDGE_BOTTOM) {
+        struct bsp_node *fence_node =
+            find_fence(reference, BSP_SPLIT_VERTICAL, LEFT);
+        if (fence_node)
+            *vertical = fence_node;
+    }
+
+    if (edges & WLR_EDGE_LEFT) {
+        struct bsp_node *fence_node =
+            find_fence(reference, BSP_SPLIT_HORIZONTAL, RIGHT);
+        if (fence_node)
+            *horizontal = fence_node;
+    } else if (edges & WLR_EDGE_RIGHT) {
+        struct bsp_node *fence_node =
+            find_fence(reference, BSP_SPLIT_HORIZONTAL, LEFT);
+        if (fence_node)
+            *horizontal = fence_node;
+    }
 }

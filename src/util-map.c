@@ -244,7 +244,7 @@ void __cwc_hhmap_remove(struct cwc_hhmap *map, uint64_t hash)
     if (result->next == NULL) {
         if (prev)
             prev->next = NULL;
-        memset(result, 0, sizeof(*result));
+        *result = (struct hhash_entry){0};
     } else { // keep the link for other to use
         result->hash = 0;
         result->data = NULL;

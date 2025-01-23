@@ -27,6 +27,13 @@ struct hyprcursor_buffer {
     cairo_surface_t *surface;
 };
 
+struct bsp_grab {
+    struct bsp_node *horizontal;
+    struct bsp_node *vertical;
+    double wfact_horizontal;
+    double wfact_vertical;
+};
+
 struct cwc_cursor {
     struct wlr_seat *seat;
     struct wlr_cursor *wlr_cursor;
@@ -38,7 +45,10 @@ struct cwc_cursor {
     enum cwc_cursor_state state;
     uint32_t resize_edges;
     double grab_x, grab_y;
-    struct wlr_box grab_geobox;
+    union {
+        struct wlr_box grab_float;
+        struct bsp_grab grab_bsp;
+    };
     struct cwc_toplevel *grabbed_toplevel;
     const char *name_before_interactive;
 

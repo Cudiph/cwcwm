@@ -1076,6 +1076,20 @@ void cwc_toplevel_set_size_surface(struct cwc_toplevel *toplevel, int w, int h)
                            h + outside_width);
 }
 
+void cwc_toplevel_set_position(struct cwc_toplevel *toplevel, int x, int y)
+{
+    int bw = cwc_border_get_thickness(&toplevel->container->border);
+    cwc_container_set_position(toplevel->container, x - bw, y - bw);
+}
+
+void cwc_toplevel_set_position_global(struct cwc_toplevel *toplevel,
+                                      int x,
+                                      int y)
+{
+    int bw = cwc_border_get_thickness(&toplevel->container->border);
+    cwc_container_set_position_global(toplevel->container, x - bw, y - bw);
+}
+
 struct cwc_toplevel *
 cwc_toplevel_at(double lx, double ly, double *sx, double *sy)
 {
@@ -1161,20 +1175,6 @@ struct cwc_toplevel *cwc_toplevel_at_tiled(double lx, double ly)
     }
 
     return NULL;
-}
-
-void cwc_toplevel_set_position(struct cwc_toplevel *toplevel, int x, int y)
-{
-    int bw = cwc_border_get_thickness(&toplevel->container->border);
-    cwc_container_set_position(toplevel->container, x - bw, y - bw);
-}
-
-void cwc_toplevel_set_position_global(struct cwc_toplevel *toplevel,
-                                      int x,
-                                      int y)
-{
-    int bw = cwc_border_get_thickness(&toplevel->container->border);
-    cwc_container_set_position_global(toplevel->container, x - bw, y - bw);
 }
 
 inline bool cwc_toplevel_is_visible(struct cwc_toplevel *toplevel)
