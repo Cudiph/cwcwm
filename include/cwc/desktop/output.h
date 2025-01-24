@@ -129,6 +129,9 @@ void cwc_output_set_layout_mode(struct cwc_output *output,
 
 void cwc_output_set_strategy_idx(struct cwc_output *output, int idx);
 
+/* return the workspace number, 0 if not found */
+int cwc_tag_find_first_tag(tag_bitfield_t tag);
+
 //================== MACRO ==================
 
 struct cwc_output *cwc_output_get_focused();

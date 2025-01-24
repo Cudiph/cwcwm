@@ -930,12 +930,13 @@ static inline void insert_tiled_toplevel_to_bsp_tree(struct cwc_output *output,
 
 void cwc_output_set_view_only(struct cwc_output *output, int workspace)
 {
+    int single_tag = 1 << (workspace - 1);
     if (output->state->active_workspace == workspace
-        && output->state->active_tag == workspace)
+        && output->state->active_tag == single_tag)
         return;
 
     if (workspace)
-        output->state->active_tag = 1 << (workspace - 1);
+        output->state->active_tag = single_tag;
     else
         output->state->active_tag = 0;
     output->state->active_workspace = workspace;
@@ -954,6 +955,9 @@ void cwc_output_set_active_tag(struct cwc_output *output, tag_bitfield_t newtag)
 {
     if (newtag == output->state->active_tag)
         return;
+
+    if (!(newtag >> (output->state->active_workspace - 1) & 1))
+        output->state->active_workspace = cwc_tag_find_first_tag(newtag);
 
     output->state->active_tag = newtag;
     cwc_output_update_visible(output);
@@ -1053,4 +1057,15 @@ void cwc_output_set_mwfact(struct cwc_output *output,
 
     output->state->tag_info[workspace].master_state.mwfact = factor;
     cwc_output_tiling_layout_update(output, workspace);
+}
+
+int cwc_tag_find_first_tag(tag_bitfield_t tag)
+{
+    for (int i = 1; i < MAX_WORKSPACE; i++) {
+        if (tag & 1)
+            return i;
+        tag >>= 1;
+    }
+
+    return 0;
 }
