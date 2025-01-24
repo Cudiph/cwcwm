@@ -33,8 +33,11 @@ local enum = {
         LEFT    = 0x110,
         RIGHT   = 0x111,
         MIDDLE  = 0x112,
-        FORWARD = 0x115, -- Aka mouse5
-        BACK    = 0x116, -- Aka mouse4
+        SIDE    = 0x113,
+        EXTRA   = 0x114,
+        FORWARD = 0x115,
+        BACK    = 0x116,
+        TASK    = 0x117,
     },
 
     --- Extracted from wlr_direction `wlr_output_layout.h`

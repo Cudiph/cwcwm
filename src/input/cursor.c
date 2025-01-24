@@ -374,6 +374,10 @@ void start_interactive_move(struct cwc_toplevel *toplevel)
     if (!toplevel || !cwc_toplevel_can_enter_interactive(toplevel))
         return;
 
+    // set image first before changing the state
+    cursor->name_before_interactive = cursor->current_name;
+    cwc_cursor_set_image_by_name(cursor, "grabbing");
+
     if (cwc_toplevel_is_floating(toplevel)) {
         cursor->state = CWC_CURSOR_STATE_MOVE;
     } else {
@@ -394,13 +398,9 @@ void start_interactive_move(struct cwc_toplevel *toplevel)
                                          cy - geom.height / 2.0);
     }
 
-    cursor->grab_x                  = cx - toplevel->container->tree->node.x;
-    cursor->grab_y                  = cy - toplevel->container->tree->node.y;
-    cursor->grabbed_toplevel        = toplevel;
-    cursor->name_before_interactive = cursor->current_name;
-
-    // set image first before changing the state
-    cwc_cursor_set_image_by_name(cursor, "grabbing");
+    cursor->grab_x           = cx - toplevel->container->tree->node.x;
+    cursor->grab_y           = cy - toplevel->container->tree->node.y;
+    cursor->grabbed_toplevel = toplevel;
 }
 
 /* geo_box is wlr_surface box */
