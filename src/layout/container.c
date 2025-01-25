@@ -462,8 +462,9 @@ static void init_surf_tree(struct cwc_toplevel *toplevel,
             container->tree, toplevel->xwsurface->surface);
 
         toplevel->xwsurface->surface->data = toplevel->surf_tree;
-        cwc_container_set_position_global(container, toplevel->xwsurface->x,
-                                          toplevel->xwsurface->y);
+        wlr_scene_node_set_position(&container->tree->node,
+                                    toplevel->xwsurface->x,
+                                    toplevel->xwsurface->y);
 
         goto assign_common;
     }
@@ -497,7 +498,10 @@ static void decide_should_tiled(struct cwc_toplevel *toplevel,
 
     if (cwc_toplevel_should_float(toplevel)) {
         cwc_toplevel_set_floating(toplevel, true);
-        cwc_toplevel_to_center(toplevel);
+
+        if (!cwc_toplevel_is_unmanaged(toplevel))
+            cwc_toplevel_to_center(toplevel);
+
         return;
     }
 
@@ -571,8 +575,6 @@ void cwc_container_init(struct cwc_output *output,
 
     if (cwc_toplevel_is_unmanaged(toplevel)) {
         cont->state |= CONTAINER_STATE_UNMANAGED;
-        cwc_container_set_position_global(cont, toplevel->xwsurface->x,
-                                          toplevel->xwsurface->y);
         goto emit_signal;
     }
 
@@ -1214,7 +1216,8 @@ static void all_toplevel_set_size(struct cwc_toplevel *toplevel, void *data)
     int surf_w = box->width;
     int surf_h = box->height;
 
-    if (geom.width == surf_w && geom.height == surf_h)
+    if (geom.width == surf_w && geom.height == surf_h
+        && !cwc_toplevel_is_x11(toplevel))
         return;
 
     struct wlr_box clip = {

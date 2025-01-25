@@ -258,6 +258,10 @@ static void on_surface_commit(struct wl_listener *listener, void *data)
         || !cwc_toplevel_is_mapped(toplevel))
         return;
 
+    // tiled toplevel already clipped
+    if (!cwc_toplevel_is_floating(toplevel))
+        return;
+
     struct wlr_box geom = cwc_toplevel_get_geometry(toplevel);
     wlr_scene_subsurface_tree_set_clip(&toplevel->surf_tree->node, &geom);
     int thickness = cwc_border_get_thickness(&toplevel->container->border);

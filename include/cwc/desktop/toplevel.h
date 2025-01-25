@@ -294,9 +294,9 @@ static inline uint32_t
 cwc_toplevel_set_size(struct cwc_toplevel *toplevel, int w, int h)
 {
     if (cwc_toplevel_is_x11(toplevel)) {
-        wlr_xwayland_surface_configure(toplevel->xwsurface,
-                                       toplevel->xwsurface->x,
-                                       toplevel->xwsurface->y, w, h);
+        int lx, ly;
+        wlr_scene_node_coords(&toplevel->surf_tree->node, &lx, &ly);
+        wlr_xwayland_surface_configure(toplevel->xwsurface, lx, ly, w, h);
         return 0;
     }
 
