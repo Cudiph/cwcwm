@@ -19,6 +19,7 @@
 #include <stdlib.h>
 #include <wayland-server-core.h>
 #include <wayland-util.h>
+#include <wlr/types/wlr_layer_shell_v1.h>
 
 #include "cwc/desktop/idle.h"
 #include "cwc/desktop/toplevel.h"
@@ -37,7 +38,18 @@ static int get_idle_inhibitor_count()
             cwc_toplevel_try_from_wlr_surface(inhibitor->surface);
 
         if (toplevel && cwc_toplevel_is_visible(toplevel))
-            count++;
+            goto increment;
+
+        struct wlr_layer_surface_v1 *xdg_surf =
+            wlr_layer_surface_v1_try_from_wlr_surface(inhibitor->surface);
+
+        if (xdg_surf)
+            goto increment;
+
+        continue;
+
+    increment:
+        count++;
     }
 
     return count;
