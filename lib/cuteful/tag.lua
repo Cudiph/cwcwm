@@ -81,7 +81,7 @@ end
 function tag.incgap(add, screen)
     local s = screen or cwc.screen.focused()
     local t = s.selected_tag
-    t.useless_gaps = t.useless_gaps + add
+    t.gap = t.gap + add
 end
 
 --- Increase master width factor.

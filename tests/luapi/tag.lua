@@ -19,9 +19,9 @@ local function test()
     tag:toggle()
     assert(tag.selected)
 
-    assert(tag.useless_gaps >= 0)
-    tag.useless_gaps = 3
-    assert(tag.useless_gaps == 3)
+    assert(tag.gap >= 0)
+    tag.gap = 3
+    assert(tag.gap == 3)
 
     assert(tag.layout_mode >= 0 and tag.layout_mode < enum.layout_mode.LENGTH)
     tag.layout_mode = enum.layout_mode.BSP
@@ -32,6 +32,14 @@ local function test()
     assert(tag.mwfact == 0.9)
 
     assert(tostring(tag.screen):match("cwc_screen"))
+
+    assert(tag.master_count == 1)
+    tag.master_count = 2
+    assert(tag.master_count == 2)
+
+    assert(tag.column_count == 1)
+    tag.column_count = 3
+    assert(tag.column_count == 3)
 
     print("cwc_tag test PASSED")
 end

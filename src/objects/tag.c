@@ -38,6 +38,7 @@
 #include "cwc/desktop/output.h"
 #include "cwc/luaclass.h"
 #include "cwc/luaobject.h"
+#include "cwc/util.h"
 
 /** Index of the tag in the screen.
  *
@@ -107,14 +108,14 @@ static int luaC_tag_set_selected(lua_State *L)
     return 0;
 }
 
-/** Useless gaps width in this tag.
+/** The gap (spacing, also called useless_gap) between clients.
  *
- * @property useless_gaps
- * @tparam integer useless_gaps
+ * @property gap
+ * @tparam integer gap
  * @propertydefault 0
  * @rangestart 0
  */
-static int luaC_tag_get_useless_gaps(lua_State *L)
+static int luaC_tag_get_gap(lua_State *L)
 {
     struct cwc_tag_info *tag = luaC_tag_checkudata(L, 1);
     lua_pushnumber(L, tag->useless_gaps);
@@ -122,7 +123,7 @@ static int luaC_tag_get_useless_gaps(lua_State *L)
     return 1;
 }
 
-static int luaC_tag_set_useless_gaps(lua_State *L)
+static int luaC_tag_set_gap(lua_State *L)
 {
     struct cwc_tag_info *tag = luaC_tag_checkudata(L, 1);
     int width                = luaL_checkint(L, 2);
@@ -183,6 +184,56 @@ static int luaC_tag_get_layout_mode(lua_State *L)
     struct cwc_tag_info *tag = luaC_tag_checkudata(L, 1);
 
     lua_pushinteger(L, tag->layout_mode);
+
+    return 1;
+}
+
+/** Set the number of master windows.
+ *
+ * @property master_count
+ * @tparam[opt=1] integer master_count
+ * @negativeallowed false
+ */
+static int luaC_tag_set_master_count(lua_State *L)
+{
+    struct cwc_tag_info *tag = luaC_tag_checkudata(L, 1);
+    uint32_t master_count    = luaL_checkint(L, 2);
+
+    tag->master_state.master_count = MAX(1, master_count);
+
+    return 0;
+}
+
+static int luaC_tag_get_master_count(lua_State *L)
+{
+    struct cwc_tag_info *tag = luaC_tag_checkudata(L, 1);
+
+    lua_pushinteger(L, tag->master_state.master_count);
+
+    return 1;
+}
+
+/** Set the number of columns.
+ *
+ * @property column_count
+ * @tparam[opt=1] integer column_count
+ * @negativeallowed false
+ */
+static int luaC_tag_set_column_count(lua_State *L)
+{
+    struct cwc_tag_info *tag = luaC_tag_checkudata(L, 1);
+    uint32_t column_count    = luaL_checkint(L, 2);
+
+    tag->master_state.column_count = MAX(1, column_count);
+
+    return 0;
+}
+
+static int luaC_tag_get_column_count(lua_State *L)
+{
+    struct cwc_tag_info *tag = luaC_tag_checkudata(L, 1);
+
+    lua_pushinteger(L, tag->master_state.column_count);
 
     return 1;
 }
@@ -249,9 +300,13 @@ void luaC_tag_setup(lua_State *L)
     };
 
     luaL_Reg tag_methods[] = {
-        {"toggle",       luaC_tag_toggle      },
-        {"view_only",    luaC_tag_view_only   },
-        {"strategy_idx", luaC_tag_strategy_idx},
+        {"toggle",           luaC_tag_toggle      },
+        {"view_only",        luaC_tag_view_only   },
+        {"strategy_idx",     luaC_tag_strategy_idx},
+
+        // TODO: remove this on v0.1
+        {"get_useless_gaps", luaC_tag_get_gap     },
+        {"set_useless_gaps", luaC_tag_set_gap     },
 
         // ro prop
         TAG_REG_READ_ONLY(index),
@@ -259,11 +314,13 @@ void luaC_tag_setup(lua_State *L)
 
         // properties
         TAG_REG_PROPERTY(selected),
-        TAG_REG_PROPERTY(useless_gaps),
+        TAG_REG_PROPERTY(gap),
         TAG_REG_PROPERTY(mwfact),
         TAG_REG_PROPERTY(layout_mode),
+        TAG_REG_PROPERTY(master_count),
+        TAG_REG_PROPERTY(column_count),
 
-        {NULL,           NULL                 },
+        {NULL,               NULL                 },
     };
 
     luaC_register_class(L, tag_classname, tag_methods, tag_metamethods);
