@@ -36,6 +36,7 @@
 #include <wayland-util.h>
 
 #include "cwc/desktop/output.h"
+#include "cwc/layout/master.h"
 #include "cwc/luaclass.h"
 #include "cwc/luaobject.h"
 #include "cwc/util.h"
@@ -201,6 +202,9 @@ static int luaC_tag_set_master_count(lua_State *L)
 
     tag->master_state.master_count = MAX(1, master_count);
 
+    struct cwc_output *output = cwc_output_from_tag_info(tag);
+    master_arrange_update(output);
+
     return 0;
 }
 
@@ -225,6 +229,9 @@ static int luaC_tag_set_column_count(lua_State *L)
     uint32_t column_count    = luaL_checkint(L, 2);
 
     tag->master_state.column_count = MAX(1, column_count);
+
+    struct cwc_output *output = cwc_output_from_tag_info(tag);
+    master_arrange_update(output);
 
     return 0;
 }

@@ -76,40 +76,105 @@ static void arrange_tile(struct cwc_toplevel **toplevels,
                          struct cwc_output *output,
                          struct master_state *master_state)
 {
-    // TODO: account master count and column count
     struct wlr_box usable_area = output->usable_area;
-    if (len == 1) {
-        cwc_container_set_size(toplevels[0]->container,
-                               output->usable_area.width, usable_area.height);
-        cwc_container_set_position_gap(toplevels[0]->container, usable_area.x,
-                                       usable_area.y);
+
+    /* master */
+    int master_count = master_state->master_count;
+    int master_width = master_count >= len
+                           ? usable_area.width
+                           : usable_area.width * master_state->mwfact;
+    master_count     = master_count >= len ? len : master_count;
+
+    int start_x = usable_area.x;
+    int start_y = usable_area.y;
+
+    float total_fact = 0;
+
+    /* get sum of wfact */
+    for (int i = 0; i < master_count; i++) {
+        struct cwc_toplevel *elem = toplevels[i];
+        total_fact += elem->container->wfact;
+    }
+
+    int next_y = start_y;
+    for (int i = 0; i < (master_count - 1); i++) {
+        struct cwc_toplevel *elem = toplevels[i];
+
+        int height = usable_area.height * elem->container->wfact / total_fact;
+        struct wlr_box newgeom = {start_x, next_y, master_width, height};
+
+        cwc_container_set_box_gap(elem->container, &newgeom);
+        next_y += height;
+    }
+
+    /* last element fill remaining area */
+    {
+        struct wlr_box newgeom = {start_x, next_y, master_width,
+                                  usable_area.height - next_y + start_y};
+        cwc_container_set_box_gap(toplevels[master_count - 1]->container,
+                                  &newgeom);
+    }
+
+    if (master_count >= len)
         return;
+
+    /* secondary */
+    int sec_len   = len - master_count;
+    int col_count = master_state->column_count >= sec_len
+                        ? sec_len
+                        : master_state->column_count;
+    int sec_width = usable_area.width - master_width;
+
+    int col_capacities[col_count];
+    int min_item_per_col = sec_len / col_count;
+    int item_remainder   = sec_len % col_count;
+
+    for (int i = master_state->column_count - 1; i >= 0; i--) {
+        col_capacities[i] = min_item_per_col;
+
+        if (item_remainder >= 1) {
+            col_capacities[i]++;
+            item_remainder--;
+        }
     }
 
-    int master_width = usable_area.width * master_state->mwfact;
-    int sec_width    = usable_area.width - master_width;
+    int next_x     = master_width;
+    int col_width  = sec_width / col_count;
+    int cidx_start = master_count;
 
-    cwc_container_set_size(toplevels[0]->container, master_width,
-                           usable_area.height);
-    cwc_container_set_position_gap(toplevels[0]->container, usable_area.x,
-                                   usable_area.y);
+    /* the logic is identical like master but applied for each column */
+    for (int col = 0; col < col_count; col++) {
+        int col_cap  = col_capacities[col];
+        int cidx_end = cidx_start + col_cap;
+        next_y       = start_y;
+        total_fact   = 0;
 
-    int sec_count  = len - master_state->master_count;
-    int sec_height = usable_area.height / sec_count;
+        for (int i = cidx_start; i < cidx_end; i++) {
+            struct cwc_toplevel *elem = toplevels[i];
+            total_fact += elem->container->wfact;
+        }
 
-    int height_used = 0;
-    for (int i = 1; i < (len - 1); ++i) {
-        struct cwc_toplevel *toplevel = toplevels[i];
-        cwc_container_set_size(toplevel->container, sec_width, sec_height);
-        cwc_container_set_position_gap(toplevel->container, master_width,
-                                       height_used + usable_area.y);
-        height_used += sec_height;
+        for (int i = cidx_start; i < cidx_end - 1; i++) {
+            struct cwc_toplevel *elem = toplevels[i];
+
+            int height =
+                usable_area.height * elem->container->wfact / total_fact;
+            struct wlr_box newgeom = {next_x, next_y, col_width, height};
+
+            cwc_container_set_box_gap(elem->container, &newgeom);
+            next_y += height;
+        }
+
+        {
+            struct wlr_box newgeom = {next_x, next_y, col_width,
+                                      usable_area.height - next_y + start_y};
+            cwc_container_set_box_gap(toplevels[cidx_end - 1]->container,
+                                      &newgeom);
+        }
+
+        next_x += col_width;
+        cidx_start += col_cap;
     }
-
-    cwc_container_set_size(toplevels[len - 1]->container, sec_width,
-                           usable_area.height - height_used);
-    cwc_container_set_position_gap(toplevels[len - 1]->container, master_width,
-                                   height_used + usable_area.y);
 }
 
 /* Initiialize the master/stack layout list since it doesn't have sentinel

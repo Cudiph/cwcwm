@@ -76,11 +76,10 @@ end
 --
 -- @staticfct incgap
 -- @tparam integer add
--- @tparam[opt] cwc_screen screen
+-- @tparam[opt] cwc_tag tag
 -- @noreturn
-function tag.incgap(add, screen)
-    local s = screen or cwc.screen.focused()
-    local t = s.selected_tag
+function tag.incgap(add, t)
+    t = t or cwc.screen.focused().selected_tag
     t.gap = t.gap + add
 end
 
@@ -88,12 +87,33 @@ end
 --
 -- @staticfct incmwfact
 -- @tparam number add
--- @tparam[opt] cwc_screen screen
+-- @tparam[opt] cwc_tag tag
 -- @noreturn
-function tag.incmwfact(add, screen)
-    local s = screen or cwc.screen.focused()
-    local t = s.selected_tag
+function tag.incmwfact(add, t)
+    t = t or cwc.screen.focused().selected_tag
     t.mwfact = t.mwfact + add
+end
+
+--- Increase the number of master windows.
+--
+-- @staticfct incnmaster
+-- @tparam number add
+-- @tparam[opt] cwc_tag tag
+-- @noreturn
+function tag.incnmaster(add, t)
+    t = t or cwc.screen.focused().selected_tag
+    t.master_count = t.master_count + add
+end
+
+--- Increase number of column windows.
+--
+-- @staticfct incncol
+-- @tparam number add
+-- @tparam[opt] cwc_tag tag
+-- @noreturn
+function tag.incncol(add, t)
+    t = t or cwc.screen.focused().selected_tag
+    t.column_count = t.column_count + add
 end
 
 ------------------ HISTORY -------------------

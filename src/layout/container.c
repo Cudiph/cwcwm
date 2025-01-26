@@ -541,6 +541,7 @@ void cwc_container_init(struct cwc_output *output,
     cont->popup_tree           = wlr_scene_tree_create(cont->tree);
     cont->tree->node.data      = cont;
     cont->opacity              = 1.0f;
+    cont->wfact                = 1.0f;
 
     int gaps = cwc_output_get_current_tag_info(cont->output)->useless_gaps;
     struct wlr_box geom      = cwc_toplevel_get_geometry(toplevel);
@@ -630,12 +631,8 @@ static void _destroy_container(struct cwc_container *container)
         wl_list_remove(&container->link_output_fstack);
     }
 
-    if (container->output->state->tag_info[container->workspace].layout_mode
-        == CWC_LAYOUT_MASTER)
-        cwc_output_tiling_layout_update(container->output,
-                                        container->workspace);
     if (container->bsp_node)
-        bsp_remove_container(container, true);
+        bsp_remove_container(container, false);
 
     if (container->old_prop.bsp_node) {
         container->output   = container->old_prop.output;
@@ -646,6 +643,8 @@ static void _destroy_container(struct cwc_container *container)
     if (container->link_output_minimized.next
         && container->link_output_minimized.prev)
         wl_list_remove(&container->link_output_minimized);
+
+    cwc_output_tiling_layout_update(container->output, container->workspace);
 
     luaC_object_unregister(L, container);
 
@@ -1021,18 +1020,22 @@ void cwc_container_set_floating(struct cwc_container *container, bool set)
 
     if (set) {
         cwc_container_restore_floating_box(container);
+        container->state |= CONTAINER_STATE_FLOATING;
+
         if (container->bsp_node)
             bsp_node_disable(container->bsp_node);
-        container->state |= CONTAINER_STATE_FLOATING;
+
         cwc_output_tiling_layout_update(container->output,
                                         container->workspace);
     } else if (cwc_container_is_floating(container)) {
         container->state &= ~CONTAINER_STATE_FLOATING;
+
         if (container->bsp_node) {
             bsp_node_enable(container->bsp_node);
         } else if (cwc_output_is_current_layout_bsp(container->output)) {
             bsp_insert_container(container, container->workspace);
         }
+
         cwc_output_tiling_layout_update(container->output,
                                         container->workspace);
     }
@@ -1216,10 +1219,6 @@ static void all_toplevel_set_size(struct cwc_toplevel *toplevel, void *data)
 
     int surf_w = box->width;
     int surf_h = box->height;
-
-    if (geom.width == surf_w && geom.height == surf_h
-        && !cwc_toplevel_is_x11(toplevel))
-        return;
 
     struct wlr_box clip = {
         .x      = 0,

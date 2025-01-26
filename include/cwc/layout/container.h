@@ -69,6 +69,7 @@ struct cwc_container {
     struct cwc_border border;
     int width, height;
     float opacity;
+    float wfact;
 
     struct wlr_box floating_box;
     container_state_bitfield_t state;

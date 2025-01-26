@@ -340,14 +340,32 @@ kbd.bind(MODKEY, "space", function()
     local tag = cwc.screen.focused().selected_tag
     tag.layout_mode = (tag.layout_mode + 1) % enum.layout_mode.LENGTH
 end, { description = "cycle to next layout mode in focused screen", group = "layout" })
+
 kbd.bind({ MODKEY, mod.CTRL }, "space", function()
     local tag = cwc.screen.focused().selected_tag
     tag:strategy_idx(1)
 end, { description = "cycle to next strategy in focused screen", group = "layout" })
+
 kbd.bind({ MODKEY, mod.CTRL, mod.SHIFT }, "space", function()
     local tag = cwc.screen.focused().selected_tag
     tag:strategy_idx(-1)
 end, { description = "cycle to previous strategy in focused screen", group = "layout" })
+
+kbd.bind({ MODKEY, mod.SHIFT }, "h", function()
+    cful.tag.incnmaster(1)
+end, { description = "increase the number of master clients", group = "layout" })
+
+kbd.bind({ MODKEY, mod.SHIFT }, "l", function()
+    cful.tag.incnmaster(-1)
+end, { description = "decrease the number of master clients", group = "layout" })
+
+kbd.bind({ MODKEY, mod.CTRL }, "h", function()
+    cful.tag.incncol(1)
+end, { description = "increase the number of columns", group = "layout" })
+
+kbd.bind({ MODKEY, mod.CTRL }, "l", function()
+    cful.tag.incncol(-1)
+end, { description = "decrease the number of columns", group = "layout" })
 
 ---------------- launcher
 kbd.bind(MODKEY, "Return", function()
