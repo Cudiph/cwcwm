@@ -18,6 +18,7 @@
 
 #include <cairo.h>
 #include <drm_fourcc.h>
+#include <limits.h>
 #include <math.h>
 #include <stdlib.h>
 #include <wayland-util.h>
