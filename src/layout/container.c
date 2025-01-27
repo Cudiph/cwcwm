@@ -1259,6 +1259,25 @@ cwc_container_should_save_floating_box(struct cwc_container *container)
            && !cwc_container_is_maximized(container);
 }
 
+static void
+save_floating_box_position(struct cwc_container *container, int x, int y)
+{
+    if (cwc_container_should_save_floating_box(container)) {
+        container->floating_box.x = x;
+        container->floating_box.y = y;
+    }
+}
+
+static void
+save_floating_box_size(struct cwc_container *container, int w, int h)
+{
+
+    if (cwc_container_should_save_floating_box(container)) {
+        container->floating_box.width  = w;
+        container->floating_box.height = h;
+    }
+}
+
 static inline void update_container_output(struct cwc_container *container)
 {
     struct wlr_box box        = cwc_container_get_box(container);
@@ -1290,11 +1309,7 @@ void cwc_container_set_size(struct cwc_container *container, int w, int h)
     int cont_h = rect.height + bw * 2;
 
     cwc_border_resize(&container->border, cont_w, cont_h);
-
-    if (cwc_container_should_save_floating_box(container)) {
-        container->floating_box.width  = w;
-        container->floating_box.height = h;
-    }
+    save_floating_box_size(container, w, h);
 
     cont_w += gaps * 2;
     cont_h += gaps * 2;
@@ -1324,11 +1339,7 @@ void cwc_container_set_position_global(struct cwc_container *container,
     cwc_container_for_each_toplevel(container, all_toplevel_update_xwsurface,
                                     &xy);
 
-    if (cwc_container_should_save_floating_box(container)) {
-        container->floating_box.x = x;
-        container->floating_box.y = y;
-    }
-
+    save_floating_box_position(container, x, y);
     update_container_output(container);
 }
 
@@ -1353,8 +1364,14 @@ void cwc_container_set_position(struct cwc_container *container, int x, int y)
 void cwc_container_set_box_global(struct cwc_container *container,
                                   struct wlr_box *box)
 {
-    wlr_scene_node_set_position(&container->tree->node, box->x, box->y);
+    int x = box->x;
+    int y = box->y;
+
+    wlr_scene_node_set_position(&container->tree->node, x, y);
     cwc_container_set_size(container, box->width, box->height);
+
+    save_floating_box_position(container, x, y);
+    update_container_output(container);
 }
 
 void cwc_container_set_box_global_gap(struct cwc_container *container,
@@ -1366,6 +1383,9 @@ void cwc_container_set_box_global_gap(struct cwc_container *container,
 
     wlr_scene_node_set_position(&container->tree->node, pos_x, pos_y);
     cwc_container_set_size(container, box->width, box->height);
+
+    save_floating_box_position(container, pos_x, pos_y);
+    update_container_output(container);
 }
 
 void cwc_container_set_box(struct cwc_container *container, struct wlr_box *box)

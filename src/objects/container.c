@@ -245,8 +245,7 @@ static int luaC_container_set_geometry(lua_State *L)
         box.height = luaL_checkint(L, -1);
     lua_pop(L, 1);
 
-    cwc_container_set_position(container, box.x, box.y);
-    cwc_container_set_size(container, box.x, box.y);
+    cwc_container_set_box_global(container, &box);
 
     return 1;
 }
