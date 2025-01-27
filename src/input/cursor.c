@@ -181,6 +181,12 @@ static void process_cursor_resize_bsp(struct cwc_cursor *cursor)
     schedule_resize(toplevel, cursor, NULL);
 }
 
+static void process_cursor_resize_master(struct cwc_cursor *cursor)
+{
+    struct cwc_output *output = cursor->grabbed_toplevel->container->output;
+    master_resize_update(output, cursor);
+}
+
 void process_cursor_motion(struct cwc_cursor *cursor,
                            uint32_t time_msec,
                            struct wlr_input_device *device,
@@ -209,6 +215,10 @@ void process_cursor_motion(struct cwc_cursor *cursor,
         server.resize_count = -1e6;
         wlr_cursor_move(wlr_cursor, device, dx, dy);
         return process_cursor_resize_bsp(cursor);
+    case CWC_CURSOR_STATE_RESIZE_MASTER:
+        server.resize_count = -1e6;
+        wlr_cursor_move(wlr_cursor, device, dx, dy);
+        return process_cursor_resize_master(cursor);
     default:
         break;
     }
@@ -486,6 +496,21 @@ static void start_interactive_resize_bsp(struct cwc_cursor *cursor,
     cursor->state = CWC_CURSOR_STATE_RESIZE_BSP;
 }
 
+static void start_interactive_resize_master(struct cwc_cursor *cursor,
+                                            uint32_t edges,
+                                            double cx,
+                                            double cy)
+{
+    struct cwc_output *output = cursor->grabbed_toplevel->container->output;
+
+    cursor->grab_x = cx;
+    cursor->grab_y = cy;
+
+    master_resize_start(output, cursor);
+
+    cursor->state = CWC_CURSOR_STATE_RESIZE_MASTER;
+}
+
 void start_interactive_resize(struct cwc_toplevel *toplevel, uint32_t edges)
 {
     struct cwc_cursor *cursor = server.seat->cursor;
@@ -518,7 +543,7 @@ void start_interactive_resize(struct cwc_toplevel *toplevel, uint32_t edges)
     } else if (tag_info->layout_mode == CWC_LAYOUT_BSP) {
         start_interactive_resize_bsp(cursor, edges, cx, cy);
     } else if (tag_info->layout_mode == CWC_LAYOUT_MASTER) {
-        cursor->state = CWC_CURSOR_STATE_RESIZE_MASTER;
+        start_interactive_resize_master(cursor, edges, cx, cy);
     }
 
     // init resize schedule
@@ -556,6 +581,12 @@ static void end_interactive_move_master(struct cwc_cursor *cursor)
                      &grabbed->link_output_container);
 
     master_arrange_update(grabbed->output);
+}
+
+static void end_interactive_resize_master(struct cwc_cursor *cursor)
+{
+    struct cwc_output *output = cursor->grabbed_toplevel->container->output;
+    master_resize_end(output, cursor);
 }
 
 static void end_interactive_move_bsp(struct cwc_cursor *cursor)
@@ -613,7 +644,7 @@ void stop_interactive(struct cwc_cursor *cursor)
         end_interactive_move_master(cursor);
         break;
     case CWC_CURSOR_STATE_RESIZE_MASTER:
-        // TODO: implement this after revamp in the master api layout.
+        end_interactive_resize_master(cursor);
         break;
     default:
         break;

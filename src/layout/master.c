@@ -17,14 +17,18 @@
  */
 
 #include <wayland-util.h>
+#include <wlr/types/wlr_cursor.h>
 
 #include "cwc/desktop/output.h"
 #include "cwc/desktop/toplevel.h"
+#include "cwc/input/cursor.h"
 #include "cwc/layout/bsp.h"
 #include "cwc/layout/container.h"
 #include "cwc/layout/master.h"
 #include "cwc/types.h"
 #include "cwc/util.h"
+
+enum stage { START, UPDATE, END };
 
 static struct layout_interface *layout_list = NULL;
 
@@ -177,6 +181,42 @@ static void arrange_tile(struct cwc_toplevel **toplevels,
     }
 }
 
+struct resize_data_tile {
+    double init_mwfact;
+} resize_data_tile = {0};
+
+static void resize_tile_start(struct cwc_toplevel **toplevels,
+                              int len,
+                              struct cwc_cursor *cursor,
+                              struct master_state *master_state)
+{
+    struct cwc_output *output = cursor->grabbed_toplevel->container->output;
+    wlr_cursor_warp(cursor->wlr_cursor, NULL,
+                    output->usable_area.width * master_state->mwfact,
+                    cursor->wlr_cursor->y);
+    cursor->grab_x = cursor->wlr_cursor->x;
+    cursor->grab_y = cursor->wlr_cursor->y;
+
+    resize_data_tile.init_mwfact = master_state->mwfact;
+
+    cwc_cursor_set_image_by_name(cursor, "col-resize");
+}
+
+static void resize_tile_update(struct cwc_toplevel **toplevels,
+                               int len,
+                               struct cwc_cursor *cursor,
+                               struct master_state *master_state)
+{
+    struct cwc_toplevel *toplevel = cursor->grabbed_toplevel;
+    struct cwc_output *output     = toplevel->container->output;
+    double cx                     = cursor->wlr_cursor->x;
+    double diff_x                 = cx - cursor->grab_x;
+
+    master_state->mwfact =
+        CLAMP(resize_data_tile.init_mwfact + diff_x / output->usable_area.width,
+              0.1, 0.9);
+}
+
 /* Initiialize the master/stack layout list since it doesn't have sentinel
  * head, an element must have inserted.
  */
@@ -190,6 +230,8 @@ static inline void master_init_layout_if_not_yet()
     tile_impl->next                    = tile_impl;
     tile_impl->prev                    = tile_impl;
     tile_impl->arrange                 = arrange_tile;
+    tile_impl->resize_start            = resize_tile_start;
+    tile_impl->resize_update           = resize_tile_update;
 
     layout_list = tile_impl;
 
@@ -215,6 +257,29 @@ struct layout_interface *get_default_master_layout()
     return layout_list;
 }
 
+static int get_tiled_toplevel_array(struct cwc_output *output,
+                                    struct cwc_toplevel **toplevels,
+                                    int array_len)
+{
+    int i = 0;
+    struct cwc_container *container;
+    wl_list_for_each(container, &output->state->containers,
+                     link_output_container)
+    {
+        struct cwc_toplevel *front =
+            cwc_container_get_front_toplevel(container);
+        if (cwc_toplevel_is_tileable(front))
+            toplevels[i++] = front;
+
+        // sanity check
+        if (i >= array_len - 1)
+            break;
+    }
+
+    toplevels[i] = NULL;
+    return i;
+}
+
 void master_arrange_update(struct cwc_output *output)
 {
     struct cwc_tag_info *info = cwc_output_get_current_tag_info(output);
@@ -223,24 +288,47 @@ void master_arrange_update(struct cwc_output *output)
 
     struct master_state *state = &info->master_state;
 
-    struct cwc_toplevel *tiled_visible[50] = {0};
-    int i                                  = 0;
-    struct cwc_container *container;
-    wl_list_for_each(container, &output->state->containers,
-                     link_output_container)
-    {
-        struct cwc_toplevel *front =
-            cwc_container_get_front_toplevel(container);
-        if (cwc_toplevel_is_tileable(front))
-            tiled_visible[i++] = front;
-
-        // sanity check
-        if (i > 49)
-            break;
-    }
+    struct cwc_toplevel *tiled_visible[50];
+    int i = get_tiled_toplevel_array(output, tiled_visible, 50);
 
     if (i >= 1)
         state->current_layout->arrange(tiled_visible, i, output, state);
+}
+
+static void _master_resize(struct cwc_output *output,
+                           struct cwc_cursor *cursor,
+                           enum stage stage)
+{
+    struct master_state *state =
+        &cwc_output_get_current_tag_info(output)->master_state;
+    struct layout_interface *layout = state->current_layout;
+
+    struct cwc_toplevel *tiled_visible[50];
+    int i = get_tiled_toplevel_array(output, tiled_visible, 50);
+
+    if (layout->resize_update && stage == UPDATE)
+        layout->resize_update(tiled_visible, i, cursor, state);
+    else if (layout->resize_start && stage == START)
+        layout->resize_start(tiled_visible, i, cursor, state);
+    else if (layout->resize_end && stage == END)
+        layout->resize_end(tiled_visible, i, cursor, state);
+
+    master_arrange_update(output);
+}
+
+void master_resize_start(struct cwc_output *output, struct cwc_cursor *cursor)
+{
+    _master_resize(output, cursor, START);
+}
+
+void master_resize_update(struct cwc_output *output, struct cwc_cursor *cursor)
+{
+    _master_resize(output, cursor, UPDATE);
+}
+
+void master_resize_end(struct cwc_output *output, struct cwc_cursor *cursor)
+{
+    _master_resize(output, cursor, END);
 }
 
 struct cwc_toplevel *master_get_master(struct cwc_output *output)

@@ -5,8 +5,14 @@
 
 struct cwc_toplevel;
 struct cwc_output;
+struct cwc_cursor;
 
 struct master_state;
+
+typedef void (*resize_func_t)(struct cwc_toplevel **toplevels,
+                              int len,
+                              struct cwc_cursor *cursor,
+                              struct master_state *master_state);
 
 struct layout_interface {
     char *name;
@@ -18,6 +24,10 @@ struct layout_interface {
                     int len,
                     struct cwc_output *output,
                     struct master_state *master_state);
+
+    resize_func_t resize_start;
+    resize_func_t resize_update;
+    resize_func_t resize_end;
 
     // private
 
@@ -32,6 +42,10 @@ void master_unregister_layout(struct layout_interface *impl);
 struct layout_interface *get_default_master_layout();
 
 void master_arrange_update(struct cwc_output *output);
+
+void master_resize_start(struct cwc_output *output, struct cwc_cursor *cursor);
+void master_resize_update(struct cwc_output *output, struct cwc_cursor *cursor);
+void master_resize_end(struct cwc_output *output, struct cwc_cursor *cursor);
 
 struct cwc_toplevel *master_get_master(struct cwc_output *output);
 
