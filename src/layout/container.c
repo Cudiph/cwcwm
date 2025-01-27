@@ -1025,8 +1025,6 @@ void cwc_container_set_floating(struct cwc_container *container, bool set)
         if (container->bsp_node)
             bsp_node_disable(container->bsp_node);
 
-        cwc_output_tiling_layout_update(container->output,
-                                        container->workspace);
     } else if (cwc_container_is_floating(container)) {
         container->state &= ~CONTAINER_STATE_FLOATING;
 
@@ -1035,10 +1033,9 @@ void cwc_container_set_floating(struct cwc_container *container, bool set)
         } else if (cwc_output_is_current_layout_bsp(container->output)) {
             bsp_insert_container(container, container->workspace);
         }
-
-        cwc_output_tiling_layout_update(container->output,
-                                        container->workspace);
     }
+
+    master_arrange_update(container->output);
 
     EMIT_PROP_SIGNAL_FOR_FRONT_TOPLEVEL(floating, container);
 }
@@ -1219,6 +1216,11 @@ static void all_toplevel_set_size(struct cwc_toplevel *toplevel, void *data)
 
     int surf_w = box->width;
     int surf_h = box->height;
+
+    /* this prevent unnecessary frame synchronization */
+    if (geom.width == surf_w && geom.height == surf_h
+        && !cwc_toplevel_is_x11(toplevel))
+        return;
 
     struct wlr_box clip = {
         .x      = 0,

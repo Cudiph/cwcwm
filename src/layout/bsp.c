@@ -101,8 +101,9 @@ static inline void bsp_node_leaf_configure(
     if (!cwc_container_is_configure_allowed(container))
         return;
 
-    // set size first so that the floating box not save the new x y
-    if (!cwc_container_is_floating(container)) {
+    if (!cwc_container_is_floating(container)
+        && cwc_output_get_current_tag_info(container->output)->layout_mode
+               == CWC_LAYOUT_BSP) {
         struct wlr_box box = {x, y, width, height};
         cwc_container_set_box_gap(container, &box);
     }
@@ -200,7 +201,9 @@ void bsp_update_node(struct bsp_node *parent)
 void bsp_update_root(struct cwc_output *output, int workspace)
 {
     struct bsp_root_entry *entry = bsp_entry_get(output, workspace);
-    if (!entry)
+    enum cwc_layout_mode current_layout =
+        output->state->tag_info[workspace].layout_mode;
+    if (!entry || current_layout != CWC_LAYOUT_BSP)
         return;
 
     struct bsp_node *root      = entry->root;
