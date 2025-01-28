@@ -130,3 +130,12 @@ void cwc_input_manager_destroy()
     free(input_manager);
     input_manager = NULL;
 }
+
+void cwc_input_manager_update_cursor_scale()
+{
+    struct cwc_seat *seat;
+    wl_list_for_each(seat, &server.input->seats, link)
+    {
+        cwc_cursor_update_scale(seat->cursor);
+    }
+}

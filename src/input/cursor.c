@@ -856,8 +856,9 @@ static int animation_loop(void *data)
     struct hyprcursor_buffer **buffer_array = cursor->cursor_buffers.data;
 
     wlr_cursor_set_buffer(cursor->wlr_cursor, &buffer_array[i]->base,
-                          cursor->images[i]->hotspotX,
-                          cursor->images[i]->hotspotY, 1.0f);
+                          cursor->images[i]->hotspotX / cursor->scale,
+                          cursor->images[i]->hotspotY / cursor->scale,
+                          cursor->scale);
 
     wl_event_source_timer_update(cursor->animation_timer,
                                  cursor->images[i]->delay);
@@ -894,14 +895,15 @@ static void on_config_commit(struct wl_listener *listener, void *data)
     if (old_config->cursor_size == g_config.cursor_size)
         return;
 
-    cursor->info.size = g_config.cursor_size;
+    struct hyprcursor_cursor_style_info newstyle = {.size =
+                                                        g_config.cursor_size};
     wlr_xcursor_manager_destroy(cursor->xcursor_mgr);
-    cursor->xcursor_mgr = wlr_xcursor_manager_create(NULL, cursor->info.size);
-    wlr_cursor_set_xcursor(cursor->wlr_cursor, cursor->xcursor_mgr, "default");
-    cwc_cursor_hyprcursor_change_style(cursor, cursor->info);
+    cursor->xcursor_mgr = wlr_xcursor_manager_create(NULL, newstyle.size);
+    cwc_cursor_hyprcursor_change_style(cursor, newstyle);
+    cwc_cursor_set_image_by_name(cursor, "default");
 
     char size[7];
-    snprintf(size, 6, "%u", cursor->info.size);
+    snprintf(size, 6, "%u", newstyle.size);
     setenv("XCURSOR_SIZE", size, true);
 }
 
@@ -921,6 +923,7 @@ struct cwc_cursor *cwc_cursor_create(struct wlr_seat *seat)
     cursor->xcursor_mgr = wlr_xcursor_manager_create(NULL, cursor->info.size);
     cursor->hyprcursor_mgr =
         hyprcursor_manager_create_with_logger(NULL, hyprcursor_logger);
+    cursor->scale = 1.0f;
     cursor->state = CWC_CURSOR_STATE_NORMAL;
 
     // timer
@@ -968,6 +971,8 @@ struct cwc_cursor *cwc_cursor_create(struct wlr_seat *seat)
     wl_signal_add(&g_config.events.commit, &cursor->config_commit_l);
 
     wlr_cursor_attach_output_layout(cursor->wlr_cursor, server.output_layout);
+    cwc_cursor_update_scale(cursor);
+
     // let xcursor theme load first for xwayland (must before change style)
     wlr_cursor_set_xcursor(cursor->wlr_cursor, cursor->xcursor_mgr, "default");
     cwc_cursor_hyprcursor_change_style(cursor, cursor->info);
@@ -1069,8 +1074,7 @@ void cwc_cursor_set_image_by_name(struct cwc_cursor *cursor, const char *name)
 
     cursor->current_name = name;
 
-    if (cursor->cursor_buffers.size)
-        hyprcursor_buffer_fini(cursor);
+    hyprcursor_buffer_fini(cursor);
 
     // xcursor fallback
     if (!hyprcursor_manager_valid(cursor->hyprcursor_mgr)) {
@@ -1099,8 +1103,9 @@ void cwc_cursor_set_image_by_name(struct cwc_cursor *cursor, const char *name)
     struct hyprcursor_buffer **buffer_array = cursor->cursor_buffers.data;
 
     wlr_cursor_set_buffer(cursor->wlr_cursor, &buffer_array[0]->base,
-                          cursor->images[0]->hotspotX,
-                          cursor->images[0]->hotspotY, 1.0f);
+                          cursor->images[0]->hotspotX / cursor->scale,
+                          cursor->images[0]->hotspotY / cursor->scale,
+                          cursor->scale);
 
     if (cursor->images_count > 1) {
         cursor->frame_index = 0;
@@ -1128,6 +1133,27 @@ void cwc_cursor_hide_cursor(struct cwc_cursor *cursor)
     cwc_cursor_set_surface(cursor, NULL, 0, 0);
 }
 
+void cwc_cursor_update_scale(struct cwc_cursor *cursor)
+{
+    cursor->scale = 1.0f;
+    struct cwc_output *output;
+    wl_list_for_each(output, &server.outputs, link)
+    {
+        if (cursor->scale < output->wlr_output->scale)
+            cursor->scale = output->wlr_output->scale;
+    }
+
+    const char *cursor_before = cursor->current_name;
+    cwc_cursor_hide_cursor(cursor);
+    cwc_cursor_set_image_by_name(cursor, cursor_before);
+
+    if (cursor->info.size != g_config.cursor_size * cursor->scale) {
+        struct hyprcursor_cursor_style_info new = {.size = g_config.cursor_size
+                                                           * cursor->scale};
+        cwc_cursor_hyprcursor_change_style(cursor, new);
+    }
+}
+
 bool cwc_cursor_hyprcursor_change_style(
     struct cwc_cursor *cursor, struct hyprcursor_cursor_style_info info)
 {
@@ -1137,10 +1163,16 @@ bool cwc_cursor_hyprcursor_change_style(
     // force reset image
     cursor->current_name = NULL;
 
+    // TODO: investigate around here because mem leak happens
+    hyprcursor_buffer_fini(cursor);
     hyprcursor_style_done(cursor->hyprcursor_mgr, cursor->info);
 
-    if (hyprcursor_load_theme_style(cursor->hyprcursor_mgr, info)) {
-        cursor->info = info;
+    info.size = g_config.cursor_size * cursor->scale;
+
+    if (hyprcursor_manager_valid(cursor->hyprcursor_mgr)
+        && hyprcursor_load_theme_style(cursor->hyprcursor_mgr, info)) {
+        cursor->info      = info;
+        cursor->info.size = info.size;
         return true;
     }
 

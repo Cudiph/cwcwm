@@ -63,6 +63,7 @@ struct cwc_cursor {
     int frame_index; // point to animation frame in cursor_buffers
     struct wl_array cursor_buffers; // struct hyprcursor_buffer *
     struct wl_event_source *animation_timer;
+    float scale;
 
     struct wlr_pointer_constraint_v1 *active_constraint;
     bool dont_emit_signal;
@@ -109,6 +110,8 @@ void cwc_cursor_set_surface(struct cwc_cursor *cursor,
                             int32_t hotspot_y);
 
 void cwc_cursor_hide_cursor(struct cwc_cursor *cursor);
+
+void cwc_cursor_update_scale(struct cwc_cursor *cursor);
 
 /* change style (mainly size)
  *

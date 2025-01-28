@@ -37,6 +37,7 @@
 #include "cwc/desktop/layer_shell.h"
 #include "cwc/desktop/output.h"
 #include "cwc/desktop/toplevel.h"
+#include "cwc/input/manager.h"
 #include "cwc/input/seat.h"
 #include "cwc/layout/bsp.h"
 #include "cwc/layout/container.h"
@@ -426,6 +427,8 @@ void cwc_output_update_output_manager_config()
     }
 
     wlr_output_manager_v1_set_configuration(server.output_manager, cfg);
+
+    cwc_input_manager_update_cursor_scale();
 }
 
 static void on_request_state(struct wl_listener *listener, void *data)

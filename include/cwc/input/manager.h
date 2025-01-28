@@ -49,4 +49,6 @@ struct cwc_input_manager *cwc_input_manager_get();
 
 void cwc_input_manager_destroy();
 
+void cwc_input_manager_update_cursor_scale();
+
 #endif // !_CWC_INPUT_MANAGER_H
