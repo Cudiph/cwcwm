@@ -899,7 +899,9 @@ static void on_config_commit(struct wl_listener *listener, void *data)
                                                         g_config.cursor_size};
     wlr_xcursor_manager_destroy(cursor->xcursor_mgr);
     cursor->xcursor_mgr = wlr_xcursor_manager_create(NULL, newstyle.size);
+    wlr_cursor_set_xcursor(cursor->wlr_cursor, cursor->xcursor_mgr, "default");
     cwc_cursor_hyprcursor_change_style(cursor, newstyle);
+    cwc_cursor_hide_cursor(cursor);
     cwc_cursor_set_image_by_name(cursor, "default");
 
     char size[7];
@@ -920,11 +922,14 @@ struct cwc_cursor *cwc_cursor_create(struct wlr_seat *seat)
     cursor->wlr_cursor       = wlr_cursor_create();
     cursor->wlr_cursor->data = cursor;
     cursor->info.size        = g_config.cursor_size;
-    cursor->xcursor_mgr = wlr_xcursor_manager_create(NULL, cursor->info.size);
     cursor->hyprcursor_mgr =
         hyprcursor_manager_create_with_logger(NULL, hyprcursor_logger);
     cursor->scale = 1.0f;
     cursor->state = CWC_CURSOR_STATE_NORMAL;
+
+    // set_xcursor must after creating manager to load the theme
+    cursor->xcursor_mgr = wlr_xcursor_manager_create(NULL, cursor->info.size);
+    wlr_cursor_set_xcursor(cursor->wlr_cursor, cursor->xcursor_mgr, "default");
 
     // timer
     cursor->animation_timer =
@@ -972,9 +977,6 @@ struct cwc_cursor *cwc_cursor_create(struct wlr_seat *seat)
 
     wlr_cursor_attach_output_layout(cursor->wlr_cursor, server.output_layout);
     cwc_cursor_update_scale(cursor);
-
-    // let xcursor theme load first for xwayland (must before change style)
-    wlr_cursor_set_xcursor(cursor->wlr_cursor, cursor->xcursor_mgr, "default");
     cwc_cursor_hyprcursor_change_style(cursor, cursor->info);
 
     char size[7];
@@ -1143,15 +1145,16 @@ void cwc_cursor_update_scale(struct cwc_cursor *cursor)
             cursor->scale = output->wlr_output->scale;
     }
 
-    const char *cursor_before = cursor->current_name;
-    cwc_cursor_hide_cursor(cursor);
-    cwc_cursor_set_image_by_name(cursor, cursor_before);
-
     if (cursor->info.size != g_config.cursor_size * cursor->scale) {
         struct hyprcursor_cursor_style_info new = {.size = g_config.cursor_size
                                                            * cursor->scale};
         cwc_cursor_hyprcursor_change_style(cursor, new);
     }
+
+    /* reset old buffer and update to new style */
+    const char *cursor_before = cursor->current_name;
+    cwc_cursor_hide_cursor(cursor);
+    cwc_cursor_set_image_by_name(cursor, cursor_before);
 }
 
 bool cwc_cursor_hyprcursor_change_style(
