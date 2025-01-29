@@ -137,5 +137,6 @@ void cwc_input_manager_update_cursor_scale()
     wl_list_for_each(seat, &server.input->seats, link)
     {
         cwc_cursor_update_scale(seat->cursor);
+        process_cursor_motion(seat->cursor, 0, NULL, 0, 0, 0, 0);
     }
 }
