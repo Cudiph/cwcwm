@@ -27,7 +27,7 @@
 #include "cwc/util.h"
 
 /* return the inhibitor count that visible */
-static int get_idle_inhibitor_count()
+static int get_valid_idle_inhibitor_count()
 {
     int count = 0;
 
@@ -37,18 +37,9 @@ static int get_idle_inhibitor_count()
         struct cwc_toplevel *toplevel =
             cwc_toplevel_try_from_wlr_surface(inhibitor->surface);
 
-        if (toplevel && cwc_toplevel_is_visible(toplevel))
-            goto increment;
+        if (toplevel && !cwc_toplevel_is_visible(toplevel))
+            continue;
 
-        struct wlr_layer_surface_v1 *xdg_surf =
-            wlr_layer_surface_v1_try_from_wlr_surface(inhibitor->surface);
-
-        if (xdg_surf)
-            goto increment;
-
-        continue;
-
-    increment:
         count++;
     }
 
@@ -57,7 +48,7 @@ static int get_idle_inhibitor_count()
 
 void update_idle_inhibitor(void *data)
 {
-    if (get_idle_inhibitor_count() < 1)
+    if (get_valid_idle_inhibitor_count() < 1)
         wlr_idle_notifier_v1_set_inhibited(server.idle->idle_notifier, false);
     else
         wlr_idle_notifier_v1_set_inhibited(server.idle->idle_notifier, true);
