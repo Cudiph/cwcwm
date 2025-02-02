@@ -2,10 +2,34 @@
 
 ## About CwC
 
-CwC is an extensible Wayland compositor with dynamic window management based on wlroots.
-Highly influenced by Awesome window manager, cwc use lua for its configuration and C plugin for extension.
+CwC is an extensible Wayland compositor with dynamic window management based
+on wlroots. Highly influenced by Awesome window manager, cwc use Lua for its
+configuration and C plugin for extension.
 
 For new user you may want to check out [getting started][getting_started] page.
+
+## Stability state
+
+Crash may happen so daily driving isn't reccommended unless you are okay with it
+and if you encounter one please report by [creating issue][github-issue] with step to
+reproduce. I will fix it as quickly as possible because I also daily drive it and
+I want my setup to be super stable.
+
+API breaking change is documented with exclamation mark (`!`) in the commit
+message as per [conventional commits specification][conventional-commits].
+APIs that derived from AwesomeWM are unlikely to get a change therefore
+guaranteed to not break your configuration.
+
+## Features
+
+- Very configurable, fast, and lightweight.
+- Hot reload configuration support.
+- Can be used as floating/tiling window manager.
+- Tabbed windows.
+- Tags instead of workspaces.
+- Documented Lua API.
+- wlr protocols support.
+- Multihead support + hotplugging (not heavily tested).
 
 ## Building and installation
 
@@ -18,8 +42,8 @@ Required dependencies:
 - xkbcommon
 - libinput
 - xxhash
-- luajit
-- XWayland
+- LuaJIT
+- Xwayland
 - xcb
 
 Lua library dependencies:
@@ -35,7 +59,7 @@ Dev dependencies:
 - wayland-protocols
 - clang-format & EmmyLuaCodeStyle (formatting)
 
-Build and installation step:
+### Manual
 
 ```console
 $ make all-release
@@ -51,15 +75,22 @@ $ sudo make uninstall
 $ make clean
 ```
 
+### AUR
+
+AUR package is available under the package name [cwc-git][cwc-git].
+
+```console
+$ yay -S cwc-git
+```
+
 <div align="center">
   <h2>Screenshot</h2>
   <img src="https://github.com/user-attachments/assets/99c3681a-e68c-4936-84be-586d8b2f04ad" alt="screenshot" />
 </div>
 
-
 ## Credits
 
-CwC took ~~inspiration~~ code from these awesome projects:
+CwC contains verbatim or modified works from these awesome projects:
 
 - [Awesome](https://github.com/awesomeWM/awesome)
 - [dwl](https://codeberg.org/dwl/dwl)
@@ -70,5 +101,9 @@ CwC took ~~inspiration~~ code from these awesome projects:
 
 See [LICENSE.md](LICENSE.md) for license details.
 
+<!-------------------- links -------------------->
 
 [getting_started]: https://cudiph.github.io/cwc/apidoc/documentation/00-getting-started.md.html
+[github-issue]: https://github.com/Cudiph/cwcwm/issues
+[conventional-commits]: https://www.conventionalcommits.org/en/v1.0.0/#commit-message-with--to-draw-attention-to-breaking-change
+[cwc-git]: https://aur.archlinux.org/packages/cwc-git
