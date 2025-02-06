@@ -134,10 +134,13 @@ static inline void _init_mapped_managed_toplevel(struct cwc_toplevel *toplevel)
 
     wlr_foreign_toplevel_handle_v1_output_enter(
         toplevel->wlr_foreign_handle, server.focused_output->wlr_output);
-    wlr_foreign_toplevel_handle_v1_set_app_id(toplevel->wlr_foreign_handle,
-                                              state.app_id);
-    wlr_foreign_toplevel_handle_v1_set_title(toplevel->wlr_foreign_handle,
-                                             state.title);
+
+    if (state.app_id)
+        wlr_foreign_toplevel_handle_v1_set_app_id(toplevel->wlr_foreign_handle,
+                                                  state.app_id);
+    if (state.title)
+        wlr_foreign_toplevel_handle_v1_set_title(toplevel->wlr_foreign_handle,
+                                                 state.title);
 
     toplevel->foreign_request_maximize_l.notify = on_foreign_request_maximize;
     toplevel->foreign_request_minimize_l.notify = on_foreign_request_minimize;
@@ -386,9 +389,10 @@ static void on_set_title(struct wl_listener *listener, void *data)
 
     ext_foreign_update_handle(toplevel);
 
-    if (toplevel->wlr_foreign_handle)
-        wlr_foreign_toplevel_handle_v1_set_title(
-            toplevel->wlr_foreign_handle, cwc_toplevel_get_title(toplevel));
+    char *title = cwc_toplevel_get_title(toplevel);
+    if (toplevel->wlr_foreign_handle && title)
+        wlr_foreign_toplevel_handle_v1_set_title(toplevel->wlr_foreign_handle,
+                                                 title);
 }
 
 static void on_set_app_id(struct wl_listener *listener, void *data)
@@ -398,9 +402,10 @@ static void on_set_app_id(struct wl_listener *listener, void *data)
 
     ext_foreign_update_handle(toplevel);
 
-    if (toplevel->wlr_foreign_handle)
-        wlr_foreign_toplevel_handle_v1_set_app_id(
-            toplevel->wlr_foreign_handle, cwc_toplevel_get_app_id(toplevel));
+    char *app_id = cwc_toplevel_get_app_id(toplevel);
+    if (toplevel->wlr_foreign_handle && app_id)
+        wlr_foreign_toplevel_handle_v1_set_app_id(toplevel->wlr_foreign_handle,
+                                                  app_id);
 }
 
 /* shared stuff between toplevel for xwayland and xdg_toplevel */
