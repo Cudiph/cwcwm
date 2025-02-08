@@ -169,6 +169,12 @@ static void on_layer_surface_map(struct wl_listener *listener, void *data)
     }
 }
 
+static void arrange_layers_idle(void *data)
+{
+    struct cwc_output *output = data;
+    arrange_layers(output);
+}
+
 static void on_layer_surface_unmap(struct wl_listener *listener, void *data)
 {
     struct cwc_layer_surface *layer_surface =
@@ -177,6 +183,13 @@ static void on_layer_surface_unmap(struct wl_listener *listener, void *data)
     if (layer_surface == server.seat->exclusive_kbd_interactive) {
         server.seat->exclusive_kbd_interactive = NULL;
         cwc_output_focus_newest_focus_visible_toplevel(layer_surface->output);
+    }
+
+    struct wlr_layer_surface_v1_state *state =
+        &layer_surface->wlr_layer_surface->current;
+    if (state->exclusive_zone || state->exclusive_edge) {
+        wl_event_loop_add_idle(server.wl_event_loop, arrange_layers_idle,
+                               layer_surface->output);
     }
 }
 
