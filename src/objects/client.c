@@ -952,7 +952,7 @@ static int luaC_client_toggle_tag(lua_State *L)
 /** Move a client to a screen.
  *
  * @method move_to_screen
- * @tparam cwc_screen The screen, default to current + 1
+ * @tparam cwc_screen s The screen, default to current + 1
  * @noreturn
  */
 static int luaC_client_move_to_screen(lua_State *L)

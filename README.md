@@ -6,19 +6,19 @@ CwC is an extensible Wayland compositor with dynamic window management based
 on wlroots. Highly influenced by Awesome window manager, cwc use Lua for its
 configuration and C plugin for extension.
 
-For new user you may want to check out [getting started][getting_started] page.
+For new users, you may want to check out [getting started][getting_started] page.
 
 ## Stability state
 
-Crash may happen so daily driving isn't reccommended unless you are okay with it
-and if you encounter one please report by [creating issue][github-issue] with step to
+Crash may happen so daily driving isn't recommended unless you're okay with it
+and if you encounter one please report by [creating issue][github-issue] with steps to
 reproduce. I will fix it as quickly as possible because I also daily drive it and
 I want my setup to be super stable.
 
 API breaking change is documented with exclamation mark (`!`) in the commit
 message as per [conventional commits specification][conventional-commits].
 APIs that derived from AwesomeWM are unlikely to get a change therefore
-guaranteed to not break your configuration.
+guaranteed not to break your configuration.
 
 ## Features
 
@@ -68,7 +68,7 @@ $ sudo make install
 
 CwC now should be available in the display manager or execute `cwc` in the tty.
 
-To clear the installation and build items you can execute this command:
+To clear the installation and build artifacts, you can execute this command:
 
 ```console
 $ sudo make uninstall
