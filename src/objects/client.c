@@ -949,6 +949,42 @@ static int luaC_client_toggle_tag(lua_State *L)
     return 0;
 }
 
+/** Move a client to a screen.
+ *
+ * @method move_to_screen
+ * @tparam cwc_screen The screen, default to current + 1
+ * @noreturn
+ */
+static int luaC_client_move_to_screen(lua_State *L)
+{
+    struct cwc_toplevel *toplevel = luaC_client_checkudata(L, 1);
+    struct cwc_output *old_output = toplevel->container->output;
+
+    struct cwc_output *new_output = NULL;
+    if (lua_type(L, 2) == LUA_TNONE) {
+        struct cwc_output *o;
+        wl_list_for_each(o, &old_output->link, link)
+        {
+            if (&o->link == &server.outputs)
+                continue;
+
+            new_output = o;
+            break;
+        }
+    } else {
+        new_output = luaC_screen_checkudata(L, 2);
+    }
+
+    if (old_output == new_output)
+        return 0;
+
+    cwc_container_move_to_output(toplevel->container, new_output);
+    cwc_output_tiling_layout_update(old_output, 0);
+    cwc_output_tiling_layout_update(new_output, 0);
+
+    return 0;
+}
+
 /** Get nearest client relative to this client.
  *
  * @method get_nearest
@@ -1015,6 +1051,7 @@ void luaC_client_setup(lua_State *L)
         CLIENT_METHOD(toggle_split),
         CLIENT_METHOD(toggle_tag),
 
+        CLIENT_METHOD(move_to_screen),
         {"move_to_tag",      luaC_client_set_workspace   },
         {"get_nearest",      luaC_client_get_nearest     },
         {"set_border_color", luaC_client_set_border_color},

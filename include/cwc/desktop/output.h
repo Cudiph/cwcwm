@@ -95,8 +95,8 @@ cwc_output_at(struct wlr_output_layout *ol, double x, double y);
 /* refocus toplevel after for example return from session lock  */
 void cwc_output_focus_newest_focus_visible_toplevel(struct cwc_output *output);
 
-/* update output management configuration */
-void cwc_output_update_output_manager_config();
+/* update output management configuration and other states */
+void cwc_output_update_outputs_state();
 
 /* set output position in the global coordinate */
 void cwc_output_set_position(struct cwc_output *output, int x, int y);

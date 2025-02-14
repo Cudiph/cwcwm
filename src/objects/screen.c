@@ -795,7 +795,7 @@ static int luaC_screen_commit(lua_State *L)
 
     output->pending_initialized = false;
     wlr_output_state_finish(&output->pending);
-    cwc_output_update_output_manager_config();
+    cwc_output_update_outputs_state();
     arrange_layers(output);
 
     return 1;

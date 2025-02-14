@@ -16,6 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -388,7 +389,7 @@ static void on_output_destroy(struct wl_listener *listener, void *data)
     luaC_object_unregister(g_config_get_lua_State(), output);
     wl_list_remove(&output->link);
 
-    cwc_output_update_output_manager_config();
+    cwc_output_update_outputs_state();
 
     // free the output only when restored because the container still need old
     // output reference to remove bsp node.
@@ -405,7 +406,53 @@ static void output_layer_set_position(struct cwc_output *output, int x, int y)
     wlr_scene_node_set_position(&output->layers.session_lock->node, x, y);
 }
 
-void cwc_output_update_output_manager_config()
+/* sorting direction is top left to bottom right */
+static void sort_output_index()
+{
+    if (wl_list_empty(&server.outputs))
+        return;
+
+    struct cwc_output *o, *sorted_o, *tmp;
+    struct wl_list sorted_list_temp;
+    wl_list_init(&sorted_list_temp);
+
+    wl_list_for_each_safe(o, tmp, &server.outputs, link)
+    {
+        struct cwc_output *target = NULL;
+        int lowest_y              = INT_MAX;
+
+        wl_list_for_each(sorted_o, &sorted_list_temp, link)
+        {
+            int sorted_o_y = sorted_o->output_layout_box.y;
+            if (o->output_layout_box.y > sorted_o_y)
+                continue;
+
+            if (!target) {
+                target   = sorted_o;
+                lowest_y = sorted_o_y;
+                continue;
+            }
+
+            if (sorted_o_y < lowest_y) {
+                target   = sorted_o;
+                lowest_y = sorted_o_y;
+            }
+        }
+
+        if (target) {
+            wl_list_reattach(target->link.prev, &o->link);
+        } else {
+            wl_list_reattach(sorted_list_temp.prev, &o->link);
+        }
+    }
+
+    wl_list_for_each_safe(o, tmp, &sorted_list_temp, link)
+    {
+        wl_list_reattach(server.outputs.prev, &o->link);
+    }
+}
+
+void cwc_output_update_outputs_state()
 {
     struct wlr_output_configuration_v1 *cfg =
         wlr_output_configuration_v1_create();
@@ -429,6 +476,7 @@ void cwc_output_update_output_manager_config()
     wlr_output_manager_v1_set_configuration(server.output_manager, cfg);
 
     cwc_input_manager_update_cursor_scale();
+    sort_output_index();
 }
 
 static void on_request_state(struct wl_listener *listener, void *data)
@@ -438,7 +486,7 @@ static void on_request_state(struct wl_listener *listener, void *data)
     struct wlr_output_event_request_state *event = data;
 
     wlr_output_commit_state(output->wlr_output, event->state);
-    cwc_output_update_output_manager_config();
+    cwc_output_update_outputs_state();
     arrange_layers(output);
 }
 
@@ -572,7 +620,7 @@ static void on_new_output(struct wl_listener *listener, void *data)
     cwc_log(CWC_INFO, "created output (%s): %p %p", wlr_output->name, output,
             output->wlr_output);
 
-    cwc_output_update_output_manager_config();
+    cwc_output_update_outputs_state();
     arrange_layers(output);
 
     luaC_object_screen_register(g_config_get_lua_State(), output);
@@ -625,7 +673,7 @@ static void output_manager_apply(struct wlr_output_configuration_v1 *config,
 
         wlr_output_state_finish(&state);
 
-        cwc_output_update_output_manager_config();
+        cwc_output_update_outputs_state();
         arrange_layers(output);
     }
 
@@ -906,7 +954,7 @@ cwc_output_get_visible_containers(struct cwc_output *output)
 void cwc_output_set_position(struct cwc_output *output, int x, int y)
 {
     wlr_output_layout_add(server.output_layout, output->wlr_output, x, y);
-    cwc_output_update_output_manager_config();
+    cwc_output_update_outputs_state();
     arrange_layers(output);
 }
 
