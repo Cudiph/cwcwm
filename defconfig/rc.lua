@@ -13,11 +13,11 @@ local cwc = cwc
 
 -- execute oneshot.lua once, cwc.is_startup() mark that the configuration is loaded for the first time
 if cwc.is_startup() then
-    pcall(require, "oneshot")
+    gears.protected_call(require, "oneshot")
 end
 
 -- execute keybind script
-pcall(require, "keybind")
+gears.protected_call(require, "keybind")
 
 ---------------------------------- CONFIGURATION --------------------------------------
 -- A library for declarative configuration and per device configuration will be added later.
