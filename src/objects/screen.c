@@ -630,6 +630,23 @@ static int luaC_screen_get_tag(lua_State *L)
     return 1;
 }
 
+/** Get nearest screen relative to this screen.
+ *
+ * @method get_nearest
+ * @tparam integer direction Direction enum
+ * @treturn cwc_screen
+ * @see cuteful.enum.direction
+ */
+static int luaC_screen_get_nearest(lua_State *L)
+{
+    struct cwc_output *output = luaC_screen_checkudata(L, 1);
+    int direction             = luaL_checkinteger(L, 2);
+
+    luaC_object_push(L, cwc_output_get_nearest_by_direction(output, direction));
+
+    return 1;
+}
+
 /** Set the screen position in the global coordinate.
  *
  * @method set_position
@@ -801,6 +818,21 @@ static int luaC_screen_commit(lua_State *L)
     return 1;
 }
 
+/** Focus this screen.
+ *
+ * @method focus
+ * @noreturn
+ */
+static int luaC_screen_focus(lua_State *L)
+{
+    struct cwc_output *output = luaC_screen_checkudata(L, 1);
+
+    cwc_output_focus(output);
+
+    return 0;
+}
+
+#define SCREEN_METHOD(name)        {#name, luaC_screen_##name}
 #define SCREEN_REG_READ_ONLY(name) {"get_" #name, luaC_screen_get_##name}
 #define SCREEN_REG_SETTER(name)    {"set_" #name, luaC_screen_set_##name}
 #define SCREEN_REG_PROPERTY(name) \
@@ -815,22 +847,24 @@ void luaC_screen_setup(lua_State *L)
     };
 
     luaL_Reg screen_methods[] = {
-        {"get_tag",           luaC_screen_get_tag          },
-        {"set_position",      luaC_screen_set_position     },
+        SCREEN_METHOD(focus),
+        SCREEN_METHOD(get_tag),
+        SCREEN_METHOD(get_nearest),
+        SCREEN_METHOD(set_position),
 
         // screen state
-        {"set_mode",          luaC_screen_set_mode         },
-        {"set_adaptive_sync", luaC_screen_set_adaptive_sync},
-        {"set_enabled",       luaC_screen_set_enabled      },
-        {"set_scale",         luaC_screen_set_scale        },
-        {"set_transform",     luaC_screen_set_transform    },
-        {"commit",            luaC_screen_commit           },
+        SCREEN_METHOD(set_mode),
+        SCREEN_METHOD(set_adaptive_sync),
+        SCREEN_METHOD(set_enabled),
+        SCREEN_METHOD(set_scale),
+        SCREEN_METHOD(set_transform),
+        SCREEN_METHOD(commit),
 
         // ro prop but have optional arguments
-        {"get_containers",    luaC_screen_get_containers   },
-        {"get_clients",       luaC_screen_get_clients      },
-        {"get_focus_stack",   luaC_screen_get_focus_stack  },
-        {"get_minimized",     luaC_screen_get_minimized    },
+        SCREEN_METHOD(get_containers),
+        SCREEN_METHOD(get_clients),
+        SCREEN_METHOD(get_focus_stack),
+        SCREEN_METHOD(get_minimized),
 
         // readonly prop
         SCREEN_REG_READ_ONLY(geometry),
@@ -857,7 +891,7 @@ void luaC_screen_setup(lua_State *L)
         SCREEN_REG_PROPERTY(active_workspace),
         SCREEN_REG_PROPERTY(max_general_workspace),
 
-        {NULL,                NULL                         },
+        {NULL, NULL},
     };
 
     luaC_register_class(L, screen_classname, screen_methods,

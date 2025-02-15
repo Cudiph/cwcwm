@@ -1,6 +1,7 @@
 -- Test the cwc_screen property
 
 local bit = require("bit")
+local enum = require('cuteful.enum')
 
 local cwc = cwc
 
@@ -96,6 +97,8 @@ local function method_test(s)
     assert(#s.clients == #s:get_clients())
     assert(#s.containers == #s:get_containers())
     assert(#s.minimized == #s:get_minimized())
+    s:get_nearest(enum.direction.LEFT)
+    s:focus()
 end
 
 local function test()

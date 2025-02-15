@@ -148,6 +148,7 @@ local function method_test(c)
     c:toggle_split()
     c:toggle_tag(c.workspace + 1)
     c:close()
+    c:move_to_screen(cwc.screen.focused())
     rand:kill()
 end
 

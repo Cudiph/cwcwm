@@ -19,7 +19,6 @@
 
 #include <float.h>
 #include <lua.h>
-#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <wayland-server-core.h>
@@ -692,74 +691,43 @@ void cwc_toplevel_jump_to(struct cwc_toplevel *toplevel, bool merge)
         cwc_toplevel_set_minimized(toplevel, false);
 }
 
-static inline double distance(int lx, int ly, int lx2, int ly2)
-{
-    int x_diff = abs(lx2 - lx);
-    int y_diff = abs(ly2 - ly);
-
-    return sqrt(pow(x_diff, 2) + pow(y_diff, 2));
-}
-
 struct cwc_toplevel *
-cwc_toplevel_get_nearest_by_direction(struct cwc_toplevel *toplevel,
+cwc_toplevel_get_nearest_by_direction(struct cwc_toplevel *reference,
                                       enum wlr_direction dir)
 {
     // TODO: add global direction option
     struct cwc_toplevel **toplevels =
-        cwc_output_get_visible_toplevels(toplevel->container->output);
+        cwc_output_get_visible_toplevels(reference->container->output);
 
-    int focused_lx, focused_ly;
-    wlr_scene_node_coords(&toplevel->container->tree->node, &focused_lx,
-                          &focused_ly);
+    int reference_lx, reference_ly;
+    wlr_scene_node_coords(&reference->container->tree->node, &reference_lx,
+                          &reference_ly);
 
-    struct {
-        double distance;
-        struct cwc_toplevel *toplevel;
-    } nearest                             = {0};
-    nearest.distance                      = DBL_MAX;
+    double nearest_distance               = DBL_MAX;
+    struct cwc_toplevel *nearest_toplevel = NULL;
     int i                                 = 0;
     struct cwc_toplevel *pointed_toplevel = toplevels[i];
     while (pointed_toplevel != NULL) {
-        if (pointed_toplevel == toplevel)
+        if (pointed_toplevel == reference)
             goto next;
 
         int lx, ly;
         wlr_scene_node_coords(&pointed_toplevel->container->tree->node, &lx,
                               &ly);
 
-        int x = lx - focused_lx;
-        int y = ly - focused_ly;
+        int x = lx - reference_lx;
+        int y = ly - reference_ly;
 
         if (!x && !y)
             goto next;
 
-        double angle = atan2(y, x) * (180 / M_PI);
+        if (!is_direction_match(dir, x, y))
+            goto next;
 
-        switch (dir) {
-        case WLR_DIRECTION_UP:
-            if (angle > -45 || angle < -135)
-                goto next;
-            break;
-        case WLR_DIRECTION_RIGHT:
-            if (angle > -45 && angle < 45)
-                break;
-            else
-                goto next;
-        case WLR_DIRECTION_DOWN:
-            if (angle < 45 || angle > 135)
-                goto next;
-            break;
-        case WLR_DIRECTION_LEFT:
-            if (angle > 135 || angle < -135)
-                break;
-            else
-                goto next;
-        }
-
-        double _distance = distance(lx, ly, focused_lx, focused_ly);
-        if (nearest.distance > _distance) {
-            nearest.distance = _distance;
-            nearest.toplevel = pointed_toplevel;
+        double _distance = distance(lx, ly, reference_lx, reference_ly);
+        if (nearest_distance > _distance) {
+            nearest_distance = _distance;
+            nearest_toplevel = pointed_toplevel;
         }
 
     next:
@@ -767,8 +735,7 @@ cwc_toplevel_get_nearest_by_direction(struct cwc_toplevel *toplevel,
     }
 
     free(toplevels);
-
-    return nearest.toplevel;
+    return nearest_toplevel;
 }
 
 struct cwc_toplevel *cwc_toplevel_get_focused()

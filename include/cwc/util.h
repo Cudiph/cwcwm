@@ -6,9 +6,10 @@
 #include <stdint.h>
 #include <time.h>
 #include <wayland-util.h>
+#include <wlr/types/wlr_output_layout.h>
 #include <wlr/util/log.h>
 
-//====================== HASHMAP ======================
+//====================== DSA ======================
 
 struct hhash_entry {
     /* next colliding element in singly linked list */
@@ -89,11 +90,27 @@ bool wl_list_length_at_least(struct wl_list *list, int more_than_or_equal_to);
 
 void wl_list_swap(struct wl_list *x, struct wl_list *y);
 
+/* list must have attached first */
 void wl_list_reattach(struct wl_list *older_sibling, struct wl_list *elm);
 
+//=================== MATH =======================
+
+/* given region and the point, return normalized x and y based on origin on the
+ * top left
+ */
 struct wlr_box;
 void normalized_region_at(
     struct wlr_box *region, double x, double y, double *nx, double *ny);
+
+/* check if given point is on the direction based on origin.
+ * point x,y (1, 0) and direction right is valid.
+ */
+bool is_direction_match(enum wlr_direction dir, int x, int y);
+
+/* distance between 2 points */
+double distance(int lx, int ly, int lx2, int ly2);
+
+//================== MACROS ========================
 
 enum cwc_log_importance {
     CWC_SILENT              = WLR_SILENT,

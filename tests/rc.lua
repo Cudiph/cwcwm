@@ -31,7 +31,7 @@ cwc.kbd.bind({}, "F12", function()
     print("--------------------------------- API TEST END ------------------------------------")
 end)
 
--- signal test by pressing F11
+-- signal test by pressing F11 must execute after API test
 cwc.kbd.bind({}, "F11", function()
     print(
         "\n--------------------------------- SIGNAL TEST START ------------------------------------")

@@ -988,7 +988,7 @@ static int luaC_client_move_to_screen(lua_State *L)
 /** Get nearest client relative to this client.
  *
  * @method get_nearest
- * @tparam integer enum Direction
+ * @tparam integer direction Direction enum
  * @treturn cwc_client
  * @see cuteful.enum.direction
  */
@@ -1052,9 +1052,9 @@ void luaC_client_setup(lua_State *L)
         CLIENT_METHOD(toggle_tag),
 
         CLIENT_METHOD(move_to_screen),
-        {"move_to_tag",      luaC_client_set_workspace   },
-        {"get_nearest",      luaC_client_get_nearest     },
-        {"set_border_color", luaC_client_set_border_color},
+        {"move_to_tag", luaC_client_set_workspace},
+        CLIENT_METHOD(get_nearest),
+        CLIENT_METHOD(set_border_color),
 
         // read only properties
         CLIENT_REG_READ_ONLY(pid),
@@ -1087,7 +1087,7 @@ void luaC_client_setup(lua_State *L)
         CLIENT_REG_PROPERTY(border_rotation),
         CLIENT_REG_PROPERTY(border_width),
 
-        {NULL,               NULL                        },
+        {NULL,          NULL                     },
     };
 
     luaC_register_class(L, client_classname, client_methods,

@@ -88,7 +88,8 @@ struct cwc_toplevel *cwc_toplevel_get_focused();
 
 void cwc_toplevel_jump_to(struct cwc_toplevel *toplevel, bool merge);
 
-/* find shortest toplevel within 90deg field of view */
+/* find shortest toplevel within 90deg field of view, return NULL if not found
+ */
 struct cwc_toplevel *
 cwc_toplevel_get_nearest_by_direction(struct cwc_toplevel *toplevel,
                                       enum wlr_direction dir);

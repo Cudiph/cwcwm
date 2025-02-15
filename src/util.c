@@ -19,7 +19,7 @@
 #include <signal.h>
 #include <stdarg.h>
 #include <stdio.h>
-#include <wayland-util.h>
+#include <stdlib.h>
 #include <wlr/util/box.h>
 
 #include "cwc/util.h"
@@ -93,4 +93,42 @@ void normalized_region_at(
 
     if (ny)
         *ny = (y - (double)region->y) / region->height;
+}
+
+double distance(int lx, int ly, int lx2, int ly2)
+{
+    int x_diff = abs(lx2 - lx);
+    int y_diff = abs(ly2 - ly);
+
+    return sqrt(pow(x_diff, 2) + pow(y_diff, 2));
+}
+
+bool is_direction_match(enum wlr_direction dir, int x, int y)
+{
+    cwc_assert(x || y, "both x and y cannot be zero");
+
+    double angle = atan2(y, x) * (180 / M_PI);
+
+    switch (dir) {
+    case WLR_DIRECTION_UP:
+        if (angle > -45 || angle < -135)
+            return false;
+        break;
+    case WLR_DIRECTION_RIGHT:
+        if (angle > -45 && angle < 45)
+            break;
+        else
+            return false;
+    case WLR_DIRECTION_DOWN:
+        if (angle < 45 || angle > 135)
+            return false;
+        break;
+    case WLR_DIRECTION_LEFT:
+        if (angle > 135 || angle < -135)
+            break;
+        else
+            return false;
+    }
+
+    return true;
 }

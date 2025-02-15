@@ -263,6 +263,14 @@ end, { description = "increase client height", group = "client" })
 
 --------------------- SCREEN LAYOUT ------------------------
 
+kbd.bind({ mod.LOGO, mod.ALT }, "j", function()
+    cful.screen.focus_relative(1)
+end, { description = "focus the next screen", group = "screen" })
+kbd.bind({ mod.LOGO, mod.ALT }, "k", function()
+    cful.screen.focus_relative(-1)
+end, { description = "focus the previous screen", group = "screen" })
+
+
 ----------------- tag
 for i = 1, 9 do
     local i_str = tostring(i)

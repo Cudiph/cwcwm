@@ -68,6 +68,8 @@ struct cwc_output {
     struct wl_listener config_commit_l;
 };
 
+void cwc_output_focus(struct cwc_output *output);
+
 /* set workspace to zero to update the current workspace */
 void cwc_output_tiling_layout_update(struct cwc_output *output, int workspace);
 void cwc_output_update_visible(struct cwc_output *output);
@@ -88,6 +90,10 @@ cwc_output_get_newest_focus_toplevel(struct cwc_output *output, bool visible);
 
 /* exact name */
 struct cwc_output *cwc_output_get_by_name(const char *name);
+
+struct cwc_output *
+cwc_output_get_nearest_by_direction(struct cwc_output *reference,
+                                    enum wlr_direction dir);
 
 struct cwc_output *
 cwc_output_at(struct wlr_output_layout *ol, double x, double y);

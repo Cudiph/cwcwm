@@ -16,6 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <float.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -49,6 +50,12 @@
 #include "cwc/signal.h"
 #include "cwc/types.h"
 #include "cwc/util.h"
+
+void cwc_output_focus(struct cwc_output *output)
+{
+    // TODO: add signal
+    server.focused_output = output;
+}
 
 void cwc_output_tiling_layout_update(struct cwc_output *output, int workspace)
 {
@@ -335,12 +342,12 @@ static void server_focus_previous_output(struct cwc_output *reference)
             if (&o->link == &server.outputs)
                 continue;
 
-            server.focused_output = o;
+            cwc_output_focus(o);
             return;
         }
     }
 
-    server.focused_output = server.fallback_output;
+    cwc_output_focus(server.fallback_output);
 }
 
 static void output_layers_fini(struct cwc_output *output);
@@ -585,7 +592,7 @@ static void on_new_output(struct wl_listener *listener, void *data)
     wlr_output_state_finish(&state);
 
     struct cwc_output *output = cwc_output_create(wlr_output);
-    server.focused_output     = output;
+    cwc_output_focus(output);
     rescue_output_toplevel_container(server.fallback_output, output);
 
     output->frame_l.notify         = on_output_frame;
@@ -875,6 +882,43 @@ struct cwc_output *cwc_output_get_by_name(const char *name)
     }
 
     return NULL;
+}
+
+struct cwc_output *
+cwc_output_get_nearest_by_direction(struct cwc_output *reference,
+                                    enum wlr_direction dir)
+{
+    struct cwc_output *nearest_output = NULL;
+    double nearest_distance           = DBL_MAX;
+    int reference_lx                  = reference->output_layout_box.x;
+    int reference_ly                  = reference->output_layout_box.y;
+
+    struct cwc_output *output;
+    wl_list_for_each(output, &server.outputs, link)
+    {
+        if (output == reference)
+            continue;
+
+        int lx = output->output_layout_box.x;
+        int ly = output->output_layout_box.y;
+
+        int x = lx - reference_lx;
+        int y = ly - reference_ly;
+
+        if (!x && !y)
+            continue;
+
+        if (!is_direction_match(dir, x, y))
+            continue;
+
+        double _distance = distance(lx, ly, reference_lx, reference_ly);
+        if (nearest_distance > _distance) {
+            nearest_distance = _distance;
+            nearest_output   = output;
+        }
+    }
+
+    return nearest_output;
 }
 
 void cwc_output_focus_newest_focus_visible_toplevel(struct cwc_output *output)

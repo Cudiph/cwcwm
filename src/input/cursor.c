@@ -240,8 +240,8 @@ void process_cursor_motion(struct cwc_cursor *cursor,
     struct wlr_surface *surface = scene_surface_at(cx, cy, &sx, &sy);
     struct cwc_output *output   = cwc_output_at(server.output_layout, cx, cy);
 
-    if (output)
-        server.focused_output = output;
+    if (output && dx && dy)
+        cwc_output_focus(output);
 
     // sway + dwl implementation in very simplified way, may contain bugs
     if (active_constraint && device
@@ -682,7 +682,10 @@ static void on_cursor_button(struct wl_listener *listener, void *data)
 
     bool handled = false;
     if (event->state == WL_POINTER_BUTTON_STATE_PRESSED) {
-        server.focused_output = cwc_output_at(server.output_layout, cx, cy);
+        struct cwc_output *new_output =
+            cwc_output_at(server.output_layout, cx, cy);
+        if (new_output)
+            cwc_output_focus(new_output);
 
         if (toplevel)
             cwc_toplevel_focus(toplevel, false);
