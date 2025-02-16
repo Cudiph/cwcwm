@@ -607,7 +607,7 @@ CLIENT_PROPERTY_CREATE_BOOLEAN(above)
  */
 CLIENT_PROPERTY_CREATE_BOOLEAN(below)
 
-/** Allow the client to tear when in fullscreen.
+/** Allow the client to tear output.
  *
  * @property allow_tearing
  * @tparam[opt=false] boolean allow_tearing

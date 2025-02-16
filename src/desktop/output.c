@@ -214,8 +214,7 @@ static bool output_can_tear(struct cwc_output *output)
     if (!toplevel)
         return false;
 
-    if (cwc_toplevel_is_fullscreen(toplevel)
-        && cwc_toplevel_is_allow_tearing(toplevel)
+    if (cwc_toplevel_is_allow_tearing(toplevel)
         && cwc_output_is_allow_tearing(output))
         return true;
 
