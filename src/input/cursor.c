@@ -1169,7 +1169,6 @@ bool cwc_cursor_hyprcursor_change_style(
     // force reset image
     cursor->current_name = NULL;
 
-    // TODO: investigate around here because mem leak happens
     hyprcursor_buffer_fini(cursor);
     hyprcursor_style_done(cursor->hyprcursor_mgr, cursor->info);
 

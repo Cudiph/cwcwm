@@ -27,7 +27,7 @@ struct cwc_server {
     // desktop
     struct wlr_output_layout *output_layout;
     struct wl_listener new_output_l;
-    struct cwc_output *fallback_output; // TODO: create a fallback output
+    struct cwc_output *fallback_output;
 
     struct wlr_output_manager_v1 *output_manager;
     struct wl_listener output_manager_apply_l;

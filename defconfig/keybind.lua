@@ -212,7 +212,6 @@ kbd.bind(MODKEY, "Right", function()
     if not c or not c.floating then return end
 
     c:move(move_speed, 0)
-    -- TODO: add getter for output layout stuff to limit x value
 end, { description = "move client to the right", group = "client" })
 
 kbd.bind(MODKEY, "Up", function()
