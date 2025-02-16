@@ -19,6 +19,7 @@ struct cwc_server {
     struct wlr_security_context_manager_v1 *security_context_manager;
     struct wlr_export_dmabuf_manager_v1 *export_dmabuf_manager;
     struct wlr_screencopy_manager_v1 *screencopy_manager;
+    struct wlr_ext_image_copy_capture_manager_v1 *copy_capture_manager;
     struct wlr_data_control_manager_v1 *data_control_manager;
     struct wlr_gamma_control_manager_v1 *gamma_control_manager;
     struct wlr_xdg_output_manager_v1 *xdg_output_manager;

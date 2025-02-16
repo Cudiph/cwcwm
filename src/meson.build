@@ -43,6 +43,8 @@ srcs = [
 
   # Staging upstream protocols
   protocols_server_header['cursor-shape-v1'],
+  protocols_server_header['ext-image-capture-source-v1'],
+  protocols_server_header['ext-image-copy-capture-v1'],
   protocols_server_header['tearing-control-v1'],
 
   # Unstable upstream protocols

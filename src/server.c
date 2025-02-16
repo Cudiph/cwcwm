@@ -33,6 +33,8 @@
 #include <wlr/types/wlr_drm.h>
 #include <wlr/types/wlr_export_dmabuf_v1.h>
 #include <wlr/types/wlr_ext_foreign_toplevel_list_v1.h>
+#include <wlr/types/wlr_ext_image_capture_source_v1.h>
+#include <wlr/types/wlr_ext_image_copy_capture_v1.h>
 #include <wlr/types/wlr_foreign_toplevel_management_v1.h>
 #include <wlr/types/wlr_fractional_scale_v1.h>
 #include <wlr/types/wlr_gamma_control_v1.h>
@@ -87,6 +89,7 @@ static bool is_privileged(const struct wl_global *global)
            || global == server.foreign_toplevel_manager->global
            || global == server.data_control_manager->global
            || global == server.screencopy_manager->global
+           || global == server.copy_capture_manager->global
            || global == server.export_dmabuf_manager->global
            || global == server.security_context_manager->global
            || global == server.gamma_control_manager->global
@@ -213,7 +216,10 @@ int server_init(struct cwc_server *s, char *config_path, char *library_path)
     s->security_context_manager = wlr_security_context_manager_v1_create(dpy);
     s->export_dmabuf_manager    = wlr_export_dmabuf_manager_v1_create(dpy);
     s->screencopy_manager       = wlr_screencopy_manager_v1_create(dpy);
-    s->data_control_manager     = wlr_data_control_manager_v1_create(dpy);
+    s->copy_capture_manager =
+        wlr_ext_image_copy_capture_manager_v1_create(dpy, 1);
+    wlr_ext_output_image_capture_source_manager_v1_create(dpy, 1);
+    s->data_control_manager = wlr_data_control_manager_v1_create(dpy);
 
     s->gamma_control_manager = wlr_gamma_control_manager_v1_create(dpy);
     wlr_scene_set_gamma_control_manager_v1(s->scene, s->gamma_control_manager);
