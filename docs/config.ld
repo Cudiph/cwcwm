@@ -2231,6 +2231,7 @@ local coreclassmap = {
     ["cwc.client"] = "cwc.client<span class='listplusign'> + cwc_client</span>",
     ["cwc.screen"] = "cwc.screen<span class='listplusign'> + cwc_screen</span>",
     ["cwc.container"] = "cwc.container<span class='listplusign'> + cwc_container</span>",
+    ["cwc.input"] = "cwc.input<span class='listplusign'> + cwc_input</span>",
 }
 
 -- Add the full module name in front.

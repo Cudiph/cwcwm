@@ -75,28 +75,34 @@ static void reregister_lua_object()
     wl_list_for_each(toplevel, &server.toplevels, link)
     {
         luaC_object_client_register(L, toplevel);
+        cwc_object_emit_signal_simple("client::new", L, toplevel);
     }
 
     struct cwc_container *container;
     wl_list_for_each(container, &server.containers, link)
     {
         luaC_object_container_register(L, container);
+        cwc_object_emit_signal_simple("container::new", L, container);
     }
 
     struct cwc_output *output;
     wl_list_for_each(output, &server.outputs, link)
     {
-        luaC_object_screen_register(L, output);
-
+        // register tag first because screen dependent on it
         for (int i = 0; i < MAX_WORKSPACE; i++) {
             luaC_object_tag_register(L, &output->state->tag_info[i]);
         }
+
+        luaC_object_screen_register(L, output);
+        cwc_object_emit_signal_simple("screen::new", g_config_get_lua_State(),
+                                      output);
     }
 
     struct cwc_libinput_device *input_dev;
     wl_list_for_each(input_dev, &server.input->devices, link)
     {
         luaC_object_input_register(L, input_dev);
+        cwc_object_emit_signal_simple("input::new", L, input_dev);
     }
 }
 

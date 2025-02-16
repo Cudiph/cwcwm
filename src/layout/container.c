@@ -590,7 +590,7 @@ void cwc_container_init(struct cwc_output *output,
 emit_signal:
     lua_State *L = g_config_get_lua_State();
     luaC_object_container_register(L, cont);
-    cwc_object_emit_signal_simple("container::new", L, toplevel);
+    cwc_object_emit_signal_simple("container::new", L, cont);
 }
 
 void cwc_container_insert_toplevel(struct cwc_container *c,
