@@ -26,6 +26,26 @@
 #include "cwc/desktop/session_lock.h"
 #include "cwc/input/keyboard.h"
 #include "cwc/server.h"
+#include "cwc/util.h"
+
+static void on_surface_map(struct wl_listener *listener, void *data)
+{
+    struct cwc_output *output =
+        wl_container_of(listener, output, surface_map_l);
+
+    keyboard_focus_surface(server.seat, output->lock_surface->surface);
+}
+
+static void on_surface_destroy(struct wl_listener *listener, void *data)
+{
+    struct cwc_output *output =
+        wl_container_of(listener, output, surface_destroy_l);
+
+    wl_list_remove(&output->surface_map_l.link);
+    wl_list_remove(&output->surface_destroy_l.link);
+
+    output->lock_surface = NULL;
+}
 
 static void on_unlock(struct wl_listener *listener, void *data)
 {
@@ -33,35 +53,34 @@ static void on_unlock(struct wl_listener *listener, void *data)
         wl_container_of(listener, locker, unlock_l);
     struct cwc_session_lock_manager *mgr = locker->manager;
 
+    cwc_log(CWC_DEBUG, "unlocking session lock: %p", locker);
+
     // unset state
     mgr->locked = false;
-    cwc_output_focus_newest_focus_visible_toplevel(
-        locker->lock_surface->output->data);
+    mgr->locker = NULL;
+    cwc_output_focus_newest_focus_visible_toplevel(server.focused_output);
 }
 
 static void on_new_surface(struct wl_listener *listener, void *data)
 {
     struct cwc_session_locker *locker =
         wl_container_of(listener, locker, new_surface_l);
-    struct cwc_session_lock_manager *mgr             = locker->manager;
     struct wlr_session_lock_surface_v1 *lock_surface = data;
 
     struct cwc_output *output = lock_surface->output->data;
+    output->lock_surface      = lock_surface;
 
     wlr_scene_subsurface_tree_create(output->layers.session_lock,
                                      lock_surface->surface);
 
+    output->surface_map_l.notify     = on_surface_map;
+    output->surface_destroy_l.notify = on_surface_destroy;
+    wl_signal_add(&lock_surface->surface->events.map, &output->surface_map_l);
+    wl_signal_add(&lock_surface->surface->events.destroy,
+                  &output->surface_destroy_l);
+
     wlr_session_lock_surface_v1_configure(
         lock_surface, output->wlr_output->width, output->wlr_output->height);
-
-    // set state
-    if (!mgr->locked) {
-        mgr->locked          = true;
-        mgr->locker          = locker;
-        locker->lock_surface = lock_surface;
-        wlr_session_lock_v1_send_locked(locker->locker);
-        keyboard_focus_surface(server.seat, lock_surface->surface);
-    }
 }
 
 static void on_lock_destroy(struct wl_listener *listener, void *data)
@@ -69,8 +88,10 @@ static void on_lock_destroy(struct wl_listener *listener, void *data)
     struct cwc_session_locker *locker =
         wl_container_of(listener, locker, destroy_l);
 
-    wl_list_remove(&locker->new_surface_l.link);
+    cwc_log(CWC_DEBUG, "destroying session lock: %p", locker);
+
     wl_list_remove(&locker->unlock_l.link);
+    wl_list_remove(&locker->new_surface_l.link);
     wl_list_remove(&locker->destroy_l.link);
     free(locker);
 }
@@ -80,6 +101,12 @@ static void on_new_lock(struct wl_listener *listener, void *data)
     struct cwc_session_lock_manager *mgr =
         wl_container_of(listener, mgr, new_lock_l);
     struct wlr_session_lock_v1 *wlr_sesslock = data;
+
+    if (mgr->locked) {
+        wlr_session_lock_v1_destroy(wlr_sesslock);
+        cwc_log(CWC_ERROR, "attempt to lock an already locked session");
+        return;
+    }
 
     struct cwc_session_locker *locker = calloc(1, sizeof(*locker));
     locker->locker                    = wlr_sesslock;
@@ -91,6 +118,12 @@ static void on_new_lock(struct wl_listener *listener, void *data)
     wl_signal_add(&wlr_sesslock->events.unlock, &locker->unlock_l);
     wl_signal_add(&wlr_sesslock->events.new_surface, &locker->new_surface_l);
     wl_signal_add(&wlr_sesslock->events.destroy, &locker->destroy_l);
+
+    cwc_log(CWC_DEBUG, "locking session: %p", locker);
+
+    wlr_session_lock_v1_send_locked(locker->locker);
+    mgr->locked = true;
+    mgr->locker = locker;
 }
 
 static void on_session_lock_destroy(struct wl_listener *listener, void *data)

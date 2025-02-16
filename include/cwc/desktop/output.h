@@ -51,6 +51,8 @@ struct cwc_output {
 
     struct timespec waiting_since;
 
+    struct wlr_session_lock_surface_v1 *lock_surface;
+
     /* direct children of the root with the same name */
     struct {
         struct wlr_scene_tree *background;   // layer_shell
@@ -66,6 +68,10 @@ struct cwc_output {
     struct wl_listener presentation_l;
 
     struct wl_listener config_commit_l;
+
+    // session lock
+    struct wl_listener surface_map_l;
+    struct wl_listener surface_destroy_l;
 };
 
 void cwc_output_focus(struct cwc_output *output);

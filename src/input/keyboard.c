@@ -28,6 +28,7 @@
 #include "cwc/config.h"
 #include "cwc/desktop/idle.h"
 #include "cwc/desktop/layer_shell.h"
+#include "cwc/desktop/output.h"
 #include "cwc/desktop/session_lock.h"
 #include "cwc/desktop/toplevel.h"
 #include "cwc/input/cursor.h"
@@ -149,11 +150,11 @@ void on_keyboard_focus_change(struct wl_listener *listener, void *data)
     struct cwc_seat *seat =
         wl_container_of(listener, seat, keyboard_focus_change_l);
     struct wlr_seat_keyboard_focus_change_event *event = data;
+    struct cwc_output *focused_output                  = server.focused_output;
 
     // check for exclusive focus
-    if (server.session_lock->locked) {
-        keyboard_focus_surface(
-            seat, server.session_lock->locker->lock_surface->surface);
+    if (server.session_lock->locked && focused_output->lock_surface) {
+        keyboard_focus_surface(seat, focused_output->lock_surface->surface);
         return;
     } else if (seat->exclusive_kbd_interactive) {
         keyboard_focus_surface(

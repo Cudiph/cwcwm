@@ -19,7 +19,6 @@ struct cwc_session_lock_manager {
 struct cwc_session_locker {
     struct wlr_session_lock_v1 *locker;
     struct cwc_session_lock_manager *manager;
-    struct wlr_session_lock_surface_v1 *lock_surface;
 
     struct wl_listener unlock_l;
     struct wl_listener new_surface_l;
