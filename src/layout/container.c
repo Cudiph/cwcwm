@@ -357,6 +357,26 @@ void cwc_border_attach_to_scene(struct cwc_border *border,
     wlr_scene_node_set_position(&border->buffer[3]->scene->node, 0, bw);
 }
 
+static void all_toplevel_reposition_tree(struct cwc_toplevel *toplevel,
+                                         void *data)
+{
+    int thickness = *(int *)data;
+
+    wlr_scene_node_set_position(&toplevel->surf_tree->node, thickness,
+                                thickness);
+}
+
+static void
+cwc_container_reposition_client_tree(struct cwc_container *container)
+{
+    int thickness = cwc_border_get_thickness(&container->border);
+    wlr_scene_node_set_position(&container->popup_tree->node, thickness,
+                                thickness);
+
+    cwc_container_for_each_toplevel(container, all_toplevel_reposition_tree,
+                                    &thickness);
+}
+
 void cwc_border_set_enabled(struct cwc_border *border, bool enabled)
 {
     if (!is_border_valid(border))
@@ -365,6 +385,10 @@ void cwc_border_set_enabled(struct cwc_border *border, bool enabled)
     for (int i = 0; i < 4; i++)
         wlr_scene_node_set_enabled(&border->buffer[i]->scene->node, enabled);
     border->enabled = enabled;
+
+    struct cwc_container *container =
+        wl_container_of(border, container, border);
+    cwc_container_reposition_client_tree(container);
 }
 
 void cwc_border_set_pattern(struct cwc_border *border,
@@ -393,26 +417,6 @@ void cwc_border_set_pattern_rotation(struct cwc_border *border, int rotation)
     rotation                 = CLAMP(rotation, -315, INT_MAX);
     border->pattern_rotation = rotation;
     border_buffer_redraw(border);
-}
-
-static void all_toplevel_reposition_tree(struct cwc_toplevel *toplevel,
-                                         void *data)
-{
-    int thickness = *(int *)data;
-
-    wlr_scene_node_set_position(&toplevel->surf_tree->node, thickness,
-                                thickness);
-}
-
-static void
-cwc_container_reposition_client_tree(struct cwc_container *container)
-{
-    int thickness = container->border.thickness;
-    wlr_scene_node_set_position(&container->popup_tree->node, thickness,
-                                thickness);
-
-    cwc_container_for_each_toplevel(container, all_toplevel_reposition_tree,
-                                    &thickness);
 }
 
 void cwc_border_set_thickness(struct cwc_border *border, int thickness)
@@ -1057,9 +1061,9 @@ static void all_toplevel_set_fullscreen(struct cwc_toplevel *toplevel,
     bool set = data;
 
     if (set) {
-        cwc_toplevel_set_size_surface(
-            toplevel, toplevel->container->output->wlr_output->width,
-            toplevel->container->output->wlr_output->height);
+        struct cwc_output *output = toplevel->container->output;
+        cwc_toplevel_set_size_surface(toplevel, output->wlr_output->width,
+                                      output->wlr_output->height);
         cwc_toplevel_set_position(toplevel, 0, 0);
         wlr_scene_subsurface_tree_set_clip(&toplevel->surf_tree->node, NULL);
     }
