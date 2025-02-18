@@ -767,6 +767,30 @@ static int luaC_client_set_opacity(lua_State *L)
     return 0;
 }
 
+/** Enable/disable border.
+ *
+ * @property border_enabled
+ * @tparam[opt=true] boolean border_enabled
+ */
+static int luaC_client_get_border_enabled(lua_State *L)
+{
+    struct cwc_toplevel *toplevel = luaC_client_checkudata(L, 1);
+
+    lua_pushboolean(L, toplevel->container->border.enabled);
+
+    return 1;
+}
+
+static int luaC_client_set_border_enabled(lua_State *L)
+{
+    struct cwc_toplevel *toplevel = luaC_client_checkudata(L, 1);
+
+    bool enable = lua_toboolean(L, 2);
+    cwc_border_set_enabled(&toplevel->container->border, enable);
+
+    return 0;
+}
+
 /** The client border color rotation in degree.
  *
  * @property border_rotation
@@ -1084,6 +1108,7 @@ void luaC_client_setup(lua_State *L)
         CLIENT_REG_PROPERTY(allow_tearing),
         CLIENT_REG_PROPERTY(urgent),
 
+        CLIENT_REG_PROPERTY(border_enabled),
         CLIENT_REG_PROPERTY(border_rotation),
         CLIENT_REG_PROPERTY(border_width),
 

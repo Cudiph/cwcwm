@@ -294,7 +294,7 @@ static void border_buffer_redraw(struct cwc_border *border)
 {
     border_buffer_fini(border);
     border_buffer_init(border, border->pattern, border->width, border->height,
-                       cwc_border_get_thickness(border));
+                       border->thickness);
 
     if (border->attached_tree)
         cwc_border_attach_to_scene(border, border->attached_tree);
@@ -349,7 +349,7 @@ void cwc_border_attach_to_scene(struct cwc_border *border,
         border->buffer[i]->scene->node.data = border;
     }
 
-    int bw = cwc_border_get_thickness(border);
+    int bw = border->thickness;
     wlr_scene_node_set_position(&border->buffer[1]->scene->node,
                                 border->width - bw, bw);
     wlr_scene_node_set_position(&border->buffer[2]->scene->node, 0,
@@ -389,6 +389,7 @@ void cwc_border_set_enabled(struct cwc_border *border, bool enabled)
     struct cwc_container *container =
         wl_container_of(border, container, border);
     cwc_container_reposition_client_tree(container);
+    cwc_output_tiling_layout_update(container->output, 0);
 }
 
 void cwc_border_set_pattern(struct cwc_border *border,
