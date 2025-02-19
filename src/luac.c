@@ -262,6 +262,19 @@ static int luaC_setenv(lua_State *L)
     return 0;
 }
 
+/** Wrapper of C unsetenv.
+ * @staticfct unsetenv
+ * @tparam string key Variable name.
+ * @noreturn
+ */
+static int luaC_unsetenv(lua_State *L)
+{
+    const char *key = luaL_checkstring(L, 1);
+
+    unsetenv(key);
+    return 0;
+}
+
 /** Change the vt (chvt).
  * @staticfct chvt
  * @tparan integer n Index of the vt.
@@ -450,6 +463,7 @@ int luaC_init()
         {"spawn",             luaC_spawn            },
         {"spawn_with_shell",  luaC_spawn_with_shell },
         {"setenv",            luaC_setenv           },
+        {"unsetenv",          luaC_unsetenv         },
         {"chvt",              luaC_chvt             },
 
         {"connect_signal",    luaC_connect_signal   },
