@@ -14,7 +14,6 @@ cwc.spawn_with_shell("sleep 3 && copyq")
 cwc.spawn_with_shell("sleep 3 && aria2tray --hide-window")
 
 -- env var
-cwc.setenv("XDG_CURRENT_DESKTOP", "cwc")
 cwc.setenv("HYPRCURSOR_THEME", "Bibata-Modern-Classic")
 
 -- xdg-desktop-portal-wlr
