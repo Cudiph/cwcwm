@@ -79,8 +79,9 @@ static void on_new_surface(struct wl_listener *listener, void *data)
     wl_signal_add(&lock_surface->surface->events.destroy,
                   &output->surface_destroy_l);
 
-    wlr_session_lock_surface_v1_configure(
-        lock_surface, output->wlr_output->width, output->wlr_output->height);
+    wlr_session_lock_surface_v1_configure(lock_surface,
+                                          output->output_layout_box.width,
+                                          output->output_layout_box.height);
 }
 
 static void on_lock_destroy(struct wl_listener *listener, void *data)

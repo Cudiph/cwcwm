@@ -1063,8 +1063,8 @@ static void all_toplevel_set_fullscreen(struct cwc_toplevel *toplevel,
 
     if (set) {
         struct cwc_output *output = toplevel->container->output;
-        cwc_toplevel_set_size_surface(toplevel, output->wlr_output->width,
-                                      output->wlr_output->height);
+        cwc_toplevel_set_size_surface(toplevel, output->output_layout_box.width,
+                                      output->output_layout_box.height);
         cwc_toplevel_set_position(toplevel, 0, 0);
         wlr_scene_subsurface_tree_set_clip(&toplevel->surf_tree->node, NULL);
     }

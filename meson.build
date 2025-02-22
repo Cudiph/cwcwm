@@ -57,7 +57,6 @@ subdir('protocol')
 
 subdir('src')
 
-# run make header first to create include folder
 if get_option('plugins')
   subdir('plugins')
 endif

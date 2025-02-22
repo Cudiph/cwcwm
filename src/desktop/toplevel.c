@@ -542,8 +542,8 @@ static void on_popup_commit(struct wl_listener *listener, void *data)
         struct cwc_output *o        = l->output;
         node                        = &l->scene_layer->tree->node;
         parent_stree                = o->layers.top;
-        box.width                   = l->output->wlr_output->width;
-        box.height                  = l->output->wlr_output->height;
+        box.width                   = l->output->output_layout_box.width;
+        box.height                  = l->output->output_layout_box.height;
     } else {
         unreachable_();
         return;
