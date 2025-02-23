@@ -79,6 +79,17 @@ void cwc_output_tiling_layout_update(struct cwc_output *output, int workspace)
     }
 }
 
+void cwc_output_tiling_layout_update_container(struct cwc_container *container,
+                                               bool update_container_workspace)
+{
+    if (!cwc_container_is_currently_tiled(container))
+        return;
+
+    cwc_output_tiling_layout_update(
+        container->output,
+        update_container_workspace ? container->workspace : 0);
+}
+
 static struct cwc_output_state *
 cwc_output_state_create(struct cwc_output *output)
 {

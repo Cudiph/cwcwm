@@ -78,6 +78,11 @@ void cwc_output_focus(struct cwc_output *output);
 
 /* set workspace to zero to update the current workspace */
 void cwc_output_tiling_layout_update(struct cwc_output *output, int workspace);
+
+/* use container for the reference to make it update only if necessary */
+void cwc_output_tiling_layout_update_container(struct cwc_container *container,
+                                               bool update_container_workspace);
+
 void cwc_output_update_visible(struct cwc_output *output);
 
 /* free it after use, NULL indicates the end of the array */

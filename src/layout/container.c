@@ -389,7 +389,7 @@ void cwc_border_set_enabled(struct cwc_border *border, bool enabled)
     struct cwc_container *container =
         wl_container_of(border, container, border);
     cwc_container_reposition_client_tree(container);
-    cwc_output_tiling_layout_update(container->output, 0);
+    cwc_output_tiling_layout_update_container(container, 0);
 }
 
 void cwc_border_set_pattern(struct cwc_border *border,
@@ -434,7 +434,7 @@ void cwc_border_set_thickness(struct cwc_border *border, int thickness)
     struct cwc_container *container =
         wl_container_of(border, container, border);
     cwc_container_reposition_client_tree(container);
-    cwc_output_tiling_layout_update(container->output, 0);
+    cwc_output_tiling_layout_update_container(container, 0);
 }
 
 int cwc_border_get_thickness(struct cwc_border *border)
@@ -535,6 +535,22 @@ _update_to_current_active_tag_and_worskpace(struct cwc_container *cont)
     cont->workspace = cont->output->state->active_workspace;
 }
 
+static inline void
+_cwc_container_set_initial_state(struct cwc_container *cont,
+                                 struct cwc_toplevel *toplevel)
+{
+    if (cwc_toplevel_is_unmanaged(toplevel))
+        cont->state |= CONTAINER_STATE_UNMANAGED;
+
+    if (cwc_toplevel_wants_maximized(toplevel))
+        cont->state |= CONTAINER_STATE_MAXIMIZED;
+
+    if (cwc_toplevel_wants_fullscreen(toplevel))
+        cont->state |= CONTAINER_STATE_FULLSCREEN;
+    else if (cwc_toplevel_wants_minimized(toplevel))
+        cont->state |= CONTAINER_STATE_MINIMIZED;
+}
+
 void cwc_container_init(struct cwc_output *output,
                         struct cwc_toplevel *toplevel,
                         int border_w)
@@ -557,6 +573,7 @@ void cwc_container_init(struct cwc_output *output,
     cont->floating_box.height = cont->height;
 
     _update_to_current_active_tag_and_worskpace(cont);
+    _cwc_container_set_initial_state(cont, toplevel);
 
     // putting toplevel to 0 will make toplevel hidden
     cont->tag       = cont->tag ? cont->tag : 1;
@@ -580,10 +597,8 @@ void cwc_container_init(struct cwc_output *output,
     init_surf_tree(toplevel, cont);
     cwc_container_reposition_client_tree(cont);
 
-    if (cwc_toplevel_is_unmanaged(toplevel)) {
-        cont->state |= CONTAINER_STATE_UNMANAGED;
+    if (cwc_toplevel_is_unmanaged(toplevel))
         goto emit_signal;
-    }
 
     wl_list_insert(&cont->output->state->containers,
                    &cont->link_output_container);
@@ -649,7 +664,7 @@ static void _destroy_container(struct cwc_container *container)
         && container->link_output_minimized.prev)
         wl_list_remove(&container->link_output_minimized);
 
-    cwc_output_tiling_layout_update(container->output, container->workspace);
+    cwc_output_tiling_layout_update_container(container, true);
 
     luaC_object_unregister(L, container);
 
@@ -1442,6 +1457,14 @@ bool cwc_container_is_visible_in_workspace(struct cwc_container *container,
     return (workspace == container->workspace);
 }
 
+bool cwc_container_is_currently_tiled(struct cwc_container *container)
+{
+    return !(cwc_container_is_fullscreen(container)
+             || cwc_container_is_maximized(container)
+             || cwc_container_is_minimized(container)
+             || cwc_container_is_floating(container));
+}
+
 void cwc_container_move_to_tag(struct cwc_container *container, int workspace)
 {
     if (container->workspace == workspace)
@@ -1458,7 +1481,7 @@ void cwc_container_move_to_tag(struct cwc_container *container, int workspace)
     if (tag_info->layout_mode == CWC_LAYOUT_BSP)
         bsp_insert_container(container, workspace);
 
-    cwc_output_tiling_layout_update(container->output, container->workspace);
+    cwc_output_tiling_layout_update_container(container, true);
     cwc_output_update_visible(container->output);
 }
 
