@@ -39,6 +39,9 @@ static void on_layer_surface_destroy(struct wl_listener *listener, void *data)
     cwc_log(CWC_DEBUG, "destroying layer surface at output %p: %p",
             lsurf->output, lsurf->wlr_layer_surface);
 
+    if (cwc_output_is_exist(lsurf->output))
+        wlr_scene_node_destroy(&lsurf->popup_tree->node);
+
     wl_list_remove(&lsurf->link);
     wl_list_remove(&lsurf->map_l.link);
     wl_list_remove(&lsurf->unmap_l.link);
@@ -94,6 +97,9 @@ static void arrange_surface(struct cwc_output *output,
 
         wlr_scene_layer_surface_v1_configure(surface->scene_layer, full_area,
                                              usable_area);
+        wlr_scene_node_set_position(&surface->popup_tree->node,
+                                    surface->scene_layer->tree->node.x,
+                                    surface->scene_layer->tree->node.y);
     }
 }
 
@@ -237,6 +243,7 @@ static void on_new_surface(struct wl_listener *listener, void *data)
         layer_shell_get_scene(surf->output, layer_surface->pending.layer);
     surf->scene_layer =
         wlr_scene_layer_surface_v1_create(surface_scene_tree, layer_surface);
+    surf->popup_tree = wlr_scene_tree_create(surf->output->layers.overlay);
 
     layer_surface->data                = surf;
     layer_surface->surface->data       = surf->scene_layer->tree;

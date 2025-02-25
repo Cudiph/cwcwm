@@ -539,11 +539,9 @@ static void on_popup_commit(struct wl_listener *listener, void *data)
         node         = &toplevel->container->tree->node;
     } else if (layersurf) {
         struct cwc_layer_surface *l = layersurf->data;
-        struct cwc_output *o        = l->output;
         node                        = &l->scene_layer->tree->node;
-        parent_stree                = o->layers.top;
-        box.width                   = l->output->output_layout_box.width;
-        box.height                  = l->output->output_layout_box.height;
+        parent_stree                = l->popup_tree;
+        box                         = l->output->output_layout_box;
     } else {
         unreachable_();
         return;

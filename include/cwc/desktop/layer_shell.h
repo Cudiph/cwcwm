@@ -15,6 +15,7 @@ struct cwc_layer_surface {
     struct wlr_scene_layer_surface_v1 *scene_layer;
     struct cwc_output *output;
     bool mapped;
+    struct wlr_scene_tree *popup_tree;
 
     struct wl_listener new_popup_l;
     struct wl_listener destroy_l;
