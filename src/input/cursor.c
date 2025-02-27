@@ -53,6 +53,7 @@
 #include "cwc/desktop/idle.h"
 #include "cwc/desktop/output.h"
 #include "cwc/desktop/toplevel.h"
+#include "cwc/desktop/transaction.h"
 #include "cwc/input/cursor.h"
 #include "cwc/input/keyboard.h"
 #include "cwc/input/manager.h"
@@ -580,7 +581,7 @@ static void end_interactive_move_master(struct cwc_cursor *cursor)
         wl_list_swap(&toplevel_under_cursor->container->link_output_container,
                      &grabbed->link_output_container);
 
-    master_arrange_update(grabbed->output);
+    transaction_schedule_tag(cwc_output_get_current_tag_info(grabbed->output));
 }
 
 static void end_interactive_resize_master(struct cwc_cursor *cursor)

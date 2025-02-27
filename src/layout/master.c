@@ -21,6 +21,7 @@
 
 #include "cwc/desktop/output.h"
 #include "cwc/desktop/toplevel.h"
+#include "cwc/desktop/transaction.h"
 #include "cwc/input/cursor.h"
 #include "cwc/layout/bsp.h"
 #include "cwc/layout/container.h"
@@ -313,7 +314,7 @@ static void _master_resize(struct cwc_output *output,
     else if (layout->resize_end && stage == END)
         layout->resize_end(tiled_visible, i, cursor, state);
 
-    master_arrange_update(output);
+    transaction_schedule_tag(cwc_output_get_current_tag_info(output));
 }
 
 void master_resize_start(struct cwc_output *output, struct cwc_cursor *cursor)
@@ -353,5 +354,6 @@ void master_set_master(struct cwc_toplevel *toplevel)
     wl_list_swap(&toplevel->link_output_toplevels,
                  &master->link_output_toplevels);
 
-    master_arrange_update(toplevel->container->output);
+    transaction_schedule_tag(
+        cwc_output_get_current_tag_info(toplevel->container->output));
 }

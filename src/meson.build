@@ -17,6 +17,7 @@ srcs = [
   'desktop/output.c',
   'desktop/session_lock.c',
   'desktop/toplevel.c',
+  'desktop/transaction.c',
 
   'input/cursor.c',
   'input/manager.c',

@@ -45,7 +45,7 @@ struct cwc_output {
     struct wlr_scene_output *scene_output;
     struct cwc_output_state *state;
     struct wlr_output_state pending;
-    bool pending_initialized;
+    bool pending_transaction;
     bool restored;
     bool tearing_allowed;
 
@@ -160,6 +160,12 @@ cwc_output_get_current_tag_info(struct cwc_output *output)
     return &output->state->tag_info[output->state->active_workspace];
 }
 
+static inline struct cwc_tag_info *cwc_output_get_tag(struct cwc_output *output,
+                                                      int index)
+{
+    return &output->state->tag_info[index];
+}
+
 static inline bool cwc_output_is_current_layout_float(struct cwc_output *output)
 {
     return cwc_output_get_current_tag_info(output)->layout_mode
@@ -177,14 +183,6 @@ static inline bool cwc_output_is_current_layout_bsp(struct cwc_output *output)
 {
     return cwc_output_get_current_tag_info(output)->layout_mode
            == CWC_LAYOUT_BSP;
-}
-
-static inline void
-cwc_output_tiling_layout_update_all_general_workspace(struct cwc_output *output)
-{
-    for (int i = 1; i < output->state->max_general_workspace; i++) {
-        cwc_output_tiling_layout_update(output, i);
-    }
 }
 
 static inline bool cwc_output_is_allow_tearing(struct cwc_output *output)

@@ -87,6 +87,7 @@ struct cwc_tag_info {
     char *label;
     enum cwc_layout_mode layout_mode;
     int index; // index in output_state array
+    bool pending_transaction;
 
     int useless_gaps;
     struct bsp_root_entry bsp_root_entry;

@@ -39,6 +39,7 @@
 #include "cwc/desktop/layer_shell.h"
 #include "cwc/desktop/output.h"
 #include "cwc/desktop/toplevel.h"
+#include "cwc/desktop/transaction.h"
 #include "cwc/input/manager.h"
 #include "cwc/input/seat.h"
 #include "cwc/layout/bsp.h"
@@ -111,6 +112,7 @@ cwc_output_state_create(struct cwc_output *output)
         tag_info->index                       = i;
         tag_info->useless_gaps                = g_config.useless_gaps;
         tag_info->layout_mode                 = CWC_LAYOUT_FLOATING;
+        tag_info->pending_transaction         = false;
         tag_info->master_state.master_count   = 1;
         tag_info->master_state.column_count   = 1;
         tag_info->master_state.mwfact         = 0.5;
@@ -373,6 +375,7 @@ static void on_output_destroy(struct wl_listener *listener, void *data)
     cwc_log(CWC_INFO, "destroying output (%s): %p %p", output->wlr_output->name,
             output, output->wlr_output);
 
+    wlr_output_state_finish(&output->pending);
     output_layers_fini(output);
     wlr_scene_output_destroy(output->scene_output);
 
@@ -401,7 +404,7 @@ static void on_output_destroy(struct wl_listener *listener, void *data)
                                        focused->state->tag_info[i].layout_mode);
     }
 
-    cwc_output_update_visible(focused);
+    transaction_schedule_output(focused);
 
     luaC_object_unregister(g_config_get_lua_State(), output);
     wl_list_remove(&output->link);
@@ -522,8 +525,6 @@ static void on_config_commit(struct wl_listener *listener, void *data)
 
     if (old_config->useless_gaps == g_config.useless_gaps)
         return;
-
-    cwc_output_tiling_layout_update_all_general_workspace(output);
 }
 
 static void output_layers_init(struct cwc_output *output)
@@ -637,6 +638,7 @@ static void on_new_output(struct wl_listener *listener, void *data)
     cwc_log(CWC_INFO, "created output (%s): %p %p", wlr_output->name, output,
             output->wlr_output);
 
+    wlr_output_state_init(&output->pending);
     cwc_output_update_outputs_state();
     arrange_layers(output);
 
@@ -1046,8 +1048,8 @@ void cwc_output_set_view_only(struct cwc_output *output, int workspace)
         output->state->active_tag = 0;
     output->state->active_workspace = workspace;
 
-    cwc_output_tiling_layout_update(output, 0);
-    cwc_output_update_visible(output);
+    transaction_schedule_tag(cwc_output_get_current_tag_info(output));
+    transaction_schedule_output(output);
 
     lua_State *L = g_config_get_lua_State();
     cwc_object_emit_signal_simple("screen::prop::active_tag", L, output);
@@ -1065,8 +1067,8 @@ void cwc_output_set_active_tag(struct cwc_output *output, tag_bitfield_t newtag)
         output->state->active_workspace = cwc_tag_find_first_tag(newtag);
 
     output->state->active_tag = newtag;
-    cwc_output_update_visible(output);
-    cwc_output_tiling_layout_update(output, 0);
+    transaction_schedule_output(output);
+    transaction_schedule_tag(cwc_output_get_current_tag_info(output));
 
     cwc_object_emit_signal_simple("screen::prop::active_tag",
                                   g_config_get_lua_State(), output);
@@ -1109,7 +1111,7 @@ void cwc_output_set_layout_mode(struct cwc_output *output,
         break;
     }
 
-    cwc_output_tiling_layout_update(output, workspace);
+    transaction_schedule_tag(cwc_output_get_tag(output, workspace));
 }
 
 void cwc_output_set_strategy_idx(struct cwc_output *output, int idx)
@@ -1129,7 +1131,7 @@ void cwc_output_set_strategy_idx(struct cwc_output *output, int idx)
             while (idx++)
                 info->master_state.current_layout =
                     info->master_state.current_layout->prev;
-        master_arrange_update(output);
+        transaction_schedule_tag(cwc_output_get_current_tag_info(output));
         break;
     default:
         return;
@@ -1147,7 +1149,7 @@ void cwc_output_set_useless_gaps(struct cwc_output *output,
     gaps_width = MAX(0, gaps_width);
 
     output->state->tag_info[workspace].useless_gaps = gaps_width;
-    cwc_output_tiling_layout_update(output, workspace);
+    transaction_schedule_tag(cwc_output_get_tag(output, workspace));
 }
 
 void cwc_output_set_mwfact(struct cwc_output *output,
@@ -1160,8 +1162,9 @@ void cwc_output_set_mwfact(struct cwc_output *output,
     workspace = CLAMP(workspace, 1, MAX_WORKSPACE);
     factor    = CLAMP(factor, 0.1, 0.9);
 
-    output->state->tag_info[workspace].master_state.mwfact = factor;
-    cwc_output_tiling_layout_update(output, workspace);
+    struct cwc_tag_info *tag = cwc_output_get_tag(output, workspace);
+    tag->master_state.mwfact = factor;
+    transaction_schedule_tag(tag);
 }
 
 int cwc_tag_find_first_tag(tag_bitfield_t tag)

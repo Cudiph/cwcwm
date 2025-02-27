@@ -37,6 +37,7 @@
 #include "cwc/desktop/layer_shell.h"
 #include "cwc/desktop/output.h"
 #include "cwc/desktop/toplevel.h"
+#include "cwc/desktop/transaction.h"
 #include "cwc/layout/container.h"
 #include "cwc/luac.h"
 #include "cwc/luaclass.h"
@@ -665,23 +666,13 @@ static int luaC_screen_set_position(lua_State *L)
     return 0;
 }
 
-static void init_state_if_not_yet(struct cwc_output *output)
-{
-    if (output->pending_initialized)
-        return;
-
-    wlr_output_state_init(&output->pending);
-    output->pending_initialized = true;
-}
-
-/** Set the screen mode (commit to apply).
+/** Set the screen mode.
  *
  * @method set_mode
  * @tparam integer width
  * @tparam integer height
  * @tparam[opt=0] integer refresh Monitor refresh rate in hz
  * @noreturn
- * @see commit
  */
 static int luaC_screen_set_mode(lua_State *L)
 {
@@ -709,18 +700,17 @@ static int luaC_screen_set_mode(lua_State *L)
     if (!found)
         return 0;
 
-    init_state_if_not_yet(output);
     wlr_output_state_set_mode(&output->pending, mode);
+    transaction_schedule_output(output);
 
     return 0;
 }
 
-/** Set adaptive sync (commit to apply).
+/** Set adaptive sync.
  *
  * @method set_adaptive_sync
  * @tparam boolean enable True to enable
  * @noreturn
- * @see commit
  */
 static int luaC_screen_set_adaptive_sync(lua_State *L)
 {
@@ -731,18 +721,17 @@ static int luaC_screen_set_adaptive_sync(lua_State *L)
     if (!output->wlr_output->adaptive_sync_supported)
         return 0;
 
-    init_state_if_not_yet(output);
     wlr_output_state_set_adaptive_sync_enabled(&output->pending, set);
+    transaction_schedule_output(output);
 
     return 0;
 }
 
-/** Set output enabled state (commit to apply).
+/** Set output enabled state.
  *
  * @method set_enabled
  * @tparam boolean enable True to enable
  * @noreturn
- * @see commit
  */
 static int luaC_screen_set_enabled(lua_State *L)
 {
@@ -750,72 +739,45 @@ static int luaC_screen_set_enabled(lua_State *L)
     struct cwc_output *output = luaC_screen_checkudata(L, 1);
     bool set                  = lua_toboolean(L, 2);
 
-    init_state_if_not_yet(output);
     wlr_output_state_set_enabled(&output->pending, set);
+    transaction_schedule_output(output);
 
     return 0;
 }
 
-/** Set output scale (commit to apply).
+/** Set output scale.
  *
  * @method set_scale
  * @tparam number scale
  * @noreturn
- * @see commit
  */
 static int luaC_screen_set_scale(lua_State *L)
 {
     struct cwc_output *output = luaC_screen_checkudata(L, 1);
     float scale               = luaL_checknumber(L, 2);
 
-    init_state_if_not_yet(output);
     wlr_output_state_set_scale(&output->pending, scale);
+    transaction_schedule_output(output);
 
     return 0;
 }
 
-/** Set output transform rotation (commit to apply).
+/** Set output transform rotation.
  *
  * @method set_transform
  * @tparam integer enum Output transform enum
  * @noreturn
  * @see cuteful.enum.output_transform
- * @see commit
  */
 static int luaC_screen_set_transform(lua_State *L)
 {
     struct cwc_output *output = luaC_screen_checkudata(L, 1);
     int transform_enum        = luaL_checkint(L, 2);
 
-    init_state_if_not_yet(output);
     wlr_output_state_set_transform(&output->pending, transform_enum);
+    transaction_schedule_output(output);
 
     return 0;
-}
-
-/** Commit pending state.
- *
- * @method commit
- * @treturn boolean success Commit result.
- */
-static int luaC_screen_commit(lua_State *L)
-{
-    struct cwc_output *output = luaC_screen_checkudata(L, 1);
-
-    if (!output->pending_initialized) {
-        lua_pushboolean(L, false);
-        return 1;
-    }
-
-    lua_pushboolean(
-        L, wlr_output_commit_state(output->wlr_output, &output->pending));
-
-    output->pending_initialized = false;
-    wlr_output_state_finish(&output->pending);
-    cwc_output_update_outputs_state();
-    arrange_layers(output);
-
-    return 1;
 }
 
 /** Focus this screen.
@@ -858,7 +820,6 @@ void luaC_screen_setup(lua_State *L)
         SCREEN_METHOD(set_enabled),
         SCREEN_METHOD(set_scale),
         SCREEN_METHOD(set_transform),
-        SCREEN_METHOD(commit),
 
         // ro prop but have optional arguments
         SCREEN_METHOD(get_containers),

@@ -66,12 +66,10 @@ cwc.connect_signal("screen::new", function(screen)
     if screen.name == "DP-1" then
         screen:set_position(0, 0)
 
-        -- some settings need commit to apply
         screen:set_mode(1920, 1080, 60) -- width, height, refresh rate
         screen:set_adaptive_sync(true)
         screen:set_scale(1.2)
         screen:set_transform(enum.output_transform.TRANSFORM_NORMAL)
-        screen:commit()
 
         -- by default the screen is not allowed to tear
         screen.allow_tearing = true

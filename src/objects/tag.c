@@ -36,6 +36,7 @@
 #include <wayland-util.h>
 
 #include "cwc/desktop/output.h"
+#include "cwc/desktop/transaction.h"
 #include "cwc/layout/master.h"
 #include "cwc/luaclass.h"
 #include "cwc/luaobject.h"
@@ -103,8 +104,8 @@ static int luaC_tag_set_selected(lua_State *L)
     else
         output->state->active_tag &= ~(1 << (tag->index - 1));
 
-    cwc_output_update_visible(output);
-    cwc_output_tiling_layout_update(output, 0);
+    transaction_schedule_output(output);
+    transaction_schedule_tag(cwc_output_get_current_tag_info(output));
 
     return 0;
 }
@@ -202,8 +203,7 @@ static int luaC_tag_set_master_count(lua_State *L)
 
     tag->master_state.master_count = MAX(1, master_count);
 
-    struct cwc_output *output = cwc_output_from_tag_info(tag);
-    master_arrange_update(output);
+    transaction_schedule_tag(tag);
 
     return 0;
 }
@@ -230,8 +230,7 @@ static int luaC_tag_set_column_count(lua_State *L)
 
     tag->master_state.column_count = MAX(1, column_count);
 
-    struct cwc_output *output = cwc_output_from_tag_info(tag);
-    master_arrange_update(output);
+    transaction_schedule_tag(tag);
 
     return 0;
 }

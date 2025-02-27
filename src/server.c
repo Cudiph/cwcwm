@@ -66,6 +66,7 @@
 #include "cwc/desktop/output.h"
 #include "cwc/desktop/session_lock.h"
 #include "cwc/desktop/toplevel.h"
+#include "cwc/desktop/transaction.h"
 #include "cwc/input/cursor.h"
 #include "cwc/input/keyboard.h"
 #include "cwc/input/manager.h"
@@ -259,6 +260,7 @@ int server_init(struct cwc_server *s, char *config_path, char *library_path)
     cwc_idle_init(s);
     setup_cwc_session_lock(s);
     setup_layer_shell(s);
+    setup_transaction(s);
 
     // inputs
     s->input = cwc_input_manager_get();

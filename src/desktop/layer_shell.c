@@ -24,6 +24,7 @@
 #include "cwc/desktop/layer_shell.h"
 #include "cwc/desktop/output.h"
 #include "cwc/desktop/toplevel.h"
+#include "cwc/desktop/transaction.h"
 #include "cwc/input/keyboard.h"
 #include "cwc/input/seat.h"
 #include "cwc/layout/master.h"
@@ -140,7 +141,7 @@ void arrange_layers(struct cwc_output *output)
 
     if (!wlr_box_equal(&usable_area, &output->usable_area)) {
         output->usable_area = usable_area;
-        cwc_output_tiling_layout_update(output, 0);
+        transaction_schedule_tag(cwc_output_get_current_tag_info(output));
         cwc_output_maximized_toplevel_update(output);
     }
 
@@ -175,12 +176,6 @@ static void on_layer_surface_map(struct wl_listener *listener, void *data)
     }
 }
 
-static void arrange_layers_idle(void *data)
-{
-    struct cwc_output *output = data;
-    arrange_layers(output);
-}
-
 static void on_layer_surface_unmap(struct wl_listener *listener, void *data)
 {
     struct cwc_layer_surface *layer_surface =
@@ -193,10 +188,8 @@ static void on_layer_surface_unmap(struct wl_listener *listener, void *data)
 
     struct wlr_layer_surface_v1_state *state =
         &layer_surface->wlr_layer_surface->current;
-    if (state->exclusive_zone || state->exclusive_edge) {
-        wl_event_loop_add_idle(server.wl_event_loop, arrange_layers_idle,
-                               layer_surface->output);
-    }
+    if (state->exclusive_zone || state->exclusive_edge)
+        transaction_schedule_output(layer_surface->output);
 }
 
 static void on_layer_surface_commit(struct wl_listener *listener, void *data)

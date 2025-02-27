@@ -38,6 +38,7 @@
 #include "cwc/config.h"
 #include "cwc/desktop/output.h"
 #include "cwc/desktop/toplevel.h"
+#include "cwc/desktop/transaction.h"
 #include "cwc/layout/bsp.h"
 #include "cwc/layout/container.h"
 #include "cwc/luac.h"
@@ -701,7 +702,7 @@ static int luaC_client_set_tag(lua_State *L)
     tag_bitfield_t tag            = luaL_checkint(L, 2);
 
     toplevel->container->tag = tag;
-    cwc_output_update_visible(toplevel->container->output);
+    transaction_schedule_output(toplevel->container->output);
 
     return 0;
 }
@@ -968,7 +969,7 @@ static int luaC_client_toggle_tag(lua_State *L)
 
     int tag = luaL_checkint(L, 2);
     toplevel->container->tag ^= 1 << (tag - 1);
-    cwc_output_update_visible(toplevel->container->output);
+    transaction_schedule_output(toplevel->container->output);
 
     return 0;
 }
@@ -1003,8 +1004,8 @@ static int luaC_client_move_to_screen(lua_State *L)
         return 0;
 
     cwc_container_move_to_output(toplevel->container, new_output);
-    cwc_output_tiling_layout_update(old_output, 0);
-    cwc_output_tiling_layout_update(new_output, 0);
+    transaction_schedule_tag(cwc_output_get_current_tag_info(old_output));
+    transaction_schedule_tag(cwc_output_get_current_tag_info(new_output));
 
     return 0;
 }

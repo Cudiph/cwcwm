@@ -29,6 +29,7 @@
 #include "cwc/config.h"
 #include "cwc/desktop/output.h"
 #include "cwc/desktop/toplevel.h"
+#include "cwc/desktop/transaction.h"
 #include "cwc/input/cursor.h"
 #include "cwc/input/seat.h"
 #include "cwc/layout/bsp.h"
@@ -389,7 +390,8 @@ void cwc_border_set_enabled(struct cwc_border *border, bool enabled)
     struct cwc_container *container =
         wl_container_of(border, container, border);
     cwc_container_reposition_client_tree(container);
-    cwc_output_tiling_layout_update_container(container, 0);
+    transaction_schedule_tag(
+        cwc_output_get_current_tag_info(container->output));
 }
 
 void cwc_border_set_pattern(struct cwc_border *border,
@@ -434,7 +436,8 @@ void cwc_border_set_thickness(struct cwc_border *border, int thickness)
     struct cwc_container *container =
         wl_container_of(border, container, border);
     cwc_container_reposition_client_tree(container);
-    cwc_output_tiling_layout_update_container(container, 0);
+    transaction_schedule_tag(
+        cwc_output_get_current_tag_info(container->output));
 }
 
 int cwc_border_get_thickness(struct cwc_border *border)
@@ -1055,7 +1058,8 @@ void cwc_container_set_floating(struct cwc_container *container, bool set)
         }
     }
 
-    master_arrange_update(container->output);
+    transaction_schedule_tag(
+        cwc_output_get_current_tag_info(container->output));
 
     EMIT_PROP_SIGNAL_FOR_FRONT_TOPLEVEL(floating, container);
 }
@@ -1068,7 +1072,7 @@ void cwc_container_set_sticky(struct cwc_container *container, bool set)
     }
 
     container->state &= ~CONTAINER_STATE_STICKY;
-    cwc_output_update_visible(container->output);
+    transaction_schedule_output(container->output);
 }
 
 static void all_toplevel_set_fullscreen(struct cwc_toplevel *toplevel,
@@ -1130,7 +1134,8 @@ void cwc_container_set_fullscreen(struct cwc_container *container, bool set)
     cwc_container_for_each_toplevel(container, all_toplevel_set_fullscreen,
                                     (void *)set);
 
-    master_arrange_update(container->output);
+    transaction_schedule_tag(
+        cwc_output_get_current_tag_info(container->output));
 
     EMIT_PROP_SIGNAL_FOR_FRONT_TOPLEVEL(fullscreen, container);
 }
@@ -1182,7 +1187,8 @@ void cwc_container_set_maximized(struct cwc_container *container, bool set)
     cwc_container_for_each_toplevel(container, all_toplevel_set_maximized,
                                     (void *)set);
 
-    master_arrange_update(container->output);
+    transaction_schedule_tag(
+        cwc_output_get_current_tag_info(container->output));
 
     EMIT_PROP_SIGNAL_FOR_FRONT_TOPLEVEL(maximized, container);
 }
@@ -1224,7 +1230,8 @@ void cwc_container_set_minimized(struct cwc_container *container, bool set)
     cwc_container_for_each_toplevel(container, all_toplevel_set_minimized,
                                     (void *)set);
 
-    master_arrange_update(container->output);
+    transaction_schedule_tag(
+        cwc_output_get_current_tag_info(container->output));
 
     EMIT_PROP_SIGNAL_FOR_FRONT_TOPLEVEL(minimized, container);
 }
@@ -1482,7 +1489,7 @@ void cwc_container_move_to_tag(struct cwc_container *container, int workspace)
         bsp_insert_container(container, workspace);
 
     cwc_output_tiling_layout_update_container(container, true);
-    cwc_output_update_visible(container->output);
+    transaction_schedule_output(container->output);
 }
 
 void cwc_container_to_center(struct cwc_container *container)
