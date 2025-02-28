@@ -556,14 +556,8 @@ void start_interactive_resize(struct cwc_toplevel *toplevel, uint32_t edges)
 static void end_interactive_resize_floating(struct cwc_cursor *cursor)
 {
     // apply pending change from schedule
-    struct wlr_box pending = cursor->pending_box;
-
-    // use set pos instead of set box so that it'll update container output
-    cwc_container_set_position_global(cursor->grabbed_toplevel->container,
-                                      pending.x, pending.y);
-    cwc_toplevel_set_size_surface(cursor->grabbed_toplevel, pending.width,
-                                  pending.height);
-
+    cwc_container_set_box_global(cursor->grabbed_toplevel->container,
+                                 &cursor->pending_box);
     cursor->grab_float = (struct wlr_box){0};
 }
 
