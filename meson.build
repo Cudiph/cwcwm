@@ -56,6 +56,7 @@ wlr_files = []
 subdir('protocol')
 
 subdir('src')
+subdir('cwctl')
 
 if get_option('plugins')
   subdir('plugins')

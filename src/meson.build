@@ -28,6 +28,9 @@ srcs = [
   'input/tablet.c',
   'input/touch.c',
 
+  'ipc/server.c',
+  'ipc/common.c',
+
   'layout/bsp.c',
   'layout/master.c',
   'layout/container.c',

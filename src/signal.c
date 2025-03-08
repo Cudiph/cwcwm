@@ -204,6 +204,15 @@ void cwc_signal_emit(const char *name, void *data, lua_State *L, int nargs)
     _emit_lua(sig_entry, L, nargs);
 }
 
+int cwc_object_emit_signal_simple(const char *name, lua_State *L, void *pointer)
+{
+    luaC_object_push(L, pointer);
+    cwc_signal_emit(name, pointer, L, 1);
+    lua_pop(L, 1);
+
+    return 0;
+}
+
 void cwc_object_emit_signal_varr(const char *name, lua_State *L, int nargs, ...)
 {
     va_list argptr;

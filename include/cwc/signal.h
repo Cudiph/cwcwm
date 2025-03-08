@@ -59,15 +59,9 @@ void cwc_lua_signal_clear(struct cwc_hhmap *map);
 /* emit signal name with an object pointed as pointer as the only argument
  * passed
  */
-static inline int
-cwc_object_emit_signal_simple(const char *name, lua_State *L, void *pointer)
-{
-    luaC_object_push(L, pointer);
-    cwc_signal_emit(name, pointer, L, 1);
-    lua_pop(L, 1);
-
-    return 0;
-}
+int cwc_object_emit_signal_simple(const char *name,
+                                  lua_State *L,
+                                  void *pointer);
 
 /* the C listener data arg is a list of what is passed as by the varargs ... */
 void cwc_object_emit_signal_varr(const char *name,

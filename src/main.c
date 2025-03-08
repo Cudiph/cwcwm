@@ -18,9 +18,11 @@
 
 #include <dlfcn.h>
 #include <getopt.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <wayland-server-core.h>
 #include <wlr/util/log.h>
 
 #include "cwc/config.h"
@@ -58,6 +60,11 @@ struct cwc_config g_config = {0};
 bool lua_initial_load      = true;
 char *config_path          = NULL;
 char *library_path         = NULL;
+
+static void sig_handler(int signal)
+{
+    wl_display_terminate(server.wl_display);
+}
 
 /* entry point */
 int main(int argc, char **argv)
@@ -104,6 +111,9 @@ int main(int argc, char **argv)
     if ((exit_value = server_init(&server, config_path, library_path))) {
         goto shutdown;
     }
+
+    signal(SIGINT, sig_handler);
+    signal(SIGTERM, sig_handler);
 
     if (startup_cmd)
         spawn_with_shell(startup_cmd);

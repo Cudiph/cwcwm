@@ -79,6 +79,10 @@ struct cwc_server {
     struct cwc_input_manager *input;
     struct cwc_seat *seat;
 
+    // ipc
+    int socket_fd;
+    char *socket_path;
+
     // list
     struct wl_list plugins;      // cwc_plugin.link
     struct wl_list outputs;      // cwc_output.link

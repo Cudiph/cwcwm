@@ -26,7 +26,7 @@ uninstall:
 	ninja -C $(BUILDDIR) uninstall
 
 format:
-	@find src plugins tests include -type f -name "*.[ch]" -print0 | xargs -0 clang-format -i --verbose
+	@find src plugins tests include cwctl -type f -name "*.[ch]" -print0 | xargs -0 clang-format -i --verbose
 	@CodeFormat format -w .
 	@CodeFormat format -f ./docs/config.ld --overwrite
 

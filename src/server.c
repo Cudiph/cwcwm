@@ -268,6 +268,8 @@ int server_init(struct cwc_server *s, char *config_path, char *library_path)
     setup_keyboard(s->input);
     setup_seat(s->input);
 
+    setup_ipc(s);
+
     const char *socket = wl_display_add_socket_auto(dpy);
     if (!socket)
         return EXIT_FAILURE;
@@ -291,6 +293,7 @@ void server_fini(struct cwc_server *s)
 
     cwc_signal_emit_c("cwc::shutdown", NULL);
 
+    cleanup_ipc(s);
     cleanup_seat(s->input);
     cleanup_keyboard(s->input);
     cleanup_pointer(s->input);
