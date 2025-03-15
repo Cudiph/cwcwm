@@ -748,7 +748,7 @@ static void on_tearing_object_destroy(struct wl_listener *listener, void *data)
 
 static void on_tearing_object_set_hint(struct wl_listener *listener, void *data)
 {
-    struct tearing_object *obj = wl_container_of(listener, obj, destroy_l);
+    struct tearing_object *obj = wl_container_of(listener, obj, set_hint_l);
 
     struct cwc_toplevel *toplevel =
         cwc_toplevel_try_from_wlr_surface(obj->tearing_control->surface);
