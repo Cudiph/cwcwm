@@ -40,9 +40,6 @@ static void on_layer_surface_destroy(struct wl_listener *listener, void *data)
     cwc_log(CWC_DEBUG, "destroying layer surface at output %p: %p",
             lsurf->output, lsurf->wlr_layer_surface);
 
-    if (cwc_output_is_exist(lsurf->output))
-        wlr_scene_node_destroy(&lsurf->popup_tree->node);
-
     wl_list_remove(&lsurf->link);
     wl_list_remove(&lsurf->map_l.link);
     wl_list_remove(&lsurf->unmap_l.link);
