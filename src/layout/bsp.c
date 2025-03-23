@@ -481,6 +481,9 @@ void bsp_toggle_split(struct bsp_node *node)
     if (node->type == BSP_NODE_LEAF)
         node = node->parent;
 
+    if (!node)
+        return;
+
     if (node->split_type == BSP_SPLIT_HORIZONTAL)
         node->split_type = BSP_SPLIT_VERTICAL;
     else
