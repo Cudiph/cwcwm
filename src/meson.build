@@ -26,6 +26,7 @@ srcs = [
   'input/seat.c',
   'input/switch.c',
   'input/tablet.c',
+  'input/text_input.c',
   'input/touch.c',
 
   'ipc/server.c',

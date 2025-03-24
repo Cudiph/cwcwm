@@ -16,10 +16,21 @@ struct cwc_keyboard_group {
     struct wl_listener modifiers_l;
     struct wl_listener key_l;
 
-    union {
-        struct wl_listener config_commit_l; // for native
-        struct wl_listener destroy_l;       // for virtual
-    };
+    struct wl_listener config_commit_l; // for native
+};
+
+struct cwc_keyboard {
+    struct cwc_seat *seat;
+    struct wlr_keyboard *wlr;
+
+    struct wl_listener modifiers_l;
+    struct wl_listener key_l;
+};
+
+struct cwc_virtual_keyboard {
+    struct cwc_keyboard *base;
+
+    struct wl_listener destroy_l;
 };
 
 struct cwc_keyboard_group *cwc_keyboard_group_create(struct cwc_seat *seat,

@@ -174,6 +174,7 @@ struct cwc_seat *cwc_seat_create(struct cwc_input_manager *manager,
     wl_list_init(&seat->tablet_devs);
     wl_list_init(&seat->tablet_pad_devs);
     wl_list_init(&seat->touch_devs);
+    wl_list_init(&seat->text_inputs);
 
     seat->destroy_l.notify = on_destroy;
     wl_signal_add(&seat->wlr_seat->events.destroy, &seat->destroy_l);

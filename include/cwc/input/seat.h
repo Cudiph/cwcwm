@@ -20,10 +20,15 @@ struct cwc_seat {
     struct cwc_layer_surface *exclusive_kbd_interactive;
     struct wlr_keyboard_shortcuts_inhibitor_v1 *kbd_inhibitor;
 
-    struct wl_list switch_devs;
-    struct wl_list tablet_devs;
-    struct wl_list tablet_pad_devs;
-    struct wl_list touch_devs;
+    struct cwc_input_method *input_method;
+    struct cwc_text_input *focused_text_input;
+    struct wlr_input_method_keyboard_grab_v2 *kbd_grab;
+
+    struct wl_list switch_devs;     // struct cwc_switch.link
+    struct wl_list tablet_devs;     // struct cwc_tablet.link
+    struct wl_list tablet_pad_devs; // struct cwc_tablet_pad.link
+    struct wl_list touch_devs;      // struct cwc_touch.link
+    struct wl_list text_inputs;     // struct cwc_text_input.link
 
     struct wl_listener request_set_cursor_l;
     struct wl_listener pointer_focus_change_l;
@@ -34,6 +39,8 @@ struct cwc_seat {
     struct wl_listener request_start_drag_l;
     struct wl_listener start_drag_l;
     struct wl_listener destroy_l;
+
+    struct wl_listener kbd_grab_destroy_l;
 };
 
 struct cwc_drag {

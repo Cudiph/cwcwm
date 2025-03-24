@@ -22,6 +22,9 @@ extern void cleanup_pointer(struct cwc_input_manager *input_mgr);
 extern void setup_keyboard(struct cwc_input_manager *input_mgr);
 extern void cleanup_keyboard(struct cwc_input_manager *input_mgr);
 
+extern void setup_text_input(struct cwc_server *s);
+extern void cleanup_text_input(struct cwc_server *s);
+
 void setup_seat(struct cwc_input_manager *input_mgr);
 void cleanup_seat(struct cwc_input_manager *input_mgr);
 

@@ -20,7 +20,8 @@ struct cwc_server {
     struct wlr_export_dmabuf_manager_v1 *export_dmabuf_manager;
     struct wlr_screencopy_manager_v1 *screencopy_manager;
     struct wlr_ext_image_copy_capture_manager_v1 *copy_capture_manager;
-    struct wlr_data_control_manager_v1 *data_control_manager;
+    struct wlr_data_control_manager_v1 *wlr_data_control_manager;
+    struct wlr_ext_data_control_manager_v1 *ext_data_control_manager;
     struct wlr_gamma_control_manager_v1 *gamma_control_manager;
     struct wlr_xdg_output_manager_v1 *xdg_output_manager;
 
@@ -78,6 +79,12 @@ struct cwc_server {
     // inputs
     struct cwc_input_manager *input;
     struct cwc_seat *seat;
+
+    struct wlr_input_method_manager_v2 *input_method_manager;
+    struct wl_listener new_input_method_l;
+
+    struct wlr_text_input_manager_v3 *text_input_manager;
+    struct wl_listener new_text_input_l;
 
     // ipc
     int socket_fd;

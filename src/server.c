@@ -32,12 +32,14 @@
 #include <wlr/types/wlr_data_device.h>
 #include <wlr/types/wlr_drm.h>
 #include <wlr/types/wlr_export_dmabuf_v1.h>
+#include <wlr/types/wlr_ext_data_control_v1.h>
 #include <wlr/types/wlr_ext_foreign_toplevel_list_v1.h>
 #include <wlr/types/wlr_ext_image_capture_source_v1.h>
 #include <wlr/types/wlr_ext_image_copy_capture_v1.h>
 #include <wlr/types/wlr_foreign_toplevel_management_v1.h>
 #include <wlr/types/wlr_fractional_scale_v1.h>
 #include <wlr/types/wlr_gamma_control_v1.h>
+#include <wlr/types/wlr_input_method_v2.h>
 #include <wlr/types/wlr_keyboard_shortcuts_inhibit_v1.h>
 #include <wlr/types/wlr_linux_dmabuf_v1.h>
 #include <wlr/types/wlr_linux_drm_syncobj_v1.h>
@@ -49,6 +51,7 @@
 #include <wlr/types/wlr_security_context_v1.h>
 #include <wlr/types/wlr_single_pixel_buffer_v1.h>
 #include <wlr/types/wlr_subcompositor.h>
+#include <wlr/types/wlr_text_input_v3.h>
 #include <wlr/types/wlr_transient_seat_v1.h>
 #include <wlr/types/wlr_viewporter.h>
 #include <wlr/types/wlr_virtual_keyboard_v1.h>
@@ -66,7 +69,6 @@
 #include "cwc/desktop/output.h"
 #include "cwc/desktop/session_lock.h"
 #include "cwc/desktop/toplevel.h"
-#include "cwc/desktop/transaction.h"
 #include "cwc/input/cursor.h"
 #include "cwc/input/keyboard.h"
 #include "cwc/input/manager.h"
@@ -85,10 +87,11 @@ static bool is_privileged(const struct wl_global *global)
 
     return global == server.output_manager->global
            || global == server.output_power_manager->global
-           // || global == server.input_method->global
+           || global == server.input_method_manager->global
            || global == server.foreign_toplevel_list->global
            || global == server.foreign_toplevel_manager->global
-           || global == server.data_control_manager->global
+           || global == server.wlr_data_control_manager->global
+           || global == server.ext_data_control_manager->global
            || global == server.screencopy_manager->global
            || global == server.copy_capture_manager->global
            || global == server.export_dmabuf_manager->global
@@ -220,7 +223,9 @@ int server_init(struct cwc_server *s, char *config_path, char *library_path)
     s->copy_capture_manager =
         wlr_ext_image_copy_capture_manager_v1_create(dpy, 1);
     wlr_ext_output_image_capture_source_manager_v1_create(dpy, 1);
-    s->data_control_manager = wlr_data_control_manager_v1_create(dpy);
+    s->wlr_data_control_manager = wlr_data_control_manager_v1_create(dpy);
+    s->ext_data_control_manager =
+        wlr_ext_data_control_manager_v1_create(dpy, 1);
 
     s->gamma_control_manager = wlr_gamma_control_manager_v1_create(dpy);
     wlr_scene_set_gamma_control_manager_v1(s->scene, s->gamma_control_manager);
@@ -267,6 +272,7 @@ int server_init(struct cwc_server *s, char *config_path, char *library_path)
     setup_pointer(s->input);
     setup_keyboard(s->input);
     setup_seat(s->input);
+    setup_text_input(s);
 
     setup_ipc(s);
 
@@ -294,9 +300,12 @@ void server_fini(struct cwc_server *s)
     cwc_signal_emit_c("cwc::shutdown", NULL);
 
     cleanup_ipc(s);
+
+    cleanup_text_input(s);
     cleanup_seat(s->input);
     cleanup_keyboard(s->input);
     cleanup_pointer(s->input);
+
     cleanup_output(s);
     cleanup_xdg_shell(s);
     cleanup_decoration_manager(s);
