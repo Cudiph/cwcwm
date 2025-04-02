@@ -143,13 +143,16 @@ static void process_key_event(struct cwc_seat *seat,
         break;
     }
 
-    struct wlr_input_method_keyboard_grab_v2 *kbd_grab =
-        keyboard_get_im_grab(seat, kbd);
-    if (!handled && kbd_grab) {
-        wlr_input_method_keyboard_grab_v2_set_keyboard(kbd_grab, kbd);
-        wlr_input_method_keyboard_grab_v2_send_key(
-            kbd_grab, event->time_msec, event->keycode, event->state);
-        handled = true;
+    if (!handled) {
+        struct wlr_input_method_keyboard_grab_v2 *kbd_grab =
+            keyboard_get_im_grab(seat, kbd);
+
+        if (kbd_grab) {
+            wlr_input_method_keyboard_grab_v2_set_keyboard(kbd_grab, kbd);
+            wlr_input_method_keyboard_grab_v2_send_key(
+                kbd_grab, event->time_msec, event->keycode, event->state);
+            handled = true;
+        }
     }
 
     if (!handled) {

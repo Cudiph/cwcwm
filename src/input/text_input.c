@@ -23,8 +23,11 @@
 #include <wlr/types/wlr_input_method_v2.h>
 #include <wlr/types/wlr_text_input_v3.h>
 
+#include "cwc/desktop/output.h"
+#include "cwc/desktop/toplevel.h"
 #include "cwc/input/seat.h"
 #include "cwc/input/text_input.h"
+#include "cwc/layout/container.h"
 #include "cwc/server.h"
 #include "cwc/util.h"
 
@@ -164,11 +167,80 @@ static void on_input_method_commit(struct wl_listener *listener, void *data)
     wlr_text_input_v3_send_done(focused->wlr);
 }
 
+void constrain_popup(struct cwc_im_popup *popup)
+{
+    struct cwc_seat *seat        = popup->im->wlr->seat->data;
+    struct wlr_text_input_v3 *ti = seat->focused_text_input->wlr;
+    struct wlr_box rect          = ti->pending.cursor_rectangle;
+
+    struct cwc_toplevel *toplevel =
+        cwc_toplevel_try_from_wlr_surface(ti->focused_surface);
+
+    // TODO: handle for surface other than toplevel
+    if (!toplevel)
+        return;
+
+    struct wlr_box cont_box = cwc_container_get_box(toplevel->container);
+    struct wlr_box o_box    = toplevel->container->output->output_layout_box;
+    int popup_w             = popup->popup->surface->current.width;
+    int popup_h             = popup->popup->surface->current.height;
+
+    int final_x = cont_box.x + rect.x;
+    int final_y = cont_box.y + rect.y + rect.height;
+
+    // constrain if it overflow on right side
+    int popup_end_x  = final_x + popup_w;
+    int output_end_x = o_box.x + o_box.width;
+    if (popup_end_x > output_end_x)
+        final_x -= popup_end_x - output_end_x;
+
+    // constrain if it overflow on the bottom
+    int popup_end_y  = final_y + popup_h;
+    int output_end_y = o_box.y + o_box.height;
+    if (popup_end_y > output_end_y)
+        final_y -= rect.height + popup_h;
+
+    wlr_scene_node_set_position(&popup->tree->node, final_x, final_y);
+}
+
+static void on_popup_commit(struct wl_listener *listener, void *data)
+{
+    struct cwc_im_popup *popup = wl_container_of(listener, popup, commit_l);
+    constrain_popup(popup);
+}
+
+static void on_popup_destroy(struct wl_listener *listener, void *data)
+{
+    struct cwc_im_popup *popup = wl_container_of(listener, popup, destroy_l);
+
+    wlr_scene_node_destroy(&popup->tree->node);
+
+    wl_list_remove(&popup->commit_l.link);
+    wl_list_remove(&popup->destroy_l.link);
+
+    free(popup);
+}
+
 static void on_input_method_new_popup(struct wl_listener *listener, void *data)
 {
     struct cwc_input_method *im = wl_container_of(listener, im, new_popup_l);
+    struct wlr_input_popup_surface_v2 *popup = data;
 
-    // TODO: handle popup
+    struct cwc_im_popup *p = calloc(1, sizeof(*p));
+    if (!p)
+        return;
+
+    p->im       = im;
+    p->popup    = popup;
+    popup->data = p;
+
+    p->tree = wlr_scene_tree_create(server.root.overlay);
+    wlr_scene_subsurface_tree_create(p->tree, popup->surface);
+
+    p->destroy_l.notify = on_popup_destroy;
+    p->commit_l.notify  = on_popup_commit;
+    wl_signal_add(&popup->events.destroy, &p->destroy_l);
+    wl_signal_add(&popup->surface->events.commit, &p->commit_l);
 }
 
 static void on_kbd_grab_destroy(struct wl_listener *listener, void *data)
@@ -278,17 +350,20 @@ void text_input_try_focus_surface(struct cwc_seat *seat,
     struct cwc_text_input *text_input;
     wl_list_for_each(text_input, &seat->text_inputs, link)
     {
-        if (surface
-            && wl_resource_get_client(text_input->wlr->resource)
-                   == wl_resource_get_client(surface->resource)) {
-            wlr_text_input_v3_send_enter(text_input->wlr, surface);
-            seat->focused_text_input = text_input;
-        } else if (text_input->wlr->focused_surface) {
+        if (text_input->wlr->focused_surface) {
             if (seat->input_method) {
                 wlr_input_method_v2_send_deactivate(seat->input_method->wlr);
                 send_im_state(seat->input_method, text_input);
             }
             wlr_text_input_v3_send_leave(text_input->wlr);
+        }
+
+        if (surface
+            && wl_resource_get_client(text_input->wlr->resource)
+                   == wl_resource_get_client(surface->resource)) {
+
+            wlr_text_input_v3_send_enter(text_input->wlr, surface);
+            seat->focused_text_input = text_input;
         }
     }
 }

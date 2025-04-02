@@ -25,6 +25,15 @@ struct cwc_input_method {
     struct wl_listener destroy_l;
 };
 
+struct cwc_im_popup {
+    struct cwc_input_method *im;
+    struct wlr_input_popup_surface_v2 *popup;
+    struct wlr_scene_tree *tree;
+
+    struct wl_listener commit_l;
+    struct wl_listener destroy_l;
+};
+
 void text_input_try_focus_surface(struct cwc_seat *seat,
                                   struct wlr_surface *surface);
 
