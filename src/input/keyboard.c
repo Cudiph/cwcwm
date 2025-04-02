@@ -138,6 +138,7 @@ static void process_key_event(struct cwc_seat *seat,
         // is a case when you hold down a key and hitting keybind while still
         // holding it, the client still assume that key is pressed because
         // client doesn't get notified when the key is released
+        // TODO: stupid hack #1
         if (!server.session_lock->locked)
             keybind_kbd_execute(modifiers, keysym, false);
         break;
@@ -152,6 +153,11 @@ static void process_key_event(struct cwc_seat *seat,
             wlr_input_method_keyboard_grab_v2_send_key(
                 kbd_grab, event->time_msec, event->keycode, event->state);
             handled = true;
+
+            // TODO: stupid hack #2
+            if (event->state == WL_KEYBOARD_KEY_STATE_RELEASED)
+                wlr_seat_keyboard_notify_key(wlr_seat, event->time_msec,
+                                             event->keycode, event->state);
         }
     }
 
