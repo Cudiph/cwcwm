@@ -169,7 +169,10 @@ static void on_input_method_commit(struct wl_listener *listener, void *data)
 
 void constrain_popup(struct cwc_im_popup *popup)
 {
-    struct cwc_seat *seat        = popup->im->wlr->seat->data;
+    struct cwc_seat *seat = popup->im->wlr->seat->data;
+    if (!seat->focused_text_input)
+        return;
+
     struct wlr_text_input_v3 *ti = seat->focused_text_input->wlr;
     struct wlr_box rect          = ti->pending.cursor_rectangle;
 
