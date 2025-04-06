@@ -1045,11 +1045,10 @@ static int luaC_client_set_border_color(lua_State *L)
     return 1;
 }
 
-#define CLIENT_METHOD(name)        {#name, luaC_client_##name}
-#define CLIENT_REG_READ_ONLY(name) {"get_" #name, luaC_client_get_##name}
-#define CLIENT_REG_SETTER(name)    {"set_" #name, luaC_client_set_##name}
-#define CLIENT_REG_PROPERTY(name) \
-    CLIENT_REG_READ_ONLY(name), CLIENT_REG_SETTER(name)
+#define REG_METHOD(name)    {#name, luaC_client_##name}
+#define REG_READ_ONLY(name) {"get_" #name, luaC_client_get_##name}
+#define REG_SETTER(name)    {"set_" #name, luaC_client_set_##name}
+#define REG_PROPERTY(name)  REG_READ_ONLY(name), REG_SETTER(name)
 
 void luaC_client_setup(lua_State *L)
 {
@@ -1060,58 +1059,58 @@ void luaC_client_setup(lua_State *L)
     };
 
     luaL_Reg client_methods[] = {
-        CLIENT_METHOD(move),
-        CLIENT_METHOD(move_to),
-        CLIENT_METHOD(resize),
-        CLIENT_METHOD(resize_to),
-        CLIENT_METHOD(close),
-        CLIENT_METHOD(kill),
-        CLIENT_METHOD(raise),
-        CLIENT_METHOD(lower),
-        CLIENT_METHOD(focus),
-        CLIENT_METHOD(jump_to),
-        CLIENT_METHOD(swap),
-        CLIENT_METHOD(center),
+        REG_METHOD(move),
+        REG_METHOD(move_to),
+        REG_METHOD(resize),
+        REG_METHOD(resize_to),
+        REG_METHOD(close),
+        REG_METHOD(kill),
+        REG_METHOD(raise),
+        REG_METHOD(lower),
+        REG_METHOD(focus),
+        REG_METHOD(jump_to),
+        REG_METHOD(swap),
+        REG_METHOD(center),
 
-        CLIENT_METHOD(toggle_split),
-        CLIENT_METHOD(toggle_tag),
+        REG_METHOD(toggle_split),
+        REG_METHOD(toggle_tag),
 
-        CLIENT_METHOD(move_to_screen),
+        REG_METHOD(move_to_screen),
         {"move_to_tag", luaC_client_set_workspace},
-        CLIENT_METHOD(get_nearest),
-        CLIENT_METHOD(set_border_color),
+        REG_METHOD(get_nearest),
+        REG_METHOD(set_border_color),
 
         // read only properties
-        CLIENT_REG_READ_ONLY(pid),
-        CLIENT_REG_READ_ONLY(title),
-        CLIENT_REG_READ_ONLY(appid),
-        CLIENT_REG_READ_ONLY(screen),
-        CLIENT_REG_READ_ONLY(parent),
-        CLIENT_REG_READ_ONLY(mapped),
-        CLIENT_REG_READ_ONLY(visible),
-        CLIENT_REG_READ_ONLY(x11),
-        CLIENT_REG_READ_ONLY(unmanaged),
-        CLIENT_REG_READ_ONLY(container),
+        REG_READ_ONLY(pid),
+        REG_READ_ONLY(title),
+        REG_READ_ONLY(appid),
+        REG_READ_ONLY(screen),
+        REG_READ_ONLY(parent),
+        REG_READ_ONLY(mapped),
+        REG_READ_ONLY(visible),
+        REG_READ_ONLY(x11),
+        REG_READ_ONLY(unmanaged),
+        REG_READ_ONLY(container),
 
         // properties
-        CLIENT_REG_PROPERTY(geometry),
-        CLIENT_REG_PROPERTY(tag),
-        CLIENT_REG_PROPERTY(workspace),
-        CLIENT_REG_PROPERTY(fullscreen),
-        CLIENT_REG_PROPERTY(maximized),
-        CLIENT_REG_PROPERTY(floating),
-        CLIENT_REG_PROPERTY(minimized),
-        CLIENT_REG_PROPERTY(sticky),
-        CLIENT_REG_PROPERTY(ontop),
-        CLIENT_REG_PROPERTY(above),
-        CLIENT_REG_PROPERTY(below),
-        CLIENT_REG_PROPERTY(opacity),
-        CLIENT_REG_PROPERTY(allow_tearing),
-        CLIENT_REG_PROPERTY(urgent),
+        REG_PROPERTY(geometry),
+        REG_PROPERTY(tag),
+        REG_PROPERTY(workspace),
+        REG_PROPERTY(fullscreen),
+        REG_PROPERTY(maximized),
+        REG_PROPERTY(floating),
+        REG_PROPERTY(minimized),
+        REG_PROPERTY(sticky),
+        REG_PROPERTY(ontop),
+        REG_PROPERTY(above),
+        REG_PROPERTY(below),
+        REG_PROPERTY(opacity),
+        REG_PROPERTY(allow_tearing),
+        REG_PROPERTY(urgent),
 
-        CLIENT_REG_PROPERTY(border_enabled),
-        CLIENT_REG_PROPERTY(border_rotation),
-        CLIENT_REG_PROPERTY(border_width),
+        REG_PROPERTY(border_enabled),
+        REG_PROPERTY(border_rotation),
+        REG_PROPERTY(border_width),
 
         {NULL,          NULL                     },
     };

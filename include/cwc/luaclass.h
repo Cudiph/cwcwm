@@ -112,5 +112,6 @@ LUAC_CLASS_CREATE(cwc_container, container)
 LUAC_CLASS_CREATE(cwc_output, screen)
 LUAC_CLASS_CREATE(cwc_tag_info, tag)
 LUAC_CLASS_CREATE(cwc_libinput_device, input)
+LUAC_CLASS_CREATE(cwc_layer_surface, layer_shell)
 
 #endif // !_CWC_LUACLASS_H

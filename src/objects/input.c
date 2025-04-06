@@ -326,10 +326,9 @@ LIBINPUT_DEVICE_CREATE_PROPERTY(scroll_method, integer, int, scroll, _method);
  */
 LIBINPUT_DEVICE_CREATE_PROPERTY(dwt, boolean, int, dwt, _enabled);
 
-#define INPUT_REG_READ_ONLY(name) {"get_" #name, luaC_input_get_##name}
-#define INPUT_REG_SETTER(name)    {"set_" #name, luaC_input_set_##name}
-#define INPUT_REG_PROPERTY(name) \
-    INPUT_REG_READ_ONLY(name), INPUT_REG_SETTER(name)
+#define REG_READ_ONLY(name) {"get_" #name, luaC_input_get_##name}
+#define REG_SETTER(name)    {"set_" #name, luaC_input_set_##name}
+#define REG_PROPERTY(name)  REG_READ_ONLY(name), REG_SETTER(name)
 
 void luaC_input_setup(lua_State *L)
 {
@@ -342,32 +341,32 @@ void luaC_input_setup(lua_State *L)
     luaL_Reg input_methods[] = {
 
         // readonly prop
-        INPUT_REG_READ_ONLY(type),
-        INPUT_REG_READ_ONLY(name),
-        INPUT_REG_READ_ONLY(sysname),
-        INPUT_REG_READ_ONLY(output_name),
-        INPUT_REG_READ_ONLY(id_vendor),
-        INPUT_REG_READ_ONLY(id_bustype),
-        INPUT_REG_READ_ONLY(id_product),
+        REG_READ_ONLY(type),
+        REG_READ_ONLY(name),
+        REG_READ_ONLY(sysname),
+        REG_READ_ONLY(output_name),
+        REG_READ_ONLY(id_vendor),
+        REG_READ_ONLY(id_bustype),
+        REG_READ_ONLY(id_product),
 
         // apply to more than one device type
-        INPUT_REG_PROPERTY(send_events_mode),
-        INPUT_REG_PROPERTY(left_handed),
+        REG_PROPERTY(send_events_mode),
+        REG_PROPERTY(left_handed),
 
         // pointer devices
-        INPUT_REG_PROPERTY(sensitivity),
-        INPUT_REG_PROPERTY(accel_profile),
-        INPUT_REG_PROPERTY(natural_scroll),
-        INPUT_REG_PROPERTY(middle_emulation),
-        INPUT_REG_PROPERTY(rotation_angle),
+        REG_PROPERTY(sensitivity),
+        REG_PROPERTY(accel_profile),
+        REG_PROPERTY(natural_scroll),
+        REG_PROPERTY(middle_emulation),
+        REG_PROPERTY(rotation_angle),
 
         // touchpad
-        INPUT_REG_PROPERTY(tap),
-        INPUT_REG_PROPERTY(tap_drag),
-        INPUT_REG_PROPERTY(tap_drag_lock),
-        INPUT_REG_PROPERTY(click_method),
-        INPUT_REG_PROPERTY(scroll_method),
-        INPUT_REG_PROPERTY(dwt),
+        REG_PROPERTY(tap),
+        REG_PROPERTY(tap_drag),
+        REG_PROPERTY(tap_drag_lock),
+        REG_PROPERTY(click_method),
+        REG_PROPERTY(scroll_method),
+        REG_PROPERTY(dwt),
 
         {NULL, NULL},
     };

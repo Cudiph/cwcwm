@@ -41,6 +41,7 @@
 #include <wlr/backend/x11.h>
 
 #include "cwc/config.h"
+#include "cwc/desktop/layer_shell.h"
 #include "cwc/desktop/output.h"
 #include "cwc/desktop/toplevel.h"
 #include "cwc/input/cursor.h"
@@ -103,6 +104,13 @@ static void reregister_lua_object()
     {
         luaC_object_input_register(L, input_dev);
         cwc_object_emit_signal_simple("input::new", L, input_dev);
+    }
+
+    struct cwc_layer_surface *lsurf;
+    wl_list_for_each(lsurf, &server.layer_shells, link)
+    {
+        luaC_object_layer_shell_register(L, lsurf);
+        cwc_object_emit_signal_simple("layer_shell::new", L, lsurf);
     }
 }
 
@@ -511,6 +519,9 @@ int luaC_init()
 
     /* cwc.input */
     luaC_input_setup(L);
+
+    /* cwc.layer_shell */
+    luaC_layer_shell_setup(L);
 
     char *luarc_default_location = get_luarc_path();
     if (config_path && access(config_path, R_OK) == 0) {

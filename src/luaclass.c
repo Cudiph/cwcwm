@@ -19,11 +19,12 @@
 #include <lauxlib.h>
 #include <lua.h>
 
-const char *const client_classname    = "cwc_client";
-const char *const container_classname = "cwc_container";
-const char *const screen_classname    = "cwc_screen";
-const char *const tag_classname       = "cwc_tag";
-const char *const input_classname     = "cwc_input";
+const char *const client_classname      = "cwc_client";
+const char *const container_classname   = "cwc_container";
+const char *const screen_classname      = "cwc_screen";
+const char *const tag_classname         = "cwc_tag";
+const char *const input_classname       = "cwc_input";
+const char *const layer_shell_classname = "cwc_layer_shell";
 
 /* equivalent lua code:
  * function(t, k)

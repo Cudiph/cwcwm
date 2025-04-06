@@ -293,9 +293,9 @@ static int luaC_tag_strategy_idx(lua_State *L)
     return 0;
 }
 
-#define TAG_REG_READ_ONLY(name) {"get_" #name, luaC_tag_get_##name}
-#define TAG_REG_SETTER(name)    {"set_" #name, luaC_tag_set_##name}
-#define TAG_REG_PROPERTY(name)  TAG_REG_READ_ONLY(name), TAG_REG_SETTER(name)
+#define REG_READ_ONLY(name) {"get_" #name, luaC_tag_get_##name}
+#define REG_SETTER(name)    {"set_" #name, luaC_tag_set_##name}
+#define REG_PROPERTY(name)  REG_READ_ONLY(name), REG_SETTER(name)
 
 void luaC_tag_setup(lua_State *L)
 {
@@ -315,16 +315,16 @@ void luaC_tag_setup(lua_State *L)
         {"set_useless_gaps", luaC_tag_set_gap     },
 
         // ro prop
-        TAG_REG_READ_ONLY(index),
-        TAG_REG_READ_ONLY(screen),
+        REG_READ_ONLY(index),
+        REG_READ_ONLY(screen),
 
         // properties
-        TAG_REG_PROPERTY(selected),
-        TAG_REG_PROPERTY(gap),
-        TAG_REG_PROPERTY(mwfact),
-        TAG_REG_PROPERTY(layout_mode),
-        TAG_REG_PROPERTY(master_count),
-        TAG_REG_PROPERTY(column_count),
+        REG_PROPERTY(selected),
+        REG_PROPERTY(gap),
+        REG_PROPERTY(mwfact),
+        REG_PROPERTY(layout_mode),
+        REG_PROPERTY(master_count),
+        REG_PROPERTY(column_count),
 
         {NULL,               NULL                 },
     };

@@ -37,6 +37,7 @@ file                                          = {
     "../src/objects/client.c",
     "../src/objects/container.c",
     "../src/objects/input.c",
+    "../src/objects/layer_shell.c",
     "../src/objects/screen.c",
     "../src/objects/tag.c",
 
@@ -2232,6 +2233,7 @@ local coreclassmap = {
     ["cwc.screen"] = "cwc.screen<span class='listplusign'> + cwc_screen</span>",
     ["cwc.container"] = "cwc.container<span class='listplusign'> + cwc_container</span>",
     ["cwc.input"] = "cwc.input<span class='listplusign'> + cwc_input</span>",
+    ["cwc.layer_shell"] = "cwc.layer_shell<span class='listplusign'> + cwc_layer_shell</span>",
 }
 
 -- Add the full module name in front.

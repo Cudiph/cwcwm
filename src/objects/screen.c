@@ -794,11 +794,10 @@ static int luaC_screen_focus(lua_State *L)
     return 0;
 }
 
-#define SCREEN_METHOD(name)        {#name, luaC_screen_##name}
-#define SCREEN_REG_READ_ONLY(name) {"get_" #name, luaC_screen_get_##name}
-#define SCREEN_REG_SETTER(name)    {"set_" #name, luaC_screen_set_##name}
-#define SCREEN_REG_PROPERTY(name) \
-    SCREEN_REG_READ_ONLY(name), SCREEN_REG_SETTER(name)
+#define REG_METHOD(name)    {#name, luaC_screen_##name}
+#define REG_READ_ONLY(name) {"get_" #name, luaC_screen_get_##name}
+#define REG_SETTER(name)    {"set_" #name, luaC_screen_set_##name}
+#define REG_PROPERTY(name)  REG_READ_ONLY(name), REG_SETTER(name)
 
 void luaC_screen_setup(lua_State *L)
 {
@@ -809,48 +808,48 @@ void luaC_screen_setup(lua_State *L)
     };
 
     luaL_Reg screen_methods[] = {
-        SCREEN_METHOD(focus),
-        SCREEN_METHOD(get_tag),
-        SCREEN_METHOD(get_nearest),
-        SCREEN_METHOD(set_position),
+        REG_METHOD(focus),
+        REG_METHOD(get_tag),
+        REG_METHOD(get_nearest),
+        REG_METHOD(set_position),
 
         // screen state
-        SCREEN_METHOD(set_mode),
-        SCREEN_METHOD(set_adaptive_sync),
-        SCREEN_METHOD(set_enabled),
-        SCREEN_METHOD(set_scale),
-        SCREEN_METHOD(set_transform),
+        REG_METHOD(set_mode),
+        REG_METHOD(set_adaptive_sync),
+        REG_METHOD(set_enabled),
+        REG_METHOD(set_scale),
+        REG_METHOD(set_transform),
 
         // ro prop but have optional arguments
-        SCREEN_METHOD(get_containers),
-        SCREEN_METHOD(get_clients),
-        SCREEN_METHOD(get_focus_stack),
-        SCREEN_METHOD(get_minimized),
+        REG_METHOD(get_containers),
+        REG_METHOD(get_clients),
+        REG_METHOD(get_focus_stack),
+        REG_METHOD(get_minimized),
 
         // readonly prop
-        SCREEN_REG_READ_ONLY(geometry),
-        SCREEN_REG_READ_ONLY(name),
-        SCREEN_REG_READ_ONLY(description),
-        SCREEN_REG_READ_ONLY(make),
-        SCREEN_REG_READ_ONLY(model),
-        SCREEN_REG_READ_ONLY(serial),
-        SCREEN_REG_READ_ONLY(enabled),
-        SCREEN_REG_READ_ONLY(non_desktop),
-        SCREEN_REG_READ_ONLY(workarea),
-        SCREEN_REG_READ_ONLY(width),
-        SCREEN_REG_READ_ONLY(height),
-        SCREEN_REG_READ_ONLY(refresh),
-        SCREEN_REG_READ_ONLY(phys_width),
-        SCREEN_REG_READ_ONLY(phys_height),
-        SCREEN_REG_READ_ONLY(scale),
-        SCREEN_REG_READ_ONLY(restored),
-        SCREEN_REG_READ_ONLY(selected_tag),
+        REG_READ_ONLY(geometry),
+        REG_READ_ONLY(name),
+        REG_READ_ONLY(description),
+        REG_READ_ONLY(make),
+        REG_READ_ONLY(model),
+        REG_READ_ONLY(serial),
+        REG_READ_ONLY(enabled),
+        REG_READ_ONLY(non_desktop),
+        REG_READ_ONLY(workarea),
+        REG_READ_ONLY(width),
+        REG_READ_ONLY(height),
+        REG_READ_ONLY(refresh),
+        REG_READ_ONLY(phys_width),
+        REG_READ_ONLY(phys_height),
+        REG_READ_ONLY(scale),
+        REG_READ_ONLY(restored),
+        REG_READ_ONLY(selected_tag),
 
         // rw properties
-        SCREEN_REG_PROPERTY(allow_tearing),
-        SCREEN_REG_PROPERTY(active_tag),
-        SCREEN_REG_PROPERTY(active_workspace),
-        SCREEN_REG_PROPERTY(max_general_workspace),
+        REG_PROPERTY(allow_tearing),
+        REG_PROPERTY(active_tag),
+        REG_PROPERTY(active_workspace),
+        REG_PROPERTY(max_general_workspace),
 
         {NULL, NULL},
     };

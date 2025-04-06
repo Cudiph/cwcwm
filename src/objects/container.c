@@ -306,10 +306,9 @@ static int luaC_container_reset_mark(lua_State *L)
     return 0;
 }
 
-#define CONTAINER_REG_READ_ONLY(name) {"get_" #name, luaC_container_get_##name}
-#define CONTAINER_REG_SETTER(name)    {"set_" #name, luaC_container_set_##name}
-#define CONTAINER_REG_PROPERTY(name) \
-    CONTAINER_REG_READ_ONLY(name), CONTAINER_REG_SETTER(name)
+#define REG_READ_ONLY(name) {"get_" #name, luaC_container_get_##name}
+#define REG_SETTER(name)    {"set_" #name, luaC_container_set_##name}
+#define REG_PROPERTY(name)  REG_READ_ONLY(name), REG_SETTER(name)
 
 void luaC_container_setup(lua_State *L)
 {
@@ -328,12 +327,12 @@ void luaC_container_setup(lua_State *L)
         {"get_client_stack", luaC_container_get_client_stack},
 
         // readonly
-        CONTAINER_REG_READ_ONLY(clients),
-        CONTAINER_REG_READ_ONLY(front),
+        REG_READ_ONLY(clients),
+        REG_READ_ONLY(front),
 
         // properties
-        CONTAINER_REG_PROPERTY(geometry),
-        CONTAINER_REG_PROPERTY(insert_mark),
+        REG_PROPERTY(geometry),
+        REG_PROPERTY(insert_mark),
 
         {NULL,               NULL                           },
     };

@@ -21,6 +21,7 @@
 #include <wayland-util.h>
 #include <wlr/types/wlr_layer_shell_v1.h>
 
+#include "cwc/config.h"
 #include "cwc/desktop/layer_shell.h"
 #include "cwc/desktop/output.h"
 #include "cwc/desktop/toplevel.h"
@@ -28,7 +29,10 @@
 #include "cwc/input/keyboard.h"
 #include "cwc/input/seat.h"
 #include "cwc/layout/master.h"
+#include "cwc/luaclass.h"
+#include "cwc/luaobject.h"
 #include "cwc/server.h"
+#include "cwc/signal.h"
 #include "cwc/util.h"
 #include "wlr-layer-shell-unstable-v1-protocol.h"
 
@@ -39,6 +43,10 @@ static void on_layer_surface_destroy(struct wl_listener *listener, void *data)
 
     cwc_log(CWC_DEBUG, "destroying layer surface at output %p: %p",
             lsurf->output, lsurf->wlr_layer_surface);
+
+    lua_State *L = g_config_get_lua_State();
+    cwc_object_emit_signal_simple("layer_shell::destroy", L, lsurf);
+    luaC_object_unregister(L, lsurf);
 
     wl_list_remove(&lsurf->link);
     wl_list_remove(&lsurf->map_l.link);
@@ -256,6 +264,10 @@ static void on_new_surface(struct wl_listener *listener, void *data)
 
     cwc_log(CWC_DEBUG, "created layer surface for output %p: %p",
             layer_surface->output, surf);
+
+    lua_State *L = g_config_get_lua_State();
+    luaC_object_layer_shell_register(L, surf);
+    cwc_object_emit_signal_simple("layer_shell::new", L, surf);
 }
 
 void setup_layer_shell(struct cwc_server *s)

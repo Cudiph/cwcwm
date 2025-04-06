@@ -41,6 +41,7 @@ srcs = [
   'objects/screen.c',
   'objects/tag.c',
   'objects/input.c',
+  'objects/layer_shell.c',
 
   # Stable upstream protocols
   protocols_server_header['xdg-shell'],

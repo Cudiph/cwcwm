@@ -1,9 +1,10 @@
 #ifndef _CWC_LAYER_SHELL_H
 #define _CWC_LAYER_SHELL_H
 
-#include "cwc/types.h"
 #include <wayland-server-core.h>
 #include <wlr/types/wlr_layer_shell_v1.h>
+
+#include "cwc/types.h"
 
 struct cwc_server;
 
