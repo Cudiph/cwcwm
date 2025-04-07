@@ -189,8 +189,6 @@ static void on_surface_map(struct wl_listener *listener, void *data)
     cwc_log(CWC_DEBUG, "mapping toplevel (%s): %p",
             cwc_toplevel_get_title(toplevel), toplevel);
 
-    _init_mapped_managed_toplevel(toplevel);
-
     if (server.insert_marked && !cwc_toplevel_is_unmanaged(toplevel)) {
         cwc_container_insert_toplevel(server.insert_marked, toplevel);
     } else {
@@ -198,6 +196,8 @@ static void on_surface_map(struct wl_listener *listener, void *data)
         cwc_container_init(server.focused_output, toplevel,
                            cwc_toplevel_is_unmanaged(toplevel) ? 0 : bw);
     }
+
+    _init_mapped_managed_toplevel(toplevel);
 
     cwc_object_emit_signal_simple("client::map", g_config_get_lua_State(),
                                   toplevel);

@@ -611,6 +611,11 @@ void cwc_container_init(struct cwc_output *output,
     decide_should_tiled(toplevel, cont);
 
 emit_signal:
+    // just to make sure the border is fit to the surface correctly,
+    // this fix xwayland always has empty room.
+    cwc_container_set_size(toplevel->container, toplevel->container->width,
+                           toplevel->container->height);
+
     lua_State *L = g_config_get_lua_State();
     luaC_object_container_register(L, cont);
     cwc_object_emit_signal_simple("container::new", L, cont);
