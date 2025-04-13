@@ -26,11 +26,13 @@
 #include <sys/un.h>
 #include <unistd.h>
 
+#include "client-asset.h"
 #include "cwc/ipc.h"
+#include "screen-asset.h"
 
 static char *help_txt =
     "Usage:\n"
-    "  cwctl [options]\n"
+    "  cwctl [options] [COMMAND]\n"
     "\n"
     "Options:\n"
     "  -h, --help       show this message\n"
@@ -38,9 +40,14 @@ static char *help_txt =
     "  -c, --command    evaluate lua expression without entering repl\n"
     "  -f, --file       evaluate lua script from file\n"
     "\n"
+    "Commands:\n"
+    "  client    Get all client information\n"
+    "  screen    Get all screen information\n"
+    "\n"
     "Example:\n"
     "  cwc -s /tmp/cwc.sock -c 'return cwc.client.focused().title'\n"
-    "  cwc -f ./show-all-client.lua";
+    "  cwc -f ./show-all-client.lua\n"
+    "  cwc screen";
 
 #define ARG    1
 #define NO_ARG 0
@@ -54,10 +61,13 @@ static struct option long_options[] = {
 static char *socket_path = NULL;
 static char *input       = NULL;
 static char *result      = NULL;
+static int client_fd     = 0;
 
 #define BUFFER_SIZE 1e6
-static void repl(int cfd, char *cmd)
+void repl(char *cmd)
 {
+    int cfd = client_fd;
+
     setvbuf(stdin, NULL, _IONBF, 0);
     setvbuf(stdout, NULL, _IONBF, 0);
     setvbuf(stderr, NULL, _IONBF, 0);
@@ -98,6 +108,30 @@ static void repl(int cfd, char *cmd)
     }
 }
 
+int object_command(int argc, char **argv)
+{
+    if (optind >= argc)
+        return 1;
+
+    char *subcmd = argv[optind];
+
+    if (strcmp(subcmd, "screen") == 0) {
+        repl((char *)_cwctl_script_screen_lua);
+    } else if (strcmp(subcmd, "client") == 0) {
+        repl((char *)_cwctl_script_client_lua);
+    } else {
+        fprintf(stderr,
+                "command %s not found, run 'cwc --help' to show all command\n",
+                subcmd);
+        return 1;
+    }
+
+    for (int index = optind; index < argc; index++)
+        printf("Non-option argument %s %d\n", argv[index], index);
+
+    return 0;
+}
+
 int main(int argc, char **argv)
 {
     socket_path = getenv("CWC_SOCK");
@@ -129,7 +163,7 @@ int main(int argc, char **argv)
         return -1;
     }
 
-    int client_fd = socket(AF_UNIX, SOCK_STREAM, 0);
+    client_fd = socket(AF_UNIX, SOCK_STREAM, 0);
     if (client_fd < 0) {
         perror("cannot create client socket");
         return -1;
@@ -146,6 +180,11 @@ int main(int argc, char **argv)
     input  = malloc(BUFFER_SIZE + 1);
     result = malloc(BUFFER_SIZE + 1);
 
+    int any_error = object_command(argc, argv);
+
+    if (!any_error)
+        goto cleanup;
+
     if (!input || !result) {
         errno = ENOMEM;
         goto error_cleanup;
@@ -161,7 +200,8 @@ int main(int argc, char **argv)
         cmd = input;
     }
 
-    repl(client_fd, cmd);
+    repl(cmd);
+cleanup:
     close(client_fd);
     return 0;
 
