@@ -193,8 +193,9 @@ static void resize_tile_start(struct cwc_toplevel **toplevels,
 {
     struct cwc_output *output = cursor->grabbed_toplevel->container->output;
     wlr_cursor_warp(cursor->wlr_cursor, NULL,
-                    output->usable_area.width * master_state->mwfact,
-                    cursor->wlr_cursor->y);
+                    output->output_layout_box.x
+                        + output->usable_area.width * master_state->mwfact,
+                    output->output_layout_box.y + cursor->wlr_cursor->y);
     cursor->grab_x = cursor->wlr_cursor->x;
     cursor->grab_y = cursor->wlr_cursor->y;
 

@@ -259,6 +259,9 @@ static int luaC_client_get(lua_State *L)
     int i = 1;
     wl_list_for_each(toplevel, &server.toplevels, link)
     {
+        if (!toplevel->container)
+            continue;
+
         if (skip_unmanaged && cwc_toplevel_is_unmanaged(toplevel))
             continue;
 
