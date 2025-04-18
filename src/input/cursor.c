@@ -45,6 +45,7 @@
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_virtual_pointer_v1.h>
 #include <wlr/types/wlr_xcursor_manager.h>
+#include <wlr/util/box.h>
 #include <wlr/util/edges.h>
 #include <wlr/util/region.h>
 #include <wlr/xwayland.h>
@@ -553,6 +554,45 @@ void start_interactive_resize(struct cwc_toplevel *toplevel, uint32_t edges)
     cursor->last_resize_time_msec = timespec_to_msec(&now);
 }
 
+static void end_interactive_move_floating(struct cwc_cursor *cursor)
+{
+    double cx = cursor->wlr_cursor->x;
+    double cy = cursor->wlr_cursor->y;
+
+    struct cwc_output *current_output =
+        cwc_output_at(server.output_layout, cx, cy);
+    if (!current_output)
+        return;
+
+    uint32_t snap_edges =
+        get_snap_edges(&current_output->output_layout_box, cx, cy);
+
+    if (!snap_edges)
+        return;
+
+    struct cwc_container *grabbed = cursor->grabbed_toplevel->container;
+
+    struct wlr_box new_box = current_output->usable_area;
+
+    if (snap_edges & WLR_EDGE_TOP) {
+        new_box.height /= 2;
+        cwc_container_set_box_global(grabbed, &new_box);
+    } else if (snap_edges & WLR_EDGE_BOTTOM) {
+        new_box.y += new_box.height / 2;
+        new_box.height /= 2;
+        cwc_container_set_box_global(grabbed, &new_box);
+    }
+
+    if (snap_edges & WLR_EDGE_LEFT) {
+        new_box.width /= 2;
+        cwc_container_set_box_global(grabbed, &new_box);
+    } else if (snap_edges & WLR_EDGE_RIGHT) {
+        new_box.x += new_box.width / 2;
+        new_box.width /= 2;
+        cwc_container_set_box_global(grabbed, &new_box);
+    }
+}
+
 static void end_interactive_resize_floating(struct cwc_cursor *cursor)
 {
     // apply pending change from schedule
@@ -626,6 +666,9 @@ void stop_interactive(struct cwc_cursor *cursor)
         return;
 
     switch (cursor->state) {
+    case CWC_CURSOR_STATE_MOVE:
+        end_interactive_move_floating(cursor);
+        break;
     case CWC_CURSOR_STATE_RESIZE:
         end_interactive_resize_floating(cursor);
         break;

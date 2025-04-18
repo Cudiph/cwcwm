@@ -21,6 +21,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <wlr/util/box.h>
+#include <wlr/util/edges.h>
 
 #include "cwc/util.h"
 
@@ -131,4 +132,29 @@ bool is_direction_match(enum wlr_direction dir, int x, int y)
     }
 
     return true;
+}
+
+uint32_t get_snap_edges(struct wlr_box *output_box, int cx, int cy)
+{
+    uint32_t edges              = 0;
+    int threshold               = 16;
+    int output_right_edge_diff  = output_box->x + output_box->width - cx;
+    int output_left_edge_diff   = cx - output_box->x;
+    int output_bottom_edge_diff = output_box->y + output_box->height - cy;
+    int output_top_edge_diff    = cy - output_box->y;
+
+    if (output_right_edge_diff >= 0 && output_right_edge_diff < threshold) {
+        edges |= WLR_EDGE_RIGHT;
+    } else if (output_left_edge_diff >= 0
+               && output_left_edge_diff < threshold) {
+        edges |= WLR_EDGE_LEFT;
+    }
+
+    if (output_bottom_edge_diff >= 0 && output_bottom_edge_diff < threshold) {
+        edges |= WLR_EDGE_BOTTOM;
+    } else if (output_top_edge_diff >= 0 && output_top_edge_diff < threshold) {
+        edges |= WLR_EDGE_TOP;
+    }
+
+    return edges;
 }
