@@ -573,6 +573,8 @@ static void end_interactive_move_floating(struct cwc_cursor *cursor)
     struct cwc_container *grabbed = cursor->grabbed_toplevel->container;
 
     struct wlr_box new_box = current_output->usable_area;
+    new_box.x += current_output->output_layout_box.x;
+    new_box.y += current_output->output_layout_box.y;
 
     if (snap_edges & WLR_EDGE_TOP) {
         new_box.height /= 2;
