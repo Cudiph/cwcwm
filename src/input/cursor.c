@@ -77,6 +77,73 @@ static void process_cursor_move(struct cwc_cursor *cursor)
     cwc_container_set_position_global(grabbed->container, new_x, new_y);
 }
 
+static struct wlr_box cwc_output_get_snap_geometry(struct cwc_output *output,
+                                                    uint32_t edges)
+{
+
+    struct wlr_box new_box = output->usable_area;
+    new_box.x += output->output_layout_box.x;
+    new_box.y += output->output_layout_box.y;
+
+    if (edges & WLR_EDGE_TOP) {
+        new_box.height /= 2;
+    } else if (edges & WLR_EDGE_BOTTOM) {
+        new_box.y += new_box.height / 2;
+        new_box.height /= 2;
+    }
+
+    if (edges & WLR_EDGE_LEFT) {
+        new_box.width /= 2;
+    } else if (edges & WLR_EDGE_RIGHT) {
+        new_box.x += new_box.width / 2;
+        new_box.width /= 2;
+    }
+
+    return new_box;
+}
+
+static void destroy_snap_overlay(struct cwc_cursor *cursor)
+{
+    if (cursor->snap_overlay) {
+        wlr_scene_node_destroy(&cursor->snap_overlay->node);
+        cursor->snap_overlay = NULL;
+    }
+}
+
+static void process_cursor_move_floating(struct cwc_cursor *cursor)
+{
+    struct cwc_toplevel *grabbed = cursor->grabbed_toplevel;
+    double cx                    = cursor->wlr_cursor->x;
+    double cy                    = cursor->wlr_cursor->y;
+    struct cwc_output *c_output  = cwc_output_at(server.output_layout, cx, cy);
+
+    double new_x = cx - cursor->grab_x;
+    double new_y = cy - cursor->grab_y;
+    cwc_container_set_position_global(grabbed->container, new_x, new_y);
+
+    uint32_t snap_edges = get_snap_edges(&c_output->output_layout_box, cx, cy);
+    if (!snap_edges) {
+        destroy_snap_overlay(cursor);
+        return;
+    }
+
+    struct wlr_box overlay_rect =
+        cwc_output_get_snap_geometry(c_output, snap_edges);
+
+    const float color[4] = {0.1, 0.2, 0.4, 0.1};
+    if (!cursor->snap_overlay) {
+        cursor->snap_overlay =
+            wlr_scene_rect_create(server.root.overlay, overlay_rect.width,
+                                  overlay_rect.height, color);
+    } else {
+        wlr_scene_rect_set_size(cursor->snap_overlay, overlay_rect.width,
+                                overlay_rect.height);
+    }
+
+    wlr_scene_node_set_position(&cursor->snap_overlay->node, overlay_rect.x,
+                                overlay_rect.y);
+}
+
 /* scheduling the resize will prevent the compositor flooding configure request.
  * While it is not a problem in wayland, it is an issue for xwayland windows in
  * my case it's chromium that has the issue.
@@ -204,6 +271,8 @@ void process_cursor_motion(struct cwc_cursor *cursor,
 
     switch (cursor->state) {
     case CWC_CURSOR_STATE_MOVE:
+        wlr_cursor_move(wlr_cursor, device, dx, dy);
+        return process_cursor_move_floating(cursor);
     case CWC_CURSOR_STATE_MOVE_MASTER:
     case CWC_CURSOR_STATE_MOVE_BSP:
         wlr_cursor_move(wlr_cursor, device, dx, dy);
@@ -559,6 +628,10 @@ static void end_interactive_move_floating(struct cwc_cursor *cursor)
     double cx = cursor->wlr_cursor->x;
     double cy = cursor->wlr_cursor->y;
 
+    if (cursor->snap_overlay) {
+        destroy_snap_overlay(cursor);
+    }
+
     struct cwc_output *current_output =
         cwc_output_at(server.output_layout, cx, cy);
     if (!current_output)
@@ -572,27 +645,10 @@ static void end_interactive_move_floating(struct cwc_cursor *cursor)
 
     struct cwc_container *grabbed = cursor->grabbed_toplevel->container;
 
-    struct wlr_box new_box = current_output->usable_area;
-    new_box.x += current_output->output_layout_box.x;
-    new_box.y += current_output->output_layout_box.y;
+    struct wlr_box new_box =
+        cwc_output_get_snap_geometry(current_output, snap_edges);
 
-    if (snap_edges & WLR_EDGE_TOP) {
-        new_box.height /= 2;
-        cwc_container_set_box_global(grabbed, &new_box);
-    } else if (snap_edges & WLR_EDGE_BOTTOM) {
-        new_box.y += new_box.height / 2;
-        new_box.height /= 2;
-        cwc_container_set_box_global(grabbed, &new_box);
-    }
-
-    if (snap_edges & WLR_EDGE_LEFT) {
-        new_box.width /= 2;
-        cwc_container_set_box_global(grabbed, &new_box);
-    } else if (snap_edges & WLR_EDGE_RIGHT) {
-        new_box.x += new_box.width / 2;
-        new_box.width /= 2;
-        cwc_container_set_box_global(grabbed, &new_box);
-    }
+    cwc_container_set_box_global_gap(grabbed, &new_box);
 }
 
 static void end_interactive_resize_floating(struct cwc_cursor *cursor)

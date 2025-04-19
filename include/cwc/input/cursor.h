@@ -51,6 +51,7 @@ struct cwc_cursor {
     };
     struct cwc_toplevel *grabbed_toplevel;
     const char *name_before_interactive;
+    struct wlr_scene_rect *snap_overlay;
 
     // resize scheduling
     uint64_t last_resize_time_msec;
