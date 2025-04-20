@@ -26,6 +26,7 @@ gears.protected_call(require, "keybind")
 
 -- pointer config
 cwc.pointer.set_cursor_size(20)
+cwc.pointer.set_inactive_timeout(5)
 
 -- keyboard config
 cwc.kbd.set_repeat_rate(30)

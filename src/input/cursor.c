@@ -78,7 +78,7 @@ static void process_cursor_move(struct cwc_cursor *cursor)
 }
 
 static struct wlr_box cwc_output_get_snap_geometry(struct cwc_output *output,
-                                                    uint32_t edges)
+                                                   uint32_t edges)
 {
 
     struct wlr_box new_box = output->usable_area;
@@ -256,6 +256,21 @@ static void process_cursor_resize_master(struct cwc_cursor *cursor)
     master_resize_update(output, cursor);
 }
 
+static void cwc_cursor_unhide(struct cwc_cursor *cursor)
+{
+    if (!cursor->hidden)
+        return;
+
+    if (cursor->name_before_hidden) {
+        cwc_cursor_set_image_by_name(cursor, cursor->name_before_hidden);
+    } else if (cursor->client_surface) {
+        cwc_cursor_set_surface(cursor, cursor->client_surface,
+                               cursor->hotspot_x, cursor->hotspot_y);
+    }
+
+    cursor->hidden = false;
+}
+
 void process_cursor_motion(struct cwc_cursor *cursor,
                            uint32_t time_msec,
                            struct wlr_input_device *device,
@@ -268,6 +283,11 @@ void process_cursor_motion(struct cwc_cursor *cursor,
     struct wlr_cursor *wlr_cursor = cursor->wlr_cursor;
     struct wlr_pointer_constraint_v1 *active_constraint =
         cursor->active_constraint;
+
+    cwc_cursor_unhide(cursor);
+    wl_event_source_timer_update(cursor->inactive_timer,
+                                 g_config.cursor_inactive_timeout_ms);
+    wlr_idle_notifier_v1_notify_activity(server.idle->idle_notifier, wlr_seat);
 
     switch (cursor->state) {
     case CWC_CURSOR_STATE_MOVE:
@@ -300,7 +320,6 @@ void process_cursor_motion(struct cwc_cursor *cursor,
         time_msec = timespec_to_msec(&now);
     }
 
-    wlr_idle_notifier_v1_notify_activity(server.idle->idle_notifier, wlr_seat);
     wlr_relative_pointer_manager_v1_send_relative_motion(
         server.input->relative_pointer_manager, wlr_seat,
         (uint64_t)time_msec * 1000, dx, dy, dx_unaccel, dy_unaccel);
@@ -346,6 +365,17 @@ void process_cursor_motion(struct cwc_cursor *cursor,
     cursor->dont_emit_signal = false;
 }
 
+static void on_client_side_cursor_destroy(struct wl_listener *listener,
+                                          void *data)
+{
+    struct cwc_cursor *cursor =
+        wl_container_of(listener, cursor, client_side_surface_destroy_l);
+
+    cursor->client_surface = NULL;
+    wl_list_remove(&cursor->client_side_surface_destroy_l.link);
+    wl_list_init(&cursor->client_side_surface_destroy_l.link);
+}
+
 /* client side cursor */
 void on_request_set_cursor(struct wl_listener *listener, void *data)
 {
@@ -357,9 +387,11 @@ void on_request_set_cursor(struct wl_listener *listener, void *data)
     struct wlr_seat_client *focused_client =
         cursor->seat->pointer_state.focused_client;
 
-    if (event->seat_client == focused_client)
-        cwc_cursor_set_surface(cursor, event->surface, event->hotspot_x,
-                               event->hotspot_y);
+    if (event->seat_client != focused_client)
+        return;
+
+    cwc_cursor_set_surface(cursor, event->surface, event->hotspot_x,
+                           event->hotspot_y);
 }
 
 static void _notify_mouse_signal(struct wlr_surface *old_surface,
@@ -964,6 +996,15 @@ static int animation_loop(void *data)
     return 1;
 }
 
+static int cursor_inactive_hide_cursor(void *data)
+{
+    struct cwc_cursor *cursor  = data;
+    cursor->name_before_hidden = cursor->current_name;
+    cursor->hidden             = true;
+    cwc_cursor_hide_cursor(cursor);
+    return 1;
+}
+
 static void hyprcursor_logger(enum eHyprcursorLogLevel level, char *message)
 {
     enum wlr_log_importance wlr_level = WLR_DEBUG;
@@ -1033,6 +1074,8 @@ struct cwc_cursor *cwc_cursor_create(struct wlr_seat *seat)
     // timer
     cursor->animation_timer =
         wl_event_loop_add_timer(server.wl_event_loop, animation_loop, cursor);
+    cursor->inactive_timer = wl_event_loop_add_timer(
+        server.wl_event_loop, cursor_inactive_hide_cursor, cursor);
 
     // event listeners
     cursor->cursor_motion_l.notify     = on_cursor_motion;
@@ -1073,6 +1116,10 @@ struct cwc_cursor *cwc_cursor_create(struct wlr_seat *seat)
 
     cursor->config_commit_l.notify = on_config_commit;
     wl_signal_add(&g_config.events.commit, &cursor->config_commit_l);
+
+    cursor->client_side_surface_destroy_l.notify =
+        on_client_side_cursor_destroy;
+    wl_list_init(&cursor->client_side_surface_destroy_l.link);
 
     wlr_cursor_attach_output_layout(cursor->wlr_cursor, server.output_layout);
     cwc_cursor_update_scale(cursor);
@@ -1173,7 +1220,8 @@ void cwc_cursor_set_image_by_name(struct cwc_cursor *cursor, const char *name)
     if (cursor->current_name != NULL && strcmp(cursor->current_name, name) == 0)
         return;
 
-    cursor->current_name = name;
+    cursor->current_name   = name;
+    cursor->client_surface = NULL;
 
     hyprcursor_buffer_fini(cursor);
 
@@ -1225,13 +1273,24 @@ void cwc_cursor_set_surface(struct cwc_cursor *cursor,
     if (cursor->state != CWC_CURSOR_STATE_NORMAL)
         return;
 
+    cursor->client_surface = surface;
+    cursor->hotspot_x      = hotspot_x;
+    cursor->hotspot_y      = hotspot_y;
+    wl_list_remove(&cursor->client_side_surface_destroy_l.link);
+    if (surface) {
+        wl_signal_add(&surface->events.destroy,
+                      &cursor->client_side_surface_destroy_l);
+    } else {
+        wl_list_init(&cursor->client_side_surface_destroy_l.link);
+    }
     cursor->current_name = NULL;
     wlr_cursor_set_surface(cursor->wlr_cursor, surface, hotspot_x, hotspot_y);
 }
 
 void cwc_cursor_hide_cursor(struct cwc_cursor *cursor)
 {
-    cwc_cursor_set_surface(cursor, NULL, 0, 0);
+    cursor->current_name = NULL;
+    wlr_cursor_unset_image(cursor->wlr_cursor);
 }
 
 void cwc_cursor_update_scale(struct cwc_cursor *cursor)
@@ -1564,21 +1623,36 @@ static int luaC_pointer_set_cursor_size(lua_State *L)
     return 0;
 }
 
+/** Set a timeout to automatically hide cursor, set timeout to 0 to disable.
+ *
+ * @configfct set_inactive_timeout
+ * @tparam integer seconds Timeout in seconds
+ * @noreturn
+ */
+static int luaC_pointer_set_inactive_timeout(lua_State *L)
+{
+    int seconds = luaL_checkint(L, 1);
+
+    g_config.cursor_inactive_timeout_ms = seconds * 1000;
+    return 0;
+}
+
 void luaC_pointer_setup(lua_State *L)
 {
     luaL_Reg pointer_staticlibs[] = {
-        {"bind",               luaC_pointer_bind              },
-        {"clear",              luaC_pointer_clear             },
+        {"bind",                 luaC_pointer_bind                },
+        {"clear",                luaC_pointer_clear               },
 
-        {"get_position",       luaC_pointer_get_position      },
-        {"set_position",       luaC_pointer_set_position      },
+        {"get_position",         luaC_pointer_get_position        },
+        {"set_position",         luaC_pointer_set_position        },
 
-        {"move_interactive",   luaC_pointer_move_interactive  },
-        {"resize_interactive", luaC_pointer_resize_interactive},
-        {"stop_interactive",   luaC_pointer_stop_interactive  },
+        {"move_interactive",     luaC_pointer_move_interactive    },
+        {"resize_interactive",   luaC_pointer_resize_interactive  },
+        {"stop_interactive",     luaC_pointer_stop_interactive    },
 
-        {"set_cursor_size",    luaC_pointer_set_cursor_size   },
-        {NULL,                 NULL                           },
+        {"set_cursor_size",      luaC_pointer_set_cursor_size     },
+        {"set_inactive_timeout", luaC_pointer_set_inactive_timeout},
+        {NULL,                   NULL                             },
     };
 
     lua_newtable(L);

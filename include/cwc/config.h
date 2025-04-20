@@ -22,6 +22,7 @@ struct cwc_config {
 
     // pointer device
     int cursor_size;
+    int cursor_inactive_timeout_ms;
 
     // kbd
     int repeat_rate;

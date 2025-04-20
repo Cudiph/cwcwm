@@ -69,6 +69,14 @@ struct cwc_cursor {
     struct wlr_pointer_constraint_v1 *active_constraint;
     bool dont_emit_signal;
 
+    // cursor inactive timeout
+    bool hidden;
+    const char *name_before_hidden;
+    struct wl_event_source *inactive_timer;
+    struct wlr_surface *client_surface;
+    int hotspot_x, hotspot_y;
+    struct wl_listener client_side_surface_destroy_l;
+
     struct wl_listener cursor_motion_l;
     struct wl_listener cursor_motion_abs_l;
     struct wl_listener cursor_axis_l;
