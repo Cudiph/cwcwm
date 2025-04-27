@@ -23,6 +23,8 @@ struct cwc_config {
     // pointer device
     int cursor_size;
     int cursor_inactive_timeout_ms;
+    int cursor_edge_threshold;
+    float cursor_edge_snapping_overlay_color[4];
 
     // kbd
     int repeat_rate;

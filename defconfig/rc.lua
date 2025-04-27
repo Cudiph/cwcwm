@@ -27,6 +27,8 @@ gears.protected_call(require, "keybind")
 -- pointer config
 cwc.pointer.set_cursor_size(20)
 cwc.pointer.set_inactive_timeout(5)
+cwc.pointer.set_edge_threshold(32)
+cwc.pointer.set_edge_snapping_overlay_color(0.1, 0.2, 0.3, 0.05)
 
 -- keyboard config
 cwc.kbd.set_repeat_rate(30)

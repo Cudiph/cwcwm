@@ -134,10 +134,10 @@ bool is_direction_match(enum wlr_direction dir, int x, int y)
     return true;
 }
 
-uint32_t get_snap_edges(struct wlr_box *output_box, int cx, int cy)
+uint32_t
+get_snap_edges(struct wlr_box *output_box, int cx, int cy, int threshold)
 {
     uint32_t edges              = 0;
-    int threshold               = 16;
     int output_right_edge_diff  = output_box->x + output_box->width - cx;
     int output_left_edge_diff   = cx - output_box->x;
     int output_bottom_edge_diff = output_box->y + output_box->height - cy;

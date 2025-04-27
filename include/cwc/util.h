@@ -105,7 +105,8 @@ void normalized_region_at(
 /* check if cursor position is close to the monitor edge
  * return a bitwise of WLR_EDGES enum
  */
-uint32_t get_snap_edges(struct wlr_box *output_box, int cx, int cy);
+uint32_t
+get_snap_edges(struct wlr_box *output_box, int cx, int cy, int threshold);
 
 /* check if given point is on the direction based on origin.
  * point x,y (1, 0) and direction right is valid.

@@ -121,7 +121,8 @@ static void process_cursor_move_floating(struct cwc_cursor *cursor)
     double new_y = cy - cursor->grab_y;
     cwc_container_set_position_global(grabbed->container, new_x, new_y);
 
-    uint32_t snap_edges = get_snap_edges(&c_output->output_layout_box, cx, cy);
+    uint32_t snap_edges = get_snap_edges(&c_output->output_layout_box, cx, cy,
+                                         g_config.cursor_edge_threshold);
     if (!snap_edges) {
         destroy_snap_overlay(cursor);
         return;
@@ -130,11 +131,10 @@ static void process_cursor_move_floating(struct cwc_cursor *cursor)
     struct wlr_box overlay_rect =
         cwc_output_get_snap_geometry(c_output, snap_edges);
 
-    const float color[4] = {0.1, 0.2, 0.4, 0.1};
     if (!cursor->snap_overlay) {
-        cursor->snap_overlay =
-            wlr_scene_rect_create(server.root.overlay, overlay_rect.width,
-                                  overlay_rect.height, color);
+        cursor->snap_overlay = wlr_scene_rect_create(
+            server.root.overlay, overlay_rect.width, overlay_rect.height,
+            g_config.cursor_edge_snapping_overlay_color);
     } else {
         wlr_scene_rect_set_size(cursor->snap_overlay, overlay_rect.width,
                                 overlay_rect.height);
@@ -669,8 +669,8 @@ static void end_interactive_move_floating(struct cwc_cursor *cursor)
     if (!current_output)
         return;
 
-    uint32_t snap_edges =
-        get_snap_edges(&current_output->output_layout_box, cx, cy);
+    uint32_t snap_edges = get_snap_edges(&current_output->output_layout_box, cx,
+                                         cy, g_config.cursor_edge_threshold);
 
     if (!snap_edges)
         return;
@@ -1637,22 +1637,65 @@ static int luaC_pointer_set_inactive_timeout(lua_State *L)
     return 0;
 }
 
+/** Set a threshold distance for applying common tile position.
+ *
+ * @configfct set_edge_threshold
+ * @tparam integer threshold Threshold distance in pixel unit.
+ * @noreturn
+ */
+static int luaC_pointer_set_edge_threshold(lua_State *L)
+{
+    int threshold = luaL_checkint(L, 1);
+
+    g_config.cursor_edge_threshold = threshold;
+    return 0;
+}
+
+/** Set color of the overlay when performing edge snapping.
+ *
+ * `gears.color` is not gonna work because the overlay isn't a cairo surface.
+ *
+ * @configfct set_edge_snapping_overlay_color
+ * @tparam number red Value of red.
+ * @tparam number green Value of green.
+ * @tparam number blue Value of blue.
+ * @tparam number alpha Alpha value.
+ * @noreturn
+ */
+static int luaC_pointer_set_edge_snapping_overlay_color(lua_State *L)
+{
+    float red   = luaL_checknumber(L, 1);
+    float green = luaL_checknumber(L, 2);
+    float blue  = luaL_checknumber(L, 3);
+    float alpha = luaL_checknumber(L, 4);
+
+    g_config.cursor_edge_snapping_overlay_color[0] = red;
+    g_config.cursor_edge_snapping_overlay_color[1] = green;
+    g_config.cursor_edge_snapping_overlay_color[2] = blue;
+    g_config.cursor_edge_snapping_overlay_color[3] = alpha;
+    return 0;
+}
+
 void luaC_pointer_setup(lua_State *L)
 {
     luaL_Reg pointer_staticlibs[] = {
-        {"bind",                 luaC_pointer_bind                },
-        {"clear",                luaC_pointer_clear               },
+        {"bind",                            luaC_pointer_bind                },
+        {"clear",                           luaC_pointer_clear               },
 
-        {"get_position",         luaC_pointer_get_position        },
-        {"set_position",         luaC_pointer_set_position        },
+        {"get_position",                    luaC_pointer_get_position        },
+        {"set_position",                    luaC_pointer_set_position        },
 
-        {"move_interactive",     luaC_pointer_move_interactive    },
-        {"resize_interactive",   luaC_pointer_resize_interactive  },
-        {"stop_interactive",     luaC_pointer_stop_interactive    },
+        {"move_interactive",                luaC_pointer_move_interactive    },
+        {"resize_interactive",              luaC_pointer_resize_interactive  },
+        {"stop_interactive",                luaC_pointer_stop_interactive    },
 
-        {"set_cursor_size",      luaC_pointer_set_cursor_size     },
-        {"set_inactive_timeout", luaC_pointer_set_inactive_timeout},
-        {NULL,                   NULL                             },
+        {"set_cursor_size",                 luaC_pointer_set_cursor_size     },
+        {"set_inactive_timeout",            luaC_pointer_set_inactive_timeout},
+        {"set_edge_threshold",              luaC_pointer_set_edge_threshold  },
+        {"set_edge_snapping_overlay_color",
+         luaC_pointer_set_edge_snapping_overlay_color                        },
+
+        {NULL,                              NULL                             },
     };
 
     lua_newtable(L);

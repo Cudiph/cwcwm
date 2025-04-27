@@ -52,8 +52,13 @@ void cwc_config_set_default()
     g_config.warp_cursor_to_edge_on_resize = false;
     g_config.move_cursor_on_focus          = false;
 
-    g_config.cursor_size                = 24;
-    g_config.cursor_inactive_timeout_ms = 5000;
+    g_config.cursor_size                           = 24;
+    g_config.cursor_inactive_timeout_ms            = 5000;
+    g_config.cursor_edge_threshold                 = 16;
+    g_config.cursor_edge_snapping_overlay_color[0] = 0.1;
+    g_config.cursor_edge_snapping_overlay_color[1] = 0.2;
+    g_config.cursor_edge_snapping_overlay_color[2] = 0.4;
+    g_config.cursor_edge_snapping_overlay_color[3] = 0.1;
 
     g_config.repeat_rate  = 30;
     g_config.repeat_delay = 400;
