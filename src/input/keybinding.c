@@ -196,7 +196,7 @@ bool keybind_mouse_execute(uint32_t modifiers, uint32_t button, bool press)
 {
     uint64_t generated_key        = keybind_generate_key(modifiers, button);
     struct cwc_keybind_info *info = cwc_hhmap_nget(
-        server.keybind_kbd_map, &generated_key, GENERATED_KEY_LENGTH);
+        server.keybind_mouse_map, &generated_key, GENERATED_KEY_LENGTH);
 
     if (info == NULL)
         return false;
