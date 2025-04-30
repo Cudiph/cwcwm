@@ -30,7 +30,7 @@ pointer.bind(MODKEY, button.RIGHT, pointer.resize_interactive)
 local kbd = cwc.kbd
 
 ---------------- compositor lifecycle
-kbd.bind({ MODKEY, mod.CTRL }, "Delete", cwc.quit, { description = "exit cwc", group = "cwc" })
+kbd.bind({ MODKEY, mod.CTRL }, "Delete", cwc.quit, { description = "exit cwc", group = "cwc", exclusive = true })
 kbd.bind({ MODKEY, mod.CTRL }, "r", cwc.reload, { description = "reload configuration", group = "cwc" })
 kbd.bind({ MODKEY }, "Delete", function()
     collectgarbage("collect")
@@ -315,7 +315,7 @@ end, { description = "view prev workspace/tag", group = "tag" })
 
 -- backtick/tilde key
 kbd.bind(MODKEY, "grave", cful.tag.history.restore,
-    { description = "activate last activated tag", group = "tag" })
+    { description = "activate last activated tags", group = "tag" })
 
 -------------------- tag config
 kbd.bind(MODKEY, "equal", function()
@@ -403,10 +403,10 @@ end, { description = "clipboard history", group = "launcher" })
 -- Screen brightness
 kbd.bind({}, "XF86MonBrightnessUp", function()
     cwc.spawn_with_shell("brightnessctl s 3%+")
-end)
+end, { exclusive = true })
 kbd.bind({}, "XF86MonBrightnessDown", function()
     cwc.spawn_with_shell("brightnessctl s 3%-")
-end)
+end, { exclusive = true })
 
 local function toggle_mon()
     cwc.spawn_with_shell("wlopm --toggle '*'")
@@ -424,31 +424,31 @@ kbd.bind({}, 0x10081245, toggle_mon)
 kbd.bind({}, "XF86AudioLowerVolume", function()
     local cmd = string.format("pactl set-sink-volume @DEFAULT_SINK@ %s%%", "-3")
     cwc.spawn_with_shell(cmd)
-end)
+end, { exclusive = true })
 kbd.bind({}, "XF86AudioRaiseVolume", function()
     local cmd = string.format("pactl set-sink-volume @DEFAULT_SINK@ %s%%", "+3")
     cwc.spawn_with_shell(cmd)
-end)
+end, { exclusive = true })
 kbd.bind({}, "XF86AudioMute", function()
     cwc.spawn_with_shell("pactl set-sink-mute @DEFAULT_SINK@ toggle")
-end)
+end, { exclusive = true })
 kbd.bind({}, "XF86AudioMicMute", function()
     cwc.spawn_with_shell("pactl set-source-mute @DEFAULT_SOURCE@ toggle")
-end)
+end, { exclusive = true })
 
 -------------- Media Player Keys
 kbd.bind({}, "XF86AudioPlay", function()
     cwc.spawn_with_shell("playerctl play-pause")
-end)
+end, { exclusive = true })
 kbd.bind({}, "XF86AudioNext", function()
     cwc.spawn_with_shell("playerctl next")
-end)
+end, { exclusive = true })
 kbd.bind({}, "XF86AudioPrev", function()
     cwc.spawn_with_shell("playerctl previous")
-end)
+end, { exclusive = true })
 kbd.bind({}, "XF86AudioStop", function()
     cwc.spawn_with_shell("playerctl stop")
-end)
+end, { exclusive = true })
 
 ------------ Other Extra Keys
 kbd.bind({}, "XF86TouchpadToggle", function()
@@ -463,7 +463,7 @@ kbd.bind({}, "XF86TouchpadToggle", function()
             end
         end
     end
-end)
+end, { exclusive = true })
 kbd.bind({}, "XF86Calculator", function()
     cwc.spawn_with_shell(TERMINAL .. "-e python ")
 end)
@@ -508,4 +508,4 @@ kbd.bind({ MODKEY, mod.CTRL }, "slash", function()
     print(cwc.client.at(pos.x, pos.y))
     print(gears.debug.dump(c.geometry))
     print(s.active_tag, s.active_workspace)
-end, { description = "this just for debugging", group = "dev" })
+end, { description = "this just for debugging", group = "dev", exclusive = true })

@@ -65,6 +65,7 @@ struct cwc_keybind_info {
         int luaref_release;
     };
     void *args;
+    bool exclusive; // execute keybind even when locked or inhibited
 };
 
 /* function which start with double underscore is the low level function.
@@ -90,12 +91,15 @@ void __keybind_remove_if_exist(struct cwc_hhmap *map, uint64_t generated_key);
 void keybind_kbd_remove(uint32_t modifiers, xkb_keysym_t key);
 void keybind_mouse_remove(uint32_t modifiers, xkb_keysym_t key);
 
-bool __keybind_execute(struct cwc_hhmap *map,
+bool __keybind_execute(struct cwc_keybind_info *info,
                        uint32_t modifiers,
                        xkb_keysym_t key,
                        bool press);
 /* true if a keybind entry found/processed */
-bool keybind_kbd_execute(uint32_t modifiers, xkb_keysym_t key, bool press);
+bool keybind_kbd_execute(struct cwc_seat *seat,
+                         uint32_t modifiers,
+                         xkb_keysym_t key,
+                         bool press);
 bool keybind_mouse_execute(uint32_t modifiers, uint32_t button, bool press);
 
 void keybind_kbd_clear(bool clear_common_key);

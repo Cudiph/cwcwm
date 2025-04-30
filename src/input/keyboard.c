@@ -104,12 +104,7 @@ static void process_key_event(struct cwc_seat *seat,
 {
     struct wlr_seat *wlr_seat = seat->wlr_seat;
 
-    if (seat->kbd_inhibitor) {
-        wlr_seat_set_keyboard(wlr_seat, kbd);
-        wlr_seat_keyboard_notify_key(wlr_seat, event->time_msec, event->keycode,
-                                     event->state);
-        return;
-    }
+    wlr_idle_notifier_v1_notify_activity(server.idle->idle_notifier, wlr_seat);
 
     // translate libinput keycode -> xkbcommon
     int keycode = event->keycode + 8;
@@ -127,11 +122,7 @@ static void process_key_event(struct cwc_seat *seat,
 
     switch (event->state) {
     case WL_KEYBOARD_KEY_STATE_PRESSED:
-        if (!server.session_lock->locked)
-            handled |= keybind_kbd_execute(modifiers, keysym, true);
-
-        wlr_idle_notifier_v1_notify_activity(server.idle->idle_notifier,
-                                             wlr_seat);
+        handled |= keybind_kbd_execute(seat, modifiers, keysym, true);
         break;
     case WL_KEYBOARD_KEY_STATE_RELEASED:
         // always notify released to client even when has keybind because there
@@ -139,8 +130,7 @@ static void process_key_event(struct cwc_seat *seat,
         // holding it, the client still assume that key is pressed because
         // client doesn't get notified when the key is released
         // TODO: stupid hack #1
-        if (!server.session_lock->locked)
-            keybind_kbd_execute(modifiers, keysym, false);
+        keybind_kbd_execute(seat, modifiers, keysym, false);
         break;
     }
 

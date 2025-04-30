@@ -37,8 +37,10 @@
 
 #include "cwc/config.h"
 #include "cwc/desktop/output.h"
+#include "cwc/desktop/session_lock.h"
 #include "cwc/desktop/toplevel.h"
 #include "cwc/input/keyboard.h"
+#include "cwc/input/seat.h"
 #include "cwc/server.h"
 #include "cwc/util.h"
 
@@ -136,19 +138,11 @@ void keybind_mouse_remove(uint32_t modifiers, uint32_t button)
     __keybind_remove_if_exist(server.keybind_mouse_map, generated_key);
 }
 
-bool __keybind_execute(struct cwc_hhmap *map,
+bool __keybind_execute(struct cwc_keybind_info *info,
                        uint32_t modifiers,
                        xkb_keysym_t key,
                        bool press)
 {
-    uint64_t generated_key = keybind_generate_key(modifiers, key);
-
-    struct cwc_keybind_info *info =
-        cwc_hhmap_nget(map, &generated_key, GENERATED_KEY_LENGTH);
-
-    if (info == NULL)
-        return false;
-
     lua_State *L = g_config_get_lua_State();
     int idx;
     switch (info->type) {
@@ -179,15 +173,35 @@ bool __keybind_execute(struct cwc_hhmap *map,
     return true;
 }
 
-bool keybind_kbd_execute(uint32_t modifiers, xkb_keysym_t key, bool press)
+bool keybind_kbd_execute(struct cwc_seat *seat,
+                         uint32_t modifiers,
+                         xkb_keysym_t key,
+                         bool press)
 {
-    return __keybind_execute(server.keybind_kbd_map, modifiers, key, press);
+    uint64_t generated_key        = keybind_generate_key(modifiers, key);
+    struct cwc_keybind_info *info = cwc_hhmap_nget(
+        server.keybind_kbd_map, &generated_key, GENERATED_KEY_LENGTH);
+
+    if (info == NULL)
+        return false;
+
+    if (!info->exclusive
+        && (server.session_lock->locked || seat->kbd_inhibitor))
+        return false;
+
+    return __keybind_execute(info, modifiers, key, press);
 }
 
 bool keybind_mouse_execute(uint32_t modifiers, uint32_t button, bool press)
 {
-    return __keybind_execute(server.keybind_mouse_map, modifiers, button,
-                             press);
+    uint64_t generated_key        = keybind_generate_key(modifiers, button);
+    struct cwc_keybind_info *info = cwc_hhmap_nget(
+        server.keybind_kbd_map, &generated_key, GENERATED_KEY_LENGTH);
+
+    if (info == NULL)
+        return false;
+
+    return __keybind_execute(info, modifiers, button, press);
 }
 
 static void __keybind_clear(struct cwc_hhmap *map)
@@ -315,6 +329,8 @@ void keybind_register_common_key()
  * @tparam[opt] table data Additional data
  * @tparam[opt] string data.group Keybinding group
  * @tparam[opt] string data.description Keybinding description
+ * @tparam[opt] string data.exclusive Allow keybind to be executed even in
+ * lockscreen and shortcut inhibit
  * @noreturn
  * @see cuteful.enum.modifier
  * @see cwc.pointer.bind
@@ -392,6 +408,9 @@ static int luaC_kbd_bind(lua_State *L)
         lua_getfield(L, data_index, "group");
         if (lua_isstring(L, -1))
             info.group = strdup(lua_tostring(L, -1));
+
+        lua_getfield(L, data_index, "exclusive");
+        info.exclusive = lua_toboolean(L, -1);
     }
 
     // ready for register
