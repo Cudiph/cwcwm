@@ -159,6 +159,16 @@ static bool cwc_output_state_try_restore(struct cwc_output *output)
         container->old_prop.output   = NULL;
     }
 
+    struct cwc_toplevel *toplevel;
+    wl_list_for_each(toplevel, &server.toplevels, link)
+    {
+        if (toplevel->container->output != output)
+            continue;
+
+        wl_list_reattach(&output->state->toplevels,
+                         &toplevel->link_output_toplevels);
+    }
+
     /* update output for the layer shell */
     struct cwc_layer_surface *layer_surface;
     wl_list_for_each(layer_surface, &server.layer_shells, link)
@@ -646,6 +656,7 @@ static void on_new_output(struct wl_listener *listener, void *data)
     wlr_output_state_init(&output->pending);
     cwc_output_update_outputs_state();
     arrange_layers(output);
+    transaction_schedule_tag(cwc_output_get_current_tag_info(output));
 
     luaC_object_screen_register(g_config_get_lua_State(), output);
     cwc_object_emit_signal_simple("screen::new", g_config_get_lua_State(),

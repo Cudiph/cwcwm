@@ -701,9 +701,12 @@ static void end_interactive_move_master(struct cwc_cursor *cursor)
         cwc_toplevel_at_tiled(cursor->wlr_cursor->x, cursor->wlr_cursor->y);
     grabbed->state &= ~CONTAINER_STATE_FLOATING;
 
-    if (toplevel_under_cursor && cwc_toplevel_is_visible(toplevel_under_cursor))
+    if (toplevel_under_cursor
+        && cwc_toplevel_is_visible(toplevel_under_cursor)) {
         wl_list_swap(&toplevel_under_cursor->container->link_output_container,
                      &grabbed->link_output_container);
+        wl_list_swap(&toplevel_under_cursor->container->link, &grabbed->link);
+    }
 
     transaction_schedule_tag(cwc_output_get_current_tag_info(grabbed->output));
 }
