@@ -172,7 +172,7 @@ static bool cwc_output_state_try_restore(struct cwc_output *output)
     /* reset pending_transaction state */
     for (int i = 0; i < MAX_WORKSPACE; i++) {
         struct cwc_tag_info *tag_info = &output->state->tag_info[i];
-        tag_info->pending_transaction         = false;
+        tag_info->pending_transaction = false;
     }
 
     cwc_hhmap_remove(server.output_state_cache, output->wlr_output->name);
@@ -623,7 +623,7 @@ static void on_new_output(struct wl_listener *listener, void *data)
     output->config_commit_l.notify = on_config_commit;
     wl_signal_add(&g_config.events.commit, &output->config_commit_l);
 
-    wl_list_insert(server.outputs.prev, &output->link);
+    wl_list_insert(&server.outputs, &output->link);
 
     /* Adds this to the output layout. The add_auto function arranges outputs
      * from left-to-right in the order they appear. A more sophisticated

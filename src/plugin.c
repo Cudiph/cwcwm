@@ -99,7 +99,7 @@ cancel:
 void cwc_plugin_start(struct cwc_plugin *plugin)
 {
     // run in another thread?
-    wl_list_insert(server.plugins.prev, &plugin->link);
+    wl_list_insert(&server.plugins, &plugin->link);
 
     plugin->init_fn();
 }

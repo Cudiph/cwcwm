@@ -260,7 +260,7 @@ static void on_new_surface(struct wl_listener *listener, void *data)
     wl_signal_add(&layer_surface->surface->events.unmap, &surf->unmap_l);
     wl_signal_add(&layer_surface->surface->events.commit, &surf->commit_l);
 
-    wl_list_insert(server.layer_shells.prev, &surf->link);
+    wl_list_insert(&server.layer_shells, &surf->link);
 
     cwc_log(CWC_DEBUG, "created layer surface for output %p: %p",
             layer_surface->output, surf);

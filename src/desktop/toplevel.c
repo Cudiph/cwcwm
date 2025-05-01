@@ -455,7 +455,7 @@ static void cwc_toplevel_init_common_stuff(struct cwc_toplevel *toplevel)
         wl_signal_add(&xdg_toplevel->events.set_app_id, &toplevel->set_appid_l);
     }
 
-    wl_list_insert(server.toplevels.prev, &toplevel->link);
+    wl_list_insert(&server.toplevels, &toplevel->link);
 
     lua_State *L = g_config_get_lua_State();
     luaC_object_client_register(L, toplevel);

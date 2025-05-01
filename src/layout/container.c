@@ -583,7 +583,7 @@ void cwc_container_init(struct cwc_output *output,
     cont->workspace = cont->workspace ? cont->workspace : 1;
 
     wl_list_init(&cont->toplevels);
-    wl_list_insert(server.containers.prev, &cont->link);
+    wl_list_insert(&server.containers, &cont->link);
 
     wlr_scene_node_raise_to_top(&cont->popup_tree->node);
 
