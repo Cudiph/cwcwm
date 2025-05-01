@@ -169,6 +169,12 @@ static bool cwc_output_state_try_restore(struct cwc_output *output)
         }
     }
 
+    /* reset pending_transaction state */
+    for (int i = 0; i < MAX_WORKSPACE; i++) {
+        struct cwc_tag_info *tag_info = &output->state->tag_info[i];
+        tag_info->pending_transaction         = false;
+    }
+
     cwc_hhmap_remove(server.output_state_cache, output->wlr_output->name);
     free(old_output);
 
