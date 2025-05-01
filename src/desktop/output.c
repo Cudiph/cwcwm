@@ -375,6 +375,14 @@ static void on_output_destroy(struct wl_listener *listener, void *data)
     cwc_log(CWC_INFO, "destroying output (%s): %p %p", output->wlr_output->name,
             output, output->wlr_output);
 
+    // waybar may crash, will save it for later
+    // struct cwc_layer_surface *lsurf, *tmp;
+    // wl_list_for_each_safe(lsurf, tmp, &server.layer_shells, link)
+    // {
+    //     if (lsurf->output == output)
+    //         wlr_layer_surface_v1_destroy(lsurf->wlr_layer_surface);
+    // }
+
     wlr_output_state_finish(&output->pending);
     output_layers_fini(output);
     wlr_scene_output_destroy(output->scene_output);
@@ -382,7 +390,6 @@ static void on_output_destroy(struct wl_listener *listener, void *data)
     wl_list_remove(&output->destroy_l.link);
     wl_list_remove(&output->frame_l.link);
     wl_list_remove(&output->request_state_l.link);
-    wl_list_remove(&output->presentation_l.link);
 
     wl_list_remove(&output->config_commit_l.link);
 
@@ -510,13 +517,6 @@ static void on_request_state(struct wl_listener *listener, void *data)
     arrange_layers(output);
 }
 
-static void on_output_presentation(struct wl_listener *listener, void *data)
-{
-    struct cwc_output *output =
-        wl_container_of(listener, output, presentation_l);
-    struct wlr_output_event_present *event = data;
-}
-
 static void on_config_commit(struct wl_listener *listener, void *data)
 {
     struct cwc_output *output =
@@ -606,19 +606,18 @@ static void on_new_output(struct wl_listener *listener, void *data)
     cwc_output_focus(output);
     rescue_output_toplevel_container(server.fallback_output, output);
 
+    output->destroy_l.notify = on_output_destroy;
+    wl_signal_add(&wlr_output->events.destroy, &output->destroy_l);
+
     output->frame_l.notify         = on_output_frame;
     output->request_state_l.notify = on_request_state;
-    output->presentation_l.notify  = on_output_presentation;
-    output->destroy_l.notify       = on_output_destroy;
     wl_signal_add(&wlr_output->events.frame, &output->frame_l);
     wl_signal_add(&wlr_output->events.request_state, &output->request_state_l);
-    wl_signal_add(&wlr_output->events.present, &output->presentation_l);
-    wl_signal_add(&wlr_output->events.destroy, &output->destroy_l);
 
     output->config_commit_l.notify = on_config_commit;
     wl_signal_add(&g_config.events.commit, &output->config_commit_l);
 
-    wl_list_insert(&server.outputs, &output->link);
+    wl_list_insert(server.outputs.prev, &output->link);
 
     /* Adds this to the output layout. The add_auto function arranges outputs
      * from left-to-right in the order they appear. A more sophisticated

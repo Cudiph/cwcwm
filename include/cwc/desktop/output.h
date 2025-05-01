@@ -62,9 +62,10 @@ struct cwc_output {
         struct wlr_scene_tree *session_lock; // session_lock
     } layers;
 
+    struct wl_listener destroy_l;
+
     struct wl_listener frame_l;
     struct wl_listener request_state_l;
-    struct wl_listener destroy_l;
     struct wl_listener presentation_l;
 
     struct wl_listener config_commit_l;
