@@ -162,7 +162,9 @@ static bool cwc_output_state_try_restore(struct cwc_output *output)
     struct cwc_toplevel *toplevel;
     wl_list_for_each(toplevel, &server.toplevels, link)
     {
-        if (toplevel->container->output != output)
+        // only managed toplevel that need reattach
+        if (cwc_toplevel_is_unmanaged(toplevel) && toplevel->container
+            && toplevel->container->output != output)
             continue;
 
         wl_list_reattach(&output->state->toplevels,
@@ -391,13 +393,12 @@ static void on_output_destroy(struct wl_listener *listener, void *data)
     cwc_log(CWC_INFO, "destroying output (%s): %p %p", output->wlr_output->name,
             output, output->wlr_output);
 
-    // waybar may crash, will save it for later
-    // struct cwc_layer_surface *lsurf, *tmp;
-    // wl_list_for_each_safe(lsurf, tmp, &server.layer_shells, link)
-    // {
-    //     if (lsurf->output == output)
-    //         wlr_layer_surface_v1_destroy(lsurf->wlr_layer_surface);
-    // }
+    struct cwc_layer_surface *lsurf, *tmp;
+    wl_list_for_each_safe(lsurf, tmp, &server.layer_shells, link)
+    {
+        if (lsurf->output == output)
+            wlr_layer_surface_v1_destroy(lsurf->wlr_layer_surface);
+    }
 
     wlr_output_state_finish(&output->pending);
     output_layers_fini(output);
