@@ -163,7 +163,7 @@ static bool cwc_output_state_try_restore(struct cwc_output *output)
     wl_list_for_each(toplevel, &server.toplevels, link)
     {
         // only managed toplevel that need reattach
-        if (cwc_toplevel_is_unmanaged(toplevel)
+        if (cwc_toplevel_is_unmanaged(toplevel) || !toplevel->mapped
             || (toplevel->container && toplevel->container->output != output))
             continue;
 
@@ -380,6 +380,23 @@ static void server_focus_previous_output(struct cwc_output *reference)
     cwc_output_focus(server.fallback_output);
 }
 
+/* unmanaged surface is commonly short lived just destroy it with the output */
+static void _close_unmanaged(struct cwc_output *output)
+{
+    struct cwc_container *container;
+    wl_list_for_each(container, &server.containers, link)
+    {
+        if (container->output != output
+            || !cwc_container_is_unmanaged(container))
+            continue;
+
+        struct cwc_toplevel *toplevel =
+            cwc_container_get_front_toplevel(container);
+
+        wlr_xwayland_surface_close(toplevel->xwsurface);
+    }
+}
+
 static void output_layers_fini(struct cwc_output *output);
 
 static void on_output_destroy(struct wl_listener *listener, void *data)
@@ -420,6 +437,7 @@ static void on_output_destroy(struct wl_listener *listener, void *data)
     wlr_output_layout_get_box(server.output_layout, focused->wlr_output,
                               &focused->output_layout_box);
 
+    _close_unmanaged(output);
     rescue_output_toplevel_container(output, focused);
 
     for (int i = 1; i < MAX_WORKSPACE; i++) {
