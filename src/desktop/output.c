@@ -163,8 +163,8 @@ static bool cwc_output_state_try_restore(struct cwc_output *output)
     wl_list_for_each(toplevel, &server.toplevels, link)
     {
         // only managed toplevel that need reattach
-        if (cwc_toplevel_is_unmanaged(toplevel) && toplevel->container
-            && toplevel->container->output != output)
+        if (cwc_toplevel_is_unmanaged(toplevel)
+            || (toplevel->container && toplevel->container->output != output))
             continue;
 
         wl_list_reattach(&output->state->toplevels,
