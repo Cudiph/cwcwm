@@ -27,7 +27,7 @@ local function signal_check()
     end
 
     if count > 0 then
-        print(string.format("%d cwc_container signal test FAILED", count))
+        print(string.format("%d of %d cwc_container signal test FAILED", count, #signal_list))
     else
         print("cwc_container signal test PASSED")
     end

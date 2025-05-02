@@ -330,8 +330,16 @@ void process_cursor_motion(struct cwc_cursor *cursor,
     struct wlr_surface *surface = scene_surface_at(cx, cy, &sx, &sy);
     struct cwc_output *output   = cwc_output_at(server.output_layout, cx, cy);
 
-    if (output && dx && dy)
-        cwc_output_focus(output);
+    if (cursor->last_output != output) {
+        lua_State *L = g_config_get_lua_State();
+        cwc_object_emit_signal_simple("screen::mouse_enter", L, output);
+
+        if (cursor->last_output)
+            cwc_object_emit_signal_simple("screen::mouse_leave", L,
+                                          cursor->last_output);
+
+        cursor->last_output = output;
+    }
 
     // sway + dwl implementation in very simplified way, may contain bugs
     if (active_constraint && device

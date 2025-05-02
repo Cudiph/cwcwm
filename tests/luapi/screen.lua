@@ -11,6 +11,10 @@ local signal_list = {
     "screen::prop::active_tag",
     "screen::prop::active_workspace",
     "screen::prop::selected_tag",
+    "screen::focus",
+    "screen::unfocus",
+    "screen::mouse_enter",
+    "screen::mouse_leave",
 }
 
 local triggered_list = {}
@@ -32,7 +36,7 @@ local function signal_check()
     end
 
     if count > 0 then
-        print(string.format("%d cwc_screen signal test FAILED", count))
+        print(string.format("%d of %d cwc_screen signal test FAILED", count, #signal_list))
     else
         print("cwc_screen signal test PASSED")
     end

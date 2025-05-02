@@ -54,8 +54,22 @@
 
 void cwc_output_focus(struct cwc_output *output)
 {
-    // TODO: add signal
-    server.focused_output = output;
+    if (server.focused_output == output)
+        return;
+
+    if (output == server.fallback_output) {
+        server.focused_output = output;
+        return;
+    }
+
+    struct cwc_output *unfocused_output = server.focused_output;
+    server.focused_output               = output;
+
+    lua_State *L = g_config_get_lua_State();
+    cwc_object_emit_signal_simple("screen::focus", L, output);
+
+    if (unfocused_output)
+        cwc_object_emit_signal_simple("screen::unfocus", L, unfocused_output);
 }
 
 void cwc_output_tiling_layout_update(struct cwc_output *output, int workspace)
@@ -638,7 +652,6 @@ static void on_new_output(struct wl_listener *listener, void *data)
     wlr_output_state_finish(&state);
 
     struct cwc_output *output = cwc_output_create(wlr_output);
-    cwc_output_focus(output);
     rescue_output_toplevel_container(server.fallback_output, output);
 
     output->destroy_l.notify = on_output_destroy;
@@ -680,6 +693,9 @@ static void on_new_output(struct wl_listener *listener, void *data)
     luaC_object_screen_register(g_config_get_lua_State(), output);
     cwc_object_emit_signal_simple("screen::new", g_config_get_lua_State(),
                                   output);
+
+    if (wl_list_length(&server.outputs) == 1)
+        cwc_output_focus(output);
 }
 
 static void output_manager_apply(struct wlr_output_configuration_v1 *config,

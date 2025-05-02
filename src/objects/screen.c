@@ -58,6 +58,30 @@
  * @tparam cwc_screen s The screen object.
  */
 
+/** Emitted when a pointer enter this screen area.
+ *
+ * @signal screen::mouse_enter
+ * @tparam cwc_screen s The screen object.
+ */
+
+/** Emitted when a pointer leave this screen area.
+ *
+ * @signal screen::mouse_leave
+ * @tparam cwc_screen s The screen object.
+ */
+
+/** Emitted when a screen gains focus.
+ *
+ * @signal screen::focus
+ * @tparam cwc_screen s The screen object.
+ */
+
+/** Emitted when a screen lost focus.
+ *
+ * @signal screen::unfocus
+ * @tparam cwc_screen s The screen object.
+ */
+
 /** Property signal.
  *
  * @signal screen::prop::active_tag

@@ -68,6 +68,7 @@ struct cwc_cursor {
 
     struct wlr_pointer_constraint_v1 *active_constraint;
     bool dont_emit_signal;
+    struct cwc_output *last_output;
 
     // cursor inactive timeout
     bool hidden;
