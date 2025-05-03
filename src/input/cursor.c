@@ -832,7 +832,8 @@ static void on_cursor_button(struct wl_listener *listener, void *data)
         struct wlr_keyboard *kbd = wlr_seat_get_keyboard(cursor->seat);
         uint32_t modifiers       = kbd ? wlr_keyboard_get_modifiers(kbd) : 0;
 
-        handled |= keybind_mouse_execute(modifiers, event->button, true);
+        handled |= keybind_mouse_execute(server.main_mouse_kmap, modifiers,
+                                         event->button, true);
 
     } else {
         struct wlr_keyboard *kbd = wlr_seat_get_keyboard(cursor->seat);
@@ -841,7 +842,8 @@ static void on_cursor_button(struct wl_listener *listener, void *data)
         stop_interactive(cursor);
 
         // same as keyboard binding always pass release button to client
-        keybind_mouse_execute(modifiers, event->button, false);
+        keybind_mouse_execute(server.main_mouse_kmap, modifiers, event->button,
+                              false);
     }
 
     // don't notify when either state is have keybind to prevent
@@ -1537,7 +1539,7 @@ static int luaC_pointer_bind(lua_State *L)
         info.luaref_release = luaL_ref(L, LUA_REGISTRYINDEX);
     }
 
-    keybind_mouse_register(modifiers, button, info);
+    keybind_mouse_register(server.main_mouse_kmap, modifiers, button, info);
 
     return 0;
 }
@@ -1549,7 +1551,7 @@ static int luaC_pointer_bind(lua_State *L)
  */
 static int luaC_pointer_clear(lua_State *L)
 {
-    keybind_mouse_clear();
+    cwc_keybind_map_clear(server.main_mouse_kmap);
     return 0;
 }
 

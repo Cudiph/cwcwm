@@ -125,8 +125,15 @@ static void reregister_lua_object()
 static void cwc_restart_lua(void *data)
 {
     cwc_log(CWC_INFO, "reloading configuration...");
-    keybind_kbd_clear(false);
-    keybind_mouse_clear();
+
+    struct cwc_keybind_map *kmap, *tmp;
+    wl_list_for_each_safe(kmap, tmp, &server.kbd_kmaps, link)
+    {
+        cwc_keybind_map_destroy(kmap);
+    }
+    server.main_kbd_kmap = cwc_keybind_map_create(&server.kbd_kmaps);
+    cwc_keybind_map_clear(server.main_mouse_kmap);
+
     cwc_lua_signal_clear(server.signal_map);
     luaC_fini();
     luaC_init();

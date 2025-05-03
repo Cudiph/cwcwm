@@ -96,12 +96,13 @@ struct cwc_server {
     struct wl_list toplevels;    // cwc_toplevel.link
     struct wl_list containers;   // cwc_container.link
     struct wl_list layer_shells; // cwc_layer_surface.link
+    struct wl_list kbd_kmaps;    // cwc_keybind_map
 
     // maps
-    struct cwc_hhmap *output_state_cache; // struct cwc_output_state
-    struct cwc_hhmap *signal_map;         // struct cwc_signal_entry
-    struct cwc_hhmap *keybind_kbd_map;    // struct cwc_keybind_info
-    struct cwc_hhmap *keybind_mouse_map;  // struct cwc_keybind_info
+    struct cwc_hhmap *output_state_cache;    // struct cwc_output_state
+    struct cwc_hhmap *signal_map;            // struct cwc_signal_entry
+    struct cwc_keybind_map *main_kbd_kmap;   // struct cwc_keybind_info
+    struct cwc_keybind_map *main_mouse_kmap; // struct cwc_keybind_info
 
     // server wide state
     struct cwc_container *insert_marked; // managed by container.c

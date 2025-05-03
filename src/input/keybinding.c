@@ -30,6 +30,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <wayland-server-core.h>
+#include <wayland-util.h>
 #include <wlr/backend/multi.h>
 #include <wlr/backend/session.h>
 #include <xkbcommon/xkbcommon-keysyms.h>
@@ -62,46 +64,57 @@ static inline uint32_t generated_key_get_key(uint64_t genkey)
 {
     return genkey & 0xffffffff;
 }
+static bool _keybind_execute(struct cwc_keybind_map *kmap,
+                             struct cwc_keybind_info *info,
+                             bool press);
 
-void __keybind_register(struct cwc_hhmap *map,
-                        uint32_t modifiers,
-                        uint32_t key,
-                        struct cwc_keybind_info info)
+static int repeat_loop(void *data)
 {
-    uint64_t generated_key = keybind_generate_key(modifiers, key);
+    struct cwc_keybind_map *kmap = data;
 
-    struct cwc_keybind_info *info_dup = malloc(sizeof(*info_dup));
-    memcpy(info_dup, &info, sizeof(*info_dup));
-    info_dup->key = generated_key;
+    _keybind_execute(kmap, kmap->repeated_bind, true);
 
-    __keybind_remove_if_exist(map, generated_key);
+    wl_event_source_timer_update(kmap->repeat_timer,
+                                 2000 / g_config.repeat_rate);
 
-    cwc_hhmap_ninsert(map, &generated_key, GENERATED_KEY_LENGTH, info_dup);
+    return 1;
 }
 
-void keybind_kbd_register(uint32_t modifiers,
-                          xkb_keysym_t key,
-                          struct cwc_keybind_info info)
+struct cwc_keybind_map *cwc_keybind_map_create(struct wl_list *list)
 {
-    __keybind_register(server.keybind_kbd_map, modifiers, key, info);
+    struct cwc_keybind_map *kmap = calloc(1, sizeof(*kmap));
+    kmap->map                    = cwc_hhmap_create(0);
+    kmap->active                 = true;
+    kmap->repeat_timer =
+        wl_event_loop_add_timer(server.wl_event_loop, repeat_loop, kmap);
+
+    if (list)
+        wl_list_insert(list->prev, &kmap->link);
+    else
+        wl_list_init(&kmap->link);
+
+    return kmap;
 }
 
-void keybind_mouse_register(uint32_t modifiers,
-                            uint32_t button,
-                            struct cwc_keybind_info info)
+void cwc_keybind_map_destroy(struct cwc_keybind_map *kmap)
 {
-    __keybind_register(server.keybind_mouse_map, modifiers, button, info);
+    cwc_keybind_map_clear(kmap);
+    cwc_hhmap_destroy(kmap->map);
+    wl_event_source_remove(kmap->repeat_timer);
+
+    wl_list_remove(&kmap->link);
+
+    free(kmap);
 }
 
 /* Lifetime for group & description in C keybind must be static,
  * and for lua it need to be in the heap.
  */
-static void clean_info(struct cwc_keybind_info *info)
+static void cwc_keybind_info_destroy(struct cwc_keybind_info *info)
 {
     lua_State *L = g_config_get_lua_State();
     switch (info->type) {
     case CWC_KEYBIND_TYPE_C:
-        free(info);
         break;
     case CWC_KEYBIND_TYPE_LUA:
         if (info->luaref_press)
@@ -113,35 +126,95 @@ static void clean_info(struct cwc_keybind_info *info)
         free(info->description);
         break;
     }
+
+    free(info);
 }
 
-void __keybind_remove_if_exist(struct cwc_hhmap *map, uint64_t generated_key)
+static void _keybind_clear(struct cwc_hhmap *kmap)
+{
+    for (size_t i = 0; i < kmap->alloc; i++) {
+        struct hhash_entry *elem = &kmap->table[i];
+        if (!elem->hash)
+            continue;
+        cwc_keybind_info_destroy(elem->data);
+    }
+}
+
+void cwc_keybind_map_clear(struct cwc_keybind_map *kmap)
+{
+    struct cwc_hhmap **map = &kmap->map;
+    _keybind_clear(*map);
+    cwc_hhmap_destroy(*map);
+    *map = cwc_hhmap_create(8);
+}
+
+static void _keybind_remove_if_exist(struct cwc_keybind_map *kmap,
+                                     uint64_t generated_key);
+
+static void _keybind_register(struct cwc_keybind_map *kmap,
+                              uint32_t modifiers,
+                              uint32_t key,
+                              struct cwc_keybind_info info)
+{
+    uint64_t generated_key = keybind_generate_key(modifiers, key);
+
+    struct cwc_keybind_info *info_dup = malloc(sizeof(*info_dup));
+    memcpy(info_dup, &info, sizeof(*info_dup));
+    info_dup->key = generated_key;
+
+    _keybind_remove_if_exist(kmap, generated_key);
+
+    cwc_hhmap_ninsert(kmap->map, &generated_key, GENERATED_KEY_LENGTH,
+                      info_dup);
+}
+
+void keybind_kbd_register(struct cwc_keybind_map *kmap,
+                          uint32_t modifiers,
+                          xkb_keysym_t key,
+                          struct cwc_keybind_info info)
+{
+    _keybind_register(kmap, modifiers, key, info);
+}
+
+void keybind_mouse_register(struct cwc_keybind_map *kmap,
+                            uint32_t modifiers,
+                            uint32_t button,
+                            struct cwc_keybind_info info)
+{
+    _keybind_register(kmap, modifiers, button, info);
+}
+
+static void _keybind_remove_if_exist(struct cwc_keybind_map *kmap,
+                                     uint64_t generated_key)
 {
     struct cwc_keybind_info *existed =
-        cwc_hhmap_nget(map, &generated_key, GENERATED_KEY_LENGTH);
+        cwc_hhmap_nget(kmap->map, &generated_key, GENERATED_KEY_LENGTH);
     if (!existed)
         return;
 
-    clean_info(existed);
-    cwc_hhmap_nremove(map, &generated_key, GENERATED_KEY_LENGTH);
+    cwc_keybind_info_destroy(existed);
+    cwc_hhmap_nremove(kmap->map, &generated_key, GENERATED_KEY_LENGTH);
 }
 
-void keybind_kbd_remove(uint32_t modifiers, xkb_keysym_t key)
+void keybind_kbd_remove(struct cwc_keybind_map *kmap,
+                        uint32_t modifiers,
+                        xkb_keysym_t key)
 {
     uint64_t generated_key = keybind_generate_key(modifiers, key);
-    __keybind_remove_if_exist(server.keybind_kbd_map, generated_key);
+    _keybind_remove_if_exist(server.main_kbd_kmap, generated_key);
 }
 
-void keybind_mouse_remove(uint32_t modifiers, uint32_t button)
+void keybind_mouse_remove(struct cwc_keybind_map *kmap,
+                          uint32_t modifiers,
+                          uint32_t button)
 {
     uint64_t generated_key = keybind_generate_key(modifiers, button);
-    __keybind_remove_if_exist(server.keybind_mouse_map, generated_key);
+    _keybind_remove_if_exist(server.main_mouse_kmap, generated_key);
 }
 
-bool __keybind_execute(struct cwc_keybind_info *info,
-                       uint32_t modifiers,
-                       xkb_keysym_t key,
-                       bool press)
+static bool _keybind_execute(struct cwc_keybind_map *kmap,
+                             struct cwc_keybind_info *info,
+                             bool press)
 {
     lua_State *L = g_config_get_lua_State();
     int idx;
@@ -170,17 +243,23 @@ bool __keybind_execute(struct cwc_keybind_info *info,
         break;
     }
 
+    if (press && info->repeat && !kmap->repeated_bind) {
+        kmap->repeated_bind = info;
+        wl_event_source_timer_update(kmap->repeat_timer, g_config.repeat_delay);
+    }
+
     return true;
 }
 
-bool keybind_kbd_execute(struct cwc_seat *seat,
+bool keybind_kbd_execute(struct cwc_keybind_map *kmap,
+                         struct cwc_seat *seat,
                          uint32_t modifiers,
                          xkb_keysym_t key,
                          bool press)
 {
-    uint64_t generated_key        = keybind_generate_key(modifiers, key);
-    struct cwc_keybind_info *info = cwc_hhmap_nget(
-        server.keybind_kbd_map, &generated_key, GENERATED_KEY_LENGTH);
+    uint64_t generated_key = keybind_generate_key(modifiers, key);
+    struct cwc_keybind_info *info =
+        cwc_hhmap_nget(kmap->map, &generated_key, GENERATED_KEY_LENGTH);
 
     if (info == NULL)
         return false;
@@ -189,47 +268,22 @@ bool keybind_kbd_execute(struct cwc_seat *seat,
         && (server.session_lock->locked || seat->kbd_inhibitor))
         return false;
 
-    return __keybind_execute(info, modifiers, key, press);
+    return _keybind_execute(kmap, info, press);
 }
 
-bool keybind_mouse_execute(uint32_t modifiers, uint32_t button, bool press)
+bool keybind_mouse_execute(struct cwc_keybind_map *kmap,
+                           uint32_t modifiers,
+                           uint32_t button,
+                           bool press)
 {
-    uint64_t generated_key        = keybind_generate_key(modifiers, button);
-    struct cwc_keybind_info *info = cwc_hhmap_nget(
-        server.keybind_mouse_map, &generated_key, GENERATED_KEY_LENGTH);
+    uint64_t generated_key = keybind_generate_key(modifiers, button);
+    struct cwc_keybind_info *info =
+        cwc_hhmap_nget(kmap->map, &generated_key, GENERATED_KEY_LENGTH);
 
     if (info == NULL)
         return false;
 
-    return __keybind_execute(info, modifiers, button, press);
-}
-
-static void __keybind_clear(struct cwc_hhmap *map)
-{
-    for (size_t i = 0; i < map->alloc; i++) {
-        struct hhash_entry *elem = &map->table[i];
-        if (!elem->hash)
-            continue;
-        clean_info(elem->data);
-    }
-}
-
-void keybind_kbd_clear(bool clear_common_key)
-{
-    struct cwc_hhmap **map = &server.keybind_kbd_map;
-    __keybind_clear(*map);
-    cwc_hhmap_destroy(*map);
-    *map = cwc_hhmap_create(8);
-    if (!clear_common_key)
-        keybind_register_common_key();
-}
-
-void keybind_mouse_clear()
-{
-    struct cwc_hhmap **map = &server.keybind_mouse_map;
-    __keybind_clear(*map);
-    cwc_hhmap_destroy(*map);
-    *map = cwc_hhmap_create(8);
+    return _keybind_execute(kmap, info, press);
 }
 
 static void wlr_modifier_to_string(uint32_t mod, char *str, int len)
@@ -259,9 +313,9 @@ static void wlr_modifier_to_string(uint32_t mod, char *str, int len)
         strncat(str, "Mod5 + ", len - 1);
 }
 
-void dump_keybinds_info()
+void dump_keybinds_info(struct cwc_keybind_map *kmap)
 {
-    struct cwc_hhmap *map = server.keybind_kbd_map;
+    struct cwc_hhmap *map = kmap->map;
     for (size_t i = 0; i < map->alloc; i++) {
         struct hhash_entry *elem = &map->table[i];
         if (!elem->hash)
@@ -308,7 +362,8 @@ void keybind_register_common_key()
         snprintf(keyname, 6, "F%ld", i);
         xkb_keysym_t key =
             xkb_keysym_from_name(keyname, XKB_KEYSYM_CASE_INSENSITIVE);
-        keybind_kbd_register(WLR_MODIFIER_CTRL | WLR_MODIFIER_ALT, key,
+        keybind_kbd_register(server.main_kbd_kmap,
+                             WLR_MODIFIER_CTRL | WLR_MODIFIER_ALT, key,
                              (struct cwc_keybind_info){
                                  .type     = CWC_KEYBIND_TYPE_C,
                                  .on_press = _chvt,
@@ -331,6 +386,8 @@ void keybind_register_common_key()
  * @tparam[opt] string data.description Keybinding description
  * @tparam[opt] string data.exclusive Allow keybind to be executed even in
  * lockscreen and shortcut inhibit
+ * @tparam[opt] string data.repeated Repeat keybind when hold (only on_press
+ * will be executed)
  * @noreturn
  * @see cuteful.enum.modifier
  * @see cwc.pointer.bind
@@ -411,10 +468,13 @@ static int luaC_kbd_bind(lua_State *L)
 
         lua_getfield(L, data_index, "exclusive");
         info.exclusive = lua_toboolean(L, -1);
+
+        lua_getfield(L, data_index, "repeated");
+        info.repeat = lua_toboolean(L, -1);
     }
 
     // ready for register
-    keybind_kbd_register(modifiers, keysym, info);
+    keybind_kbd_register(server.main_kbd_kmap, modifiers, keysym, info);
 
     return 0;
 }
@@ -427,15 +487,7 @@ static int luaC_kbd_bind(lua_State *L)
  */
 static int luaC_kbd_clear(lua_State *L)
 {
-    if (lua_isboolean(L, 1)) {
-        bool clear_common_key = lua_toboolean(L, 1);
-        if (clear_common_key) {
-            keybind_kbd_clear(true);
-            return 0;
-        }
-    }
-
-    keybind_kbd_clear(false);
+    cwc_keybind_map_clear(server.main_kbd_kmap);
     return 0;
 }
 
