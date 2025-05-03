@@ -773,7 +773,7 @@ static void __cwc_container_move_to_output(struct cwc_container *container,
         bsp_remove_container(container, false);
 
     container->output = output;
-    wl_list_reattach(output->state->focus_stack.prev,
+    wl_list_reattach(&output->state->focus_stack,
                      &container->link_output_fstack);
     wl_list_reattach(output->state->containers.prev,
                      &container->link_output_container);
@@ -787,8 +787,10 @@ static void __cwc_container_move_to_output(struct cwc_container *container,
     cwc_container_for_each_toplevel(container, all_toplevel_send_output_leave,
                                     old);
 
-    container->tag = output->state->active_tag;
+    container->tag       = output->state->active_tag;
     container->workspace = output->state->active_workspace;
+
+    transaction_schedule_tag(cwc_output_get_current_tag_info(old));
 
     /* don't translate position when move to fallback output or vice versa
      * because it'll ruin the layout since the fallback output is not attached
