@@ -175,3 +175,7 @@ cwc.connect_signal("container::insert", function(cont, client)
     -- focus to the newly inserted client
     client:focus()
 end)
+
+cwc.connect_signal("screen::mouse_enter", function (s)
+    s:focus()
+end)

@@ -787,6 +787,9 @@ static void __cwc_container_move_to_output(struct cwc_container *container,
     cwc_container_for_each_toplevel(container, all_toplevel_send_output_leave,
                                     old);
 
+    container->tag = output->state->active_tag;
+    container->workspace = output->state->active_workspace;
+
     /* don't translate position when move to fallback output or vice versa
      * because it'll ruin the layout since the fallback output is not attached
      * to scene output

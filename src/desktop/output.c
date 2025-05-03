@@ -64,6 +64,7 @@ void cwc_output_focus(struct cwc_output *output)
 
     struct cwc_output *unfocused_output = server.focused_output;
     server.focused_output               = output;
+    cwc_output_focus_newest_focus_visible_toplevel(output);
 
     lua_State *L = g_config_get_lua_State();
     cwc_object_emit_signal_simple("screen::focus", L, output);
