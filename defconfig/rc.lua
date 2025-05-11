@@ -117,6 +117,14 @@ cwc.connect_signal("client::map", function(client)
     -- center the client from the screen workarea if its floating or in floating layout.
     if client.floating then client:center() end
 
+    -- don't pass focus when the focused client is fullscreen but allow if the parent is the focused
+    -- one. Useful when gaming where an app may restart itself and steal focus.
+    local focused = cwc.client.focused()
+    if focused and focused.fullscreen and client.parent ~= focused then
+        client:lower()
+        return
+    end
+
     client:raise()
     client:focus()
 

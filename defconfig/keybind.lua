@@ -449,6 +449,13 @@ end, { exclusive = true })
 kbd.bind({}, "XF86AudioStop", function()
     cwc.spawn_with_shell("playerctl stop")
 end, { exclusive = true })
+kbd.bind({}, "XF86AudioRewind", function()
+    cwc.spawn_with_shell("playerctl position 5-")
+end, { exclusive = true })
+kbd.bind({}, "XF86AudioForward", function()
+    cwc.spawn_with_shell("playerctl position 5+")
+end, { exclusive = true })
+
 
 ------------ Other Extra Keys
 kbd.bind({}, "XF86TouchpadToggle", function()
