@@ -140,6 +140,9 @@ static void process_key_event(struct cwc_seat *seat,
         // TODO: stupid hack #1
         keybind_kbd_execute(server.main_kbd_kmap, seat, modifiers, keysym,
                             false);
+        wl_event_source_timer_update(server.main_kbd_kmap->repeat_timer, 0);
+        server.main_kbd_kmap->repeated_bind = NULL;
+
         wl_list_for_each(kmap, &server.kbd_kmaps, link)
         {
             wl_event_source_timer_update(kmap->repeat_timer, 0);
