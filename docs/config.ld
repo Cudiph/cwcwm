@@ -36,6 +36,8 @@ file                                          = {
 
     "../src/objects/client.c",
     "../src/objects/container.c",
+    "../src/objects/kbindmap.c",
+    "../src/objects/kbind.c",
     "../src/objects/input.c",
     "../src/objects/layer_shell.c",
     "../src/objects/screen.c",

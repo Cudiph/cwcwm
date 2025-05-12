@@ -52,7 +52,7 @@ enum cwc_keybind_type {
 
 struct cwc_keybind_info {
     enum cwc_keybind_type type;
-    uint64_t key;
+    uint64_t key; // upper 32 bit is modifier and lower is the xkb_keysym_t
     char *description;
     char *group;
     union {
@@ -76,10 +76,24 @@ struct cwc_keybind_map {
     struct cwc_keybind_info *repeated_bind;
 };
 
+static inline uint32_t kbindinfo_key_get_modifier(uint64_t genkey)
+{
+    return genkey >> 32;
+}
+
+static inline uint32_t kbindinfo_key_get_keysym(uint64_t genkey)
+{
+    return genkey & 0xffffffff;
+}
+
 /* factory */
 struct cwc_keybind_map *cwc_keybind_map_create(struct wl_list *list);
 void cwc_keybind_map_destroy(struct cwc_keybind_map *kmap);
 void cwc_keybind_map_clear(struct cwc_keybind_map *kmap);
+
+struct lua_State;
+int cwc_keybind_map_register_bind_from_lua(struct lua_State *L,
+                                           struct cwc_keybind_map *kmap);
 
 /* function which start with double underscore is the low level function.
  * the function without underscore prefix is just a wrapper around the

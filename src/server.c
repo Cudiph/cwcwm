@@ -200,14 +200,14 @@ int server_init(struct cwc_server *s, char *config_path, char *library_path)
     wl_list_init(&s->kbd_kmaps);
 
     // initialize map so that luaC can insert something at startup
-    s->main_kbd_kmap      = cwc_keybind_map_create(&s->kbd_kmaps);
+    s->main_kbd_kmap      = cwc_keybind_map_create(NULL);
     s->main_mouse_kmap    = cwc_keybind_map_create(NULL);
     s->output_state_cache = cwc_hhmap_create(8);
     s->signal_map         = cwc_hhmap_create(50);
 
-    keybind_register_common_key();
     server_subscribe_signal();
     luaC_init();
+    keybind_register_common_key();
 
     // wlroots plug and play
     wlr_subcompositor_create(dpy);

@@ -123,6 +123,8 @@ static void process_key_event(struct cwc_seat *seat,
     struct cwc_keybind_map *kmap;
     switch (event->state) {
     case WL_KEYBOARD_KEY_STATE_PRESSED:
+        handled |= keybind_kbd_execute(server.main_kbd_kmap, seat, modifiers,
+                                       keysym, true);
         wl_list_for_each(kmap, &server.kbd_kmaps, link)
         {
             if (kmap->active)
@@ -136,6 +138,8 @@ static void process_key_event(struct cwc_seat *seat,
         // holding it, the client still assume that key is pressed because
         // client doesn't get notified when the key is released
         // TODO: stupid hack #1
+        keybind_kbd_execute(server.main_kbd_kmap, seat, modifiers, keysym,
+                            false);
         wl_list_for_each(kmap, &server.kbd_kmaps, link)
         {
             wl_event_source_timer_update(kmap->repeat_timer, 0);

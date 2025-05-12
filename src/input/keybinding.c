@@ -43,7 +43,10 @@
 #include "cwc/desktop/toplevel.h"
 #include "cwc/input/keyboard.h"
 #include "cwc/input/seat.h"
+#include "cwc/luaclass.h"
+#include "cwc/luaobject.h"
 #include "cwc/server.h"
+#include "cwc/signal.h"
 #include "cwc/util.h"
 
 #define GENERATED_KEY_LENGTH 8
@@ -55,15 +58,6 @@ uint64_t keybind_generate_key(uint32_t modifiers, uint32_t keysym)
     return _key;
 }
 
-static inline uint32_t generated_key_get_modifier(uint64_t genkey)
-{
-    return genkey >> 32;
-}
-
-static inline uint32_t generated_key_get_key(uint64_t genkey)
-{
-    return genkey & 0xffffffff;
-}
 static bool _keybind_execute(struct cwc_keybind_map *kmap,
                              struct cwc_keybind_info *info,
                              bool press);
@@ -80,6 +74,13 @@ static int repeat_loop(void *data)
     return 1;
 }
 
+static void _register_kmap_object(void *data)
+{
+    struct cwc_keybind_map *kmap = data;
+
+    luaC_object_kbindmap_register(g_config_get_lua_State(), kmap);
+}
+
 struct cwc_keybind_map *cwc_keybind_map_create(struct wl_list *list)
 {
     struct cwc_keybind_map *kmap = calloc(1, sizeof(*kmap));
@@ -93,11 +94,22 @@ struct cwc_keybind_map *cwc_keybind_map_create(struct wl_list *list)
     else
         wl_list_init(&kmap->link);
 
+    if (g_config_get_lua_State()) {
+        _register_kmap_object(kmap);
+    } else {
+        /* There's a circular dependency in server_init function so this need to
+         * run after lua is initialized */
+        wl_event_loop_add_idle(server.wl_event_loop, _register_kmap_object,
+                               kmap);
+    }
+
     return kmap;
 }
 
 void cwc_keybind_map_destroy(struct cwc_keybind_map *kmap)
 {
+    luaC_object_unregister(g_config_get_lua_State(), kmap);
+
     cwc_keybind_map_clear(kmap);
     cwc_hhmap_destroy(kmap->map);
     wl_event_source_remove(kmap->repeat_timer);
@@ -113,6 +125,7 @@ void cwc_keybind_map_destroy(struct cwc_keybind_map *kmap)
 static void cwc_keybind_info_destroy(struct cwc_keybind_info *info)
 {
     lua_State *L = g_config_get_lua_State();
+    luaC_object_unregister(L, info);
     switch (info->type) {
     case CWC_KEYBIND_TYPE_C:
         break;
@@ -166,6 +179,8 @@ static void _keybind_register(struct cwc_keybind_map *kmap,
 
     cwc_hhmap_ninsert(kmap->map, &generated_key, GENERATED_KEY_LENGTH,
                       info_dup);
+
+    luaC_object_kbind_register(g_config_get_lua_State(), info_dup);
 }
 
 void keybind_kbd_register(struct cwc_keybind_map *kmap,
@@ -326,13 +341,13 @@ void dump_keybinds_info(struct cwc_keybind_map *kmap)
         if (!info->description)
             continue;
 
-        char mods[100];
+        char mods[101];
         mods[0]         = 0;
-        char keysym[64] = {0};
+        char keysym[65] = {0};
 
-        wlr_modifier_to_string(generated_key_get_modifier(info->key), mods,
+        wlr_modifier_to_string(kbindinfo_key_get_modifier(info->key), mods,
                                100);
-        xkb_keysym_get_name(generated_key_get_key(info->key), keysym, 64);
+        xkb_keysym_get_name(kbindinfo_key_get_keysym(info->key), keysym, 64);
         printf("%s\t%s%s\t\t%s\n", info->group, mods, keysym,
                info->description);
     }
@@ -374,25 +389,8 @@ void keybind_register_common_key()
 
 //======================== LUA =============================
 
-/** Register a keyboard binding.
- *
- * @staticfct bind
- * @tparam table|number modifier Table of modifier or modifier bitfield
- * @tparam string keyname Keyname from `xkbcommon-keysyms.h`
- * @tparam func on_press Function to execute when pressed
- * @tparam[opt] func on_release Function to execute when released
- * @tparam[opt] table data Additional data
- * @tparam[opt] string data.group Keybinding group
- * @tparam[opt] string data.description Keybinding description
- * @tparam[opt] string data.exclusive Allow keybind to be executed even in
- * lockscreen and shortcut inhibit
- * @tparam[opt] string data.repeated Repeat keybind when hold (only on_press
- * will be executed)
- * @noreturn
- * @see cuteful.enum.modifier
- * @see cwc.pointer.bind
- */
-static int luaC_kbd_bind(lua_State *L)
+int cwc_keybind_map_register_bind_from_lua(lua_State *L,
+                                           struct cwc_keybind_map *kmap)
 {
     if (!lua_isnumber(L, 2) && !lua_isstring(L, 2))
         luaL_error(L, "Key can only be a string or number");
@@ -474,12 +472,38 @@ static int luaC_kbd_bind(lua_State *L)
     }
 
     // ready for register
-    keybind_kbd_register(server.main_kbd_kmap, modifiers, keysym, info);
+    keybind_kbd_register(kmap, modifiers, keysym, info);
 
     return 0;
 }
 
-/** Clear all keyboard binding
+/** Register a keyboard binding in the default map.
+ *
+ * Keybinding registered in this map is always active and cannot be deactivated.
+ *
+ * @staticfct bind
+ * @tparam table|number modifier Table of modifier or modifier bitfield
+ * @tparam string keyname Keyname from `xkbcommon-keysyms.h`
+ * @tparam func on_press Function to execute when pressed
+ * @tparam[opt] func on_release Function to execute when released
+ * @tparam[opt] table data Additional data
+ * @tparam[opt] string data.group Keybinding group
+ * @tparam[opt] string data.description Keybinding description
+ * @tparam[opt] string data.exclusive Allow keybind to be executed even in
+ * lockscreen and shortcut inhibit
+ * @tparam[opt] string data.repeated Repeat keybind when hold (only on_press
+ * will be executed)
+ * @noreturn
+ * @see cuteful.enum.modifier
+ * @see cwc.pointer.bind
+ * @see cwc_kbindmap:bind
+ */
+static int luaC_kbd_bind(lua_State *L)
+{
+    return cwc_keybind_map_register_bind_from_lua(L, server.main_kbd_kmap);
+}
+
+/** Clear all keyboard binding.
  *
  * @staticfct clear
  * @tparam[opt=false] boolean common_key Also clear common key (chvt key)
@@ -491,7 +515,67 @@ static int luaC_kbd_clear(lua_State *L)
     return 0;
 }
 
-/** Set keyboard repeat rate
+/** Create a new keybind map.
+ *
+ * @configfct create_bindmap
+ * @return cwc_kbind
+ */
+static int luaC_kbd_create_bindmap(lua_State *L)
+{
+    struct cwc_keybind_map *kmap = cwc_keybind_map_create(&server.kbd_kmaps);
+
+    luaC_object_push(L, kmap);
+
+    return 1;
+}
+
+/** Get all cwc_kbindmap object in the server.
+ *
+ * @configfct get_bindmap
+ * @treturn cwc_kbindmap[]
+ * @see get_default_member
+ */
+static int luaC_kbd_get_bindmap(lua_State *L)
+{
+    lua_newtable(L);
+
+    int i = 1;
+    struct cwc_keybind_map *input_dev;
+    wl_list_for_each(input_dev, &server.kbd_kmaps, link)
+    {
+        luaC_object_push(L, input_dev);
+        lua_rawseti(L, -2, i++);
+    }
+
+    return 1;
+}
+
+/** Get keybind object in the default map.
+ *
+ * @configfct get_default_member
+ * @treturn cwc_kbind[]
+ * @see cwc_kbindmap:member
+ */
+static int luaC_kbd_get_default_member(lua_State *L)
+{
+    struct cwc_keybind_map *kmap = server.main_kbd_kmap;
+
+    lua_newtable(L);
+    int j = 1;
+    for (size_t i = 0; i < kmap->map->alloc; i++) {
+        struct hhash_entry *elem = &kmap->map->table[i];
+        if (!elem->hash)
+            continue;
+        struct cwc_keybind_info *kbind = elem->data;
+
+        luaC_object_push(L, kbind);
+        lua_rawseti(L, -2, j++);
+    }
+
+    return 1;
+}
+
+/** Set keyboard repeat rate.
  *
  * @configfct set_repeat_rate
  * @tparam number rate Rate in hertz
@@ -504,7 +588,7 @@ static int luaC_kbd_set_repeat_rate(lua_State *L)
     return 0;
 }
 
-/** Set keyboard repeat delay
+/** Set keyboard repeat delay.
  *
  * @configfct set_repeat_delay
  * @tparam number delay Delay in miliseconds
@@ -520,12 +604,16 @@ static int luaC_kbd_set_repeat_delay(lua_State *L)
 void luaC_kbd_setup(lua_State *L)
 {
     luaL_Reg keyboard_staticlibs[] = {
-        {"bind",             luaC_kbd_bind            },
-        {"clear",            luaC_kbd_clear           },
+        {"bind",               luaC_kbd_bind              },
+        {"clear",              luaC_kbd_clear             },
+        {"create_bindmap",     luaC_kbd_create_bindmap    },
 
-        {"set_repeat_rate",  luaC_kbd_set_repeat_rate },
-        {"set_repeat_delay", luaC_kbd_set_repeat_delay},
-        {NULL,               NULL                     },
+        {"get_bindmap",        luaC_kbd_get_bindmap       },
+        {"get_default_member", luaC_kbd_get_default_member},
+
+        {"set_repeat_rate",    luaC_kbd_set_repeat_rate   },
+        {"set_repeat_delay",   luaC_kbd_set_repeat_delay  },
+        {NULL,                 NULL                       },
     };
 
     lua_newtable(L);

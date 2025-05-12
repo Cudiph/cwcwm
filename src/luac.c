@@ -131,6 +131,7 @@ static void cwc_restart_lua(void *data)
     {
         cwc_keybind_map_destroy(kmap);
     }
+    cwc_keybind_map_destroy(server.main_kbd_kmap);
     server.main_kbd_kmap = cwc_keybind_map_create(&server.kbd_kmaps);
     cwc_keybind_map_clear(server.main_mouse_kmap);
 
@@ -521,14 +522,20 @@ int luaC_init()
     /* cwc.plugin */
     luaC_plugin_setup(L);
 
-    /* cwc_tag */
-    luaC_tag_setup(L);
-
     /* cwc.input */
     luaC_input_setup(L);
 
     /* cwc.layer_shell */
     luaC_layer_shell_setup(L);
+
+    /* cwc_kbindmap */
+    luaC_kbindmap_setup(L);
+
+    /* cwc_kbind */
+    luaC_kbind_setup(L);
+
+    /* cwc_tag */
+    luaC_tag_setup(L);
 
     char *luarc_default_location = get_luarc_path();
     if (config_path && access(config_path, R_OK) == 0) {

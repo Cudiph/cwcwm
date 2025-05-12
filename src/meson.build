@@ -38,6 +38,8 @@ srcs = [
 
   'objects/client.c',
   'objects/container.c',
+  'objects/kbind.c',
+  'objects/kbindmap.c',
   'objects/screen.c',
   'objects/tag.c',
   'objects/input.c',

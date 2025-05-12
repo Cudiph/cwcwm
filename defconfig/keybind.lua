@@ -198,67 +198,95 @@ end, { description = "increase opacity", group = "client", repeated = true })
 
 ---------------- client movement
 local move_speed = 30
-kbd.bind(MODKEY, "Left", function()
+
+local function move_left()
     local c = cwc.client.focused()
     if not c or not c.floating then return end
 
     c:move(-move_speed, 0)
     local pos = c.geometry
     if pos.x < 0 then c:move_to(0, pos.y) end
-end, { description = "move client to the left", group = "client", repeated = true })
+end
 
-kbd.bind(MODKEY, "Right", function()
+local function move_right()
     local c = cwc.client.focused()
     if not c or not c.floating then return end
 
     c:move(move_speed, 0)
-end, { description = "move client to the right", group = "client", repeated = true })
+end
 
-kbd.bind(MODKEY, "Up", function()
+local function move_up()
     local c = cwc.client.focused()
     if not c or not c.floating then return end
 
     c:move(0, -move_speed)
     local pos = c.geometry
     if pos.y < 0 then c:move_to(pos.x, 0) end
-end, { description = "move client upward", group = "client", repeated = true })
+end
 
-kbd.bind(MODKEY, "Down", function()
+local function move_down()
     local c = cwc.client.focused()
     if not c or not c.floating then return end
 
     c:move(0, move_speed)
-end, { description = "move client downward", group = "client", repeated = true })
+end
+
+local move_left_opt = { description = "move client to the left", group = "client", repeated = true }
+local move_right_opt = { description = "move client to the right", group = "client", repeated = true }
+local move_up_opt = { description = "move client upward", group = "client", repeated = true }
+local move_down_opt = { description = "move client downward", group = "client", repeated = true }
+
+kbd.bind(MODKEY, "Left", move_left, move_left_opt)
+kbd.bind(MODKEY, "Right", move_right, move_right_opt)
+kbd.bind(MODKEY, "Up", move_up, move_up_opt)
+kbd.bind(MODKEY, "Down", move_down, move_down_opt)
 
 --------------------- client resize
 local size_interval = 20
-kbd.bind({ MODKEY, mod.SHIFT }, "Left", function()
+local function resize_left()
     local c = cwc.client.focused()
     if not c or not c.floating then return end
 
     c:resize(-size_interval, 0)
-end, { description = "reduce client width", group = "client", repeated = true })
+end
 
-kbd.bind({ MODKEY, mod.SHIFT }, "Right", function()
+local function resize_right()
     local c = cwc.client.focused()
     if not c or not c.floating then return end
 
     c:resize(size_interval, 0)
-end, { description = "increase client width", group = "client", repeated = true })
+end
 
-kbd.bind({ MODKEY, mod.SHIFT }, "Up", function()
+local function resize_up()
+    local c = cwc.client.focused()
+    if not c or not c.floating then return end
+
+    c:resize(size_interval, 0)
+end
+
+local function resize_up()
     local c = cwc.client.focused()
     if not c or not c.floating then return end
 
     c:resize(0, -size_interval)
-end, { description = "reduce client height", group = "client", repeated = true })
+end
 
-kbd.bind({ MODKEY, mod.SHIFT }, "Down", function()
+local function resize_down()
     local c = cwc.client.focused()
     if not c or not c.floating then return end
 
     c:resize(0, size_interval)
-end, { description = "increase client height", group = "client", repeated = true })
+end
+
+local resize_left_opt = { description = "reduce client width", group = "client", repeated = true }
+local resize_right_opt = { description = "increase client width", group = "client", repeated = true }
+local resize_up_opt = { description = "reduce client height", group = "client", repeated = true }
+local resize_down_opt = { description = "increase client height", group = "client", repeated = true }
+
+kbd.bind({ MODKEY, mod.SHIFT }, "Left", resize_left, resize_left_opt)
+kbd.bind({ MODKEY, mod.SHIFT }, "Right", resize_right, resize_right_opt)
+kbd.bind({ MODKEY, mod.SHIFT }, "Up", resize_up, resize_up_opt)
+kbd.bind({ MODKEY, mod.SHIFT }, "Down", resize_down, resize_down_opt)
 
 --------------------- SCREEN LAYOUT ------------------------
 
@@ -268,7 +296,6 @@ end, { description = "focus the next screen", group = "screen" })
 kbd.bind({ mod.LOGO, mod.ALT }, "k", function()
     cful.screen.focus_relative(-1)
 end, { description = "focus the previous screen", group = "screen" })
-
 
 ----------------- tag
 for i = 1, 9 do
@@ -499,6 +526,32 @@ kbd.bind({ mod.ALT, mod.SHIFT }, "Tab", function() --
 
     cwc.cwcle.prev(mod.ALT)
 end, { description = "cycle previous client", group = "client", repeated = true })
+
+----------------------------- CLIENT MANAGEMENT SUBMAP ---------------------------------
+
+-- Perform client management without holding the modkey
+local client_map = kbd.create_bindmap()
+client_map.active = false
+
+-- enter this submap by pressing MOD + W in the default map
+kbd.bind({ MODKEY }, "w", function()
+    client_map:active_only()
+end)
+
+-- exit this submap by pressing Esc
+client_map:bind({}, "Escape", function()
+    client_map.active = false
+end)
+
+client_map:bind({}, "h", move_left, move_left_opt)
+client_map:bind({}, "j", move_down, move_down_opt)
+client_map:bind({}, "k", move_up, move_up_opt)
+client_map:bind({}, "l", move_right, move_right_opt)
+
+client_map:bind({ mod.SHIFT }, "h", resize_left, resize_left_opt)
+client_map:bind({ mod.SHIFT }, "j", resize_down, resize_down_opt)
+client_map:bind({ mod.SHIFT }, "k", resize_up, resize_up_opt)
+client_map:bind({ mod.SHIFT }, "l", resize_right, resize_right_opt)
 
 -------------------- DEV ------------------------
 kbd.bind({ MODKEY }, "F11", function() --

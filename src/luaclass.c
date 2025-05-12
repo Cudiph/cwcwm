@@ -25,6 +25,8 @@ const char *const screen_classname      = "cwc_screen";
 const char *const tag_classname         = "cwc_tag";
 const char *const input_classname       = "cwc_input";
 const char *const layer_shell_classname = "cwc_layer_shell";
+const char *const kbindmap_classname    = "cwc_kbindmap";
+const char *const kbind_classname       = "cwc_kbind";
 
 /* equivalent lua code:
  * function(t, k)

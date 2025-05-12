@@ -101,9 +101,9 @@ void luaC_register_class(lua_State *L,
                                                                               \
     static inline int luaC_##obj_classname##_tostring(lua_State *L)           \
     {                                                                         \
-        struct cstruct_name *toplevel =                                       \
+        struct cstruct_name *cstructure =                                     \
             luaC_##obj_classname##_checkudata(L, 1);                          \
-        lua_pushfstring(L, "cwc_" #obj_classname ": %p", toplevel);           \
+        lua_pushfstring(L, "cwc_" #obj_classname ": %p", cstructure);         \
         return 1;                                                             \
     }
 
@@ -113,5 +113,6 @@ LUAC_CLASS_CREATE(cwc_output, screen)
 LUAC_CLASS_CREATE(cwc_tag_info, tag)
 LUAC_CLASS_CREATE(cwc_libinput_device, input)
 LUAC_CLASS_CREATE(cwc_layer_surface, layer_shell)
-
+LUAC_CLASS_CREATE(cwc_keybind_map, kbindmap)
+LUAC_CLASS_CREATE(cwc_keybind_info, kbind)
 #endif // !_CWC_LUACLASS_H

@@ -7,6 +7,7 @@ local lua_signal = require("luapi.signal")
 local container_test = require("luapi.container")
 local tag_test = require("luapi.tag")
 local layershell_test = require("luapi.layer_shell")
+local kbinding_test = require("luapi.kbinding")
 
 local cwc = cwc
 
@@ -76,6 +77,7 @@ cwc.kbd.bind({}, "F12", function()
     capi_signal()
     lua_signal()
     tag_test()
+    kbinding_test()
 
     cwc.screen.focused():get_tag(2):view_only()
     container_test.api()
