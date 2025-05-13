@@ -32,8 +32,11 @@ void luaC_register_class(lua_State *L,
 
 // struct cwc_toplevel *luaC_client_checkudata(lua_State *L, int ud)
 // {
-//     struct cwc_toplevel **c_udat = luaL_checkudata(L, ud, client_classname);
-//     return *c_udat;
+//     struct cwc_toplevel **udata = luaL_checkudata(L, ud, client_classname);
+//     if (luaC_object_valid(L, *udata))
+//          return *udata;
+//     luaL_error(L, "Object is not valid");
+//     return NULL;
 // }
 
 // static void luaC_object_client_register(lua_State *L,
@@ -70,7 +73,10 @@ void luaC_register_class(lua_State *L,
     {                                                                         \
         struct cstruct_name **udata =                                         \
             luaL_checkudata(L, ud, obj_classname##_classname);                \
-        return *udata;                                                        \
+        if (luaC_object_valid(L, *udata))                                     \
+            return *udata;                                                    \
+        luaL_error(L, "object already destroyed or invalid");                 \
+        return NULL;                                                          \
     }                                                                         \
                                                                               \
     static inline int luaC_##obj_classname##_create(                          \

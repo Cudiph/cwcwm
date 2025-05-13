@@ -122,7 +122,6 @@ static int luaC_kbindmap_bind(lua_State *L)
  * @method active_only
  * @noreturn
  */
-
 static int luaC_kbindmap_active_only(lua_State *L)
 {
     struct cwc_keybind_map *kmap = luaC_kbindmap_checkudata(L, 1);
@@ -134,6 +133,34 @@ static int luaC_kbindmap_active_only(lua_State *L)
     }
 
     kmap->active = true;
+
+    return 0;
+}
+
+/** Clear all keybinding (emptying the map).
+ *
+ * @method clear
+ * @noreturn
+ */
+static int luaC_kbindmap_clear(lua_State *L)
+{
+    struct cwc_keybind_map *kmap = luaC_kbindmap_checkudata(L, 1);
+
+    cwc_keybind_map_clear(kmap);
+
+    return 0;
+}
+
+/** Destroy this map freeing it from memory.
+ *
+ * @method destroy
+ * @noreturn
+ */
+static int luaC_kbindmap_destroy(lua_State *L)
+{
+    struct cwc_keybind_map *kmap = luaC_kbindmap_checkudata(L, 1);
+
+    cwc_keybind_map_destroy(kmap);
 
     return 0;
 }
@@ -153,6 +180,7 @@ void luaC_kbindmap_setup(lua_State *L)
 
     luaL_Reg kbindmap_methods[] = {
         REG_METHOD(bind),      REG_METHOD(active_only),
+        REG_METHOD(clear),     REG_METHOD(destroy),
 
         REG_READ_ONLY(member),
 

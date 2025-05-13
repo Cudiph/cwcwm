@@ -22,7 +22,6 @@ local function test()
     end, { description = "b", group = "c", exclusive = true, repeated = true })
 
     assert(#kmap.member)
-    print("cwc_kbindmap test PASSED")
 
     ---- kbind -----
     local bind_a = kmap.member[1]
@@ -52,7 +51,16 @@ local function test()
     assert(bind_a.keyname == "a")
     assert(bind_a.keysym == 0x61)
 
-    print("cwc_kbind test PASSED")
+    kmap:clear()
+    assert(#kmap.member == 0)
+
+    kmap:destroy()
+    local success = pcall(function()
+        print(kmap.active)
+    end)
+    assert(not success)
+
+    print("cwc_kbindmap & cwc_kbind test PASSED")
 end
 
 return test

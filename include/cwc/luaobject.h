@@ -78,4 +78,17 @@ static inline int luaC_object_push(lua_State *L, const void *pointer)
     return 1;
 }
 
+/** Check if object exist in the registry table.
+ * \param L The Lua VM state.
+ * \param pointer The object to check.
+ * \return Existence of the object.
+ */
+static inline bool luaC_object_valid(lua_State *L, const void *pointer)
+{
+    luaC_object_push(L, pointer);
+    bool valid = !lua_isnil(L, -1);
+    lua_pop(L, 1);
+    return valid;
+}
+
 #endif // !_CWC_LUAOBJECT_H
