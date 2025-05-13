@@ -39,7 +39,7 @@ local function scr_list()
             "\tActive tags: %s\n" ..
             "\tTearing allowed: %s\n" ..
             "\tHas focus: %s\n" ..
-            "\n"
+            ""
 
         out = out .. string.format(template,
             s_idx, s.name, s,

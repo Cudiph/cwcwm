@@ -477,7 +477,7 @@ int cwc_keybind_map_register_bind_from_lua(lua_State *L,
     return 0;
 }
 
-/** Register a keyboard binding in the default map.
+/** Register a keyboard binding to the default map.
  *
  * Keybinding registered in this map is always active and cannot be deactivated.
  *
@@ -503,7 +503,7 @@ static int luaC_kbd_bind(lua_State *L)
     return cwc_keybind_map_register_bind_from_lua(L, server.main_kbd_kmap);
 }
 
-/** Clear all keyboard binding.
+/** Clear all keyboard binding in the default map.
  *
  * @staticfct clear
  * @tparam[opt=false] boolean common_key Also clear common key (chvt key)

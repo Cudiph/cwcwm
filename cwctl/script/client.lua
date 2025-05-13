@@ -47,7 +47,7 @@ local function c_list()
             "\t\ty: %d\n" ..
             "\t\tw: %d\n" ..
             "\t\th: %d\n" ..
-            "\n"
+            ""
 
         out = out .. string.format(template,
             c_idx, c.title, c,

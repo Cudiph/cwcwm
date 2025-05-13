@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-/** Lua Object for registered keybind.
+/** Lua object for registered keybind.
  *
  * @author Dwi Asmoro Bangun
  * @copyright 2025

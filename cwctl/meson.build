@@ -1,6 +1,7 @@
 assets = {
   'client': 'script/client.lua',
   'screen': 'script/screen.lua',
+  'binds': 'script/binds.lua',
 }
 
 assets_code = {}
@@ -21,6 +22,7 @@ srcs = [
 
   assets_code['client'],
   assets_code['screen'],
+  assets_code['binds'],
 ]
 
 executable(

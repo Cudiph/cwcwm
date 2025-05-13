@@ -26,6 +26,7 @@
 #include <sys/un.h>
 #include <unistd.h>
 
+#include "binds-asset.h"
 #include "client-asset.h"
 #include "cwc/ipc.h"
 #include "screen-asset.h"
@@ -43,6 +44,7 @@ static char *help_txt =
     "Commands:\n"
     "  client    Get all client information\n"
     "  screen    Get all screen information\n"
+    "  binds     Get all active keybinds information\n"
     "\n"
     "Example:\n"
     "  cwc -s /tmp/cwc.sock -c 'return cwc.client.focused().title'\n"
@@ -119,15 +121,15 @@ int object_command(int argc, char **argv)
         repl((char *)_cwctl_script_screen_lua);
     } else if (strcmp(subcmd, "client") == 0) {
         repl((char *)_cwctl_script_client_lua);
+    } else if (strcmp(subcmd, "binds") == 0) {
+        repl((char *)_cwctl_script_binds_lua);
     } else {
-        fprintf(stderr,
-                "command %s not found, run 'cwc --help' to show all command\n",
-                subcmd);
+        fprintf(
+            stderr,
+            "command %s not found, run 'cwctl --help' to show all command\n",
+            subcmd);
         return 1;
     }
-
-    for (int index = optind; index < argc; index++)
-        printf("Non-option argument %s %d\n", argv[index], index);
 
     return 0;
 }
