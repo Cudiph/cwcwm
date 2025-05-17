@@ -29,7 +29,7 @@ int ipc_create_message_n(
         return -1;
 
     strcpy(dest, IPC_HEADER);
-    char opcstr[3] = {'\n', opcode, '\n'};
+    char opcstr[4] = {'\n', opcode, '\n', '\x00'};
     strcat(dest, opcstr);
     strncat(dest, body, n);
 
