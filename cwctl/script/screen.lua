@@ -21,6 +21,7 @@ local function scr_list()
             "[%d] %s (%s):\n" ..
             "\tDescription: %s\n" ..
             "\tEnabled: %s\n" ..
+            "\tDPMS: %s\n" ..
             "\tMake: %s\n" ..
             "\tModel: %s\n" ..
             "\tSerial: %s\n" ..
@@ -28,7 +29,7 @@ local function scr_list()
             "\tPosition: %s,%s\n" ..
             "\tPhysical size: %dx%d mm\n" ..
             "\tScale: %f\n" ..
-            "\tScreen Geometry:\n" ..
+            "\tScreen geometry:\n" ..
             "\t\tx: %d\n" ..
             "\t\ty: %d\n" ..
             "\t\tw: %d\n" ..
@@ -50,6 +51,7 @@ local function scr_list()
             s_idx, s.name, s,
             s.description,
             s.enabled,
+            s.dpms and "on" or "off",
             s.make,
             s.model,
             s.serial,

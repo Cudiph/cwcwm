@@ -170,8 +170,8 @@ static inline void schedule_resize(struct cwc_toplevel *toplevel,
             cwc_container_set_box_global(toplevel->container, new_box);
             clock_gettime(CLOCK_MONOTONIC, &now);
         } else {
-            bsp_update_root(toplevel->container->output,
-                            toplevel->container->workspace);
+            transaction_schedule_tag(
+                cwc_output_get_current_tag_info(toplevel->container->output));
         }
 
         cursor->last_resize_time_msec = timespec_to_msec(&now);
@@ -522,6 +522,7 @@ void start_interactive_move(struct cwc_toplevel *toplevel)
     cursor->grab_x           = cx - toplevel->container->tree->node.x;
     cursor->grab_y           = cy - toplevel->container->tree->node.y;
     cursor->grabbed_toplevel = toplevel;
+    toplevel->container->state |= CONTAINER_STATE_MOVING;
 }
 
 /* geo_box is wlr_surface box */
@@ -640,6 +641,7 @@ void start_interactive_resize(struct cwc_toplevel *toplevel, uint32_t edges)
     struct wlr_box geo_box = cwc_toplevel_get_geometry(toplevel);
     edges = edges ? edges : decide_which_edge_to_resize(sx, sy, geo_box);
 
+    toplevel->container->state |= CONTAINER_STATE_RESIZING;
     cursor->grabbed_toplevel        = toplevel;
     cursor->name_before_interactive = cursor->current_name;
     cursor->resize_edges            = edges;
@@ -651,7 +653,8 @@ void start_interactive_resize(struct cwc_toplevel *toplevel, uint32_t edges)
 
     if (cwc_toplevel_is_floating(toplevel)) {
         start_interactive_resize_floating(cursor, edges, cx, cy);
-    } else if (tag_info->layout_mode == CWC_LAYOUT_BSP) {
+    } else if (tag_info->layout_mode == CWC_LAYOUT_BSP
+               && toplevel->container->bsp_node) {
         start_interactive_resize_bsp(cursor, edges, cx, cy);
     } else if (tag_info->layout_mode == CWC_LAYOUT_MASTER) {
         start_interactive_resize_master(cursor, edges, cx, cy);
@@ -801,6 +804,8 @@ void stop_interactive(struct cwc_cursor *cursor)
     if (!cwc_toplevel_is_x11(*grabbed))
         wlr_xdg_toplevel_set_resizing((*grabbed)->xdg_toplevel, false);
 
+    (*grabbed)->container->state &= ~CONTAINER_STATE_RESIZING;
+    (*grabbed)->container->state &= ~CONTAINER_STATE_MOVING;
     *grabbed = NULL;
 }
 
@@ -1302,6 +1307,9 @@ void cwc_cursor_set_surface(struct cwc_cursor *cursor,
 
 void cwc_cursor_hide_cursor(struct cwc_cursor *cursor)
 {
+    if (cursor->state != CWC_CURSOR_STATE_NORMAL)
+        return;
+
     cursor->current_name = NULL;
     wlr_cursor_unset_image(cursor->wlr_cursor);
 }

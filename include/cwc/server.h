@@ -27,6 +27,7 @@ struct cwc_server {
 
     // desktop
     struct wlr_output_layout *output_layout;
+    struct wl_listener output_layout_change_l;
     struct wl_listener new_output_l;
     struct cwc_output *fallback_output;
 

@@ -7,7 +7,6 @@
 -- @module cuteful.screen
 -------------------------------------------------------------------------------
 
-local enum = require("cuteful.enum")
 local cwc = cwc
 
 local screen = {}

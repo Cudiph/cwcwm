@@ -21,6 +21,7 @@
 #include <limits.h>
 #include <math.h>
 #include <stdlib.h>
+#include <wayland-server-core.h>
 #include <wayland-util.h>
 #include <wlr/types/wlr_foreign_toplevel_management_v1.h>
 #include <wlr/types/wlr_scene.h>
@@ -737,10 +738,24 @@ void cwc_container_for_each_toplevel_top_to_bottom(
     }
 }
 
-static void all_toplevel_send_output_enter(struct cwc_toplevel *toplevel,
-                                           void *data)
+static void all_toplevel_leave_output(struct cwc_toplevel *toplevel, void *data)
 {
     struct cwc_output *output = data;
+
+    wl_list_remove(&toplevel->link_output_toplevels);
+
+    if (toplevel->wlr_foreign_handle) {
+        wlr_foreign_toplevel_handle_v1_output_leave(
+            toplevel->wlr_foreign_handle, output->wlr_output);
+    }
+}
+
+static void all_toplevel_enter_output(struct cwc_toplevel *toplevel, void *data)
+{
+    struct cwc_output *output = data;
+
+    wl_list_insert(output->state->toplevels.prev,
+                   &toplevel->link_output_toplevels);
 
     if (toplevel->wlr_foreign_handle) {
         wlr_foreign_toplevel_handle_v1_output_enter(
@@ -748,15 +763,28 @@ static void all_toplevel_send_output_enter(struct cwc_toplevel *toplevel,
     }
 }
 
-static void all_toplevel_send_output_leave(struct cwc_toplevel *toplevel,
-                                           void *data)
-{
-    struct cwc_output *output = data;
+struct translate_data {
+    double x, y;
+    struct cwc_container *container;
+    struct cwc_output *output;
+};
 
-    if (toplevel->wlr_foreign_handle) {
-        wlr_foreign_toplevel_handle_v1_output_leave(
-            toplevel->wlr_foreign_handle, output->wlr_output);
-    }
+static void _delayed_translate(void *data)
+{
+    struct translate_data *tdata    = data;
+    struct cwc_container *container = tdata->container;
+    struct cwc_output *output       = tdata->output;
+    double x                        = tdata->x;
+    double y                        = tdata->y;
+
+    x *= output->output_layout_box.width;
+    y *= output->output_layout_box.height;
+    container->floating_box.x = x + output->output_layout_box.x;
+    container->floating_box.y = y + output->output_layout_box.y;
+
+    cwc_container_set_position(container, x, y);
+
+    free(tdata);
 }
 
 static void __cwc_container_move_to_output(struct cwc_container *container,
@@ -767,7 +795,11 @@ static void __cwc_container_move_to_output(struct cwc_container *container,
     if (old == output)
         return;
 
-    bool floating = cwc_container_is_floating(container);
+    int output_workspace = output->state->active_workspace;
+    enum cwc_layout_mode layout =
+        cwc_output_get_tag(output, output_workspace)->layout_mode;
+    bool floating =
+        cwc_container_is_floating(container) || layout == CWC_LAYOUT_FLOATING;
 
     if (container->bsp_node)
         bsp_remove_container(container, false);
@@ -782,42 +814,45 @@ static void __cwc_container_move_to_output(struct cwc_container *container,
         wl_list_reattach(output->state->minimized.prev,
                          &container->link_output_minimized);
 
-    cwc_container_for_each_toplevel(container, all_toplevel_send_output_enter,
+    cwc_container_for_each_toplevel(container, all_toplevel_leave_output, old);
+    cwc_container_for_each_toplevel(container, all_toplevel_enter_output,
                                     output);
-    cwc_container_for_each_toplevel(container, all_toplevel_send_output_leave,
-                                    old);
 
     container->tag       = output->state->active_tag;
-    container->workspace = output->state->active_workspace;
+    container->workspace = output_workspace;
 
     transaction_schedule_tag(cwc_output_get_current_tag_info(old));
+
+    if (!floating && layout == CWC_LAYOUT_BSP
+        && !cwc_container_is_moving(container) && !container->old_prop.output)
+        bsp_insert_container(container, output_workspace);
 
     /* don't translate position when move to fallback output or vice versa
      * because it'll ruin the layout since the fallback output is not attached
      * to scene output
      */
-    if (!translate || old == server.fallback_output
+    if (!floating || !translate || old == server.fallback_output
         || output == server.fallback_output)
         return;
 
     struct wlr_box oldbox = cwc_container_get_box(container);
     double x, y;
     normalized_region_at(&old->output_layout_box, oldbox.x, oldbox.y, &x, &y);
-    x *= output->output_layout_box.width;
-    y *= output->output_layout_box.height;
-    x += output->output_layout_box.x;
-    y += output->output_layout_box.y;
 
-    container->floating_box.x = x;
-    container->floating_box.y = y;
+    // prevent client out of bounds when an error occur in translating  by
+    // constraining value to range 0 - 1.
+    x = fabs(x);
+    y = fabs(y);
+    x = x - (int)x;
+    y = y - (int)y;
 
-    /* set to float when it's floating in previous output to prevent dragged
-     * container to get tiled */
-    if (floating) {
-        cwc_container_set_position(container, x, y);
-        cwc_container_move_to_tag(container, output->state->active_workspace);
-        container->state |= CONTAINER_STATE_FLOATING;
-    }
+    struct translate_data *data = calloc(1, sizeof(*data));
+    data->x                     = x;
+    data->y                     = y;
+    data->container             = container;
+    data->output                = output;
+
+    wl_event_loop_add_idle(server.wl_event_loop, _delayed_translate, data);
 }
 
 void cwc_container_move_to_output_without_translate(

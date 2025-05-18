@@ -314,15 +314,6 @@ SCREEN_PROPERTY_FORWARD_WLR_OUTPUT_PROP(model, string)
  */
 SCREEN_PROPERTY_FORWARD_WLR_OUTPUT_PROP(serial, string)
 
-/** The screen enabled state.
- *
- * @property enabled
- * @tparam boolean enabled
- * @readonly
- * @propertydefault screen enabled state extracted from wlr_output.
- */
-SCREEN_PROPERTY_FORWARD_WLR_OUTPUT_PROP(enabled, boolean)
-
 /** The screen is non desktop or not.
  *
  * @property non_desktop
@@ -391,6 +382,95 @@ static int luaC_screen_get_workarea(lua_State *L)
     return 1;
 }
 
+/** The screen enabled state.
+ *
+ * unlike `dpms` this property will remove output from the output layout.
+ *
+ * @property enabled
+ * @tparam[opt=true] boolean enabled
+ * @see dpms
+ */
+static int luaC_screen_get_enabled(lua_State *L)
+{
+    struct cwc_output *output = luaC_screen_checkudata(L, 1);
+
+    lua_pushboolean(L, output->enabled);
+
+    return 1;
+}
+static int luaC_screen_set_enabled(lua_State *L)
+{
+    luaL_checktype(L, 2, LUA_TBOOLEAN);
+    struct cwc_output *output = luaC_screen_checkudata(L, 1);
+    bool set                  = lua_toboolean(L, 2);
+
+    if (set == output->enabled)
+        return 0;
+
+    // TODO: do rescue and restore
+    struct cwc_output *o;
+    if (set) {
+        wlr_output_layout_add_auto(server.output_layout, output->wlr_output);
+        wl_list_for_each(o, &server.outputs, link)
+        {
+            cwc_output_set_position(o, o->output_layout_box.x,
+                                    o->output_layout_box.y);
+        }
+    } else {
+        bool at_least_one_active = false;
+        wl_list_for_each(o, &server.outputs, link)
+        {
+            if (o == output)
+                continue;
+            at_least_one_active |= o->wlr_output->enabled;
+        }
+
+        int saved_x = output->output_layout_box.x;
+        int saved_y = output->output_layout_box.y;
+        if (at_least_one_active)
+            wlr_output_layout_remove(server.output_layout, output->wlr_output);
+        else
+            luaL_error(L, "cannot disable all output");
+
+        // assign to keep it sorted
+        output->output_layout_box.x = saved_x;
+        output->output_layout_box.y = saved_y;
+    }
+
+    wlr_output_state_set_enabled(&output->pending, set);
+    transaction_schedule_output(output);
+
+    output->enabled = set;
+
+    return 0;
+}
+
+/** The screen dpms state.
+ *
+ * @property dpms
+ * @tparam[opt=true] boolean dpms
+ * @see enabled
+ */
+static int luaC_screen_get_dpms(lua_State *L)
+{
+    struct cwc_output *output = luaC_screen_checkudata(L, 1);
+
+    lua_pushboolean(L, output->wlr_output->enabled);
+
+    return 1;
+}
+static int luaC_screen_set_dpms(lua_State *L)
+{
+    luaL_checktype(L, 2, LUA_TBOOLEAN);
+    struct cwc_output *output = luaC_screen_checkudata(L, 1);
+    bool set                  = lua_toboolean(L, 2);
+
+    wlr_output_state_set_enabled(&output->pending, set);
+    transaction_schedule_output(output);
+
+    return 0;
+}
+
 /** Whether to allow screen to tear or not.
  *
  * @property allow_tearing
@@ -399,6 +479,7 @@ static int luaC_screen_get_workarea(lua_State *L)
  */
 static int luaC_screen_set_allow_tearing(lua_State *L)
 {
+    luaL_checktype(L, 2, LUA_TBOOLEAN);
     struct cwc_output *output = luaC_screen_checkudata(L, 1);
 
     cwc_output_set_allow_tearing(output, lua_toboolean(L, 2));
@@ -757,17 +838,6 @@ static int luaC_screen_set_adaptive_sync(lua_State *L)
  * @tparam boolean enable True to enable
  * @noreturn
  */
-static int luaC_screen_set_enabled(lua_State *L)
-{
-    luaL_checktype(L, 2, LUA_TBOOLEAN);
-    struct cwc_output *output = luaC_screen_checkudata(L, 1);
-    bool set                  = lua_toboolean(L, 2);
-
-    wlr_output_state_set_enabled(&output->pending, set);
-    transaction_schedule_output(output);
-
-    return 0;
-}
 
 /** Set output scale.
  *
@@ -818,6 +888,24 @@ static int luaC_screen_focus(lua_State *L)
     return 0;
 }
 
+/** Destroy this screen.
+ *
+ * used for debugging.
+ *
+ * @method destroy
+ * @noreturn
+ * @see enabled
+ * @see dpms
+ */
+static int luaC_screen_destroy(lua_State *L)
+{
+    struct cwc_output *output = luaC_screen_checkudata(L, 1);
+
+    wlr_output_destroy(output->wlr_output);
+
+    return 0;
+}
+
 #define REG_METHOD(name)    {#name, luaC_screen_##name}
 #define REG_READ_ONLY(name) {"get_" #name, luaC_screen_get_##name}
 #define REG_SETTER(name)    {"set_" #name, luaC_screen_set_##name}
@@ -840,7 +928,6 @@ void luaC_screen_setup(lua_State *L)
         // screen state
         REG_METHOD(set_mode),
         REG_METHOD(set_adaptive_sync),
-        REG_METHOD(set_enabled),
         REG_METHOD(set_scale),
         REG_METHOD(set_transform),
 
@@ -849,6 +936,8 @@ void luaC_screen_setup(lua_State *L)
         REG_METHOD(get_clients),
         REG_METHOD(get_focus_stack),
         REG_METHOD(get_minimized),
+
+        REG_METHOD(destroy),
 
         // readonly prop
         REG_READ_ONLY(geometry),
@@ -870,6 +959,8 @@ void luaC_screen_setup(lua_State *L)
         REG_READ_ONLY(selected_tag),
 
         // rw properties
+        REG_PROPERTY(enabled),
+        REG_PROPERTY(dpms),
         REG_PROPERTY(allow_tearing),
         REG_PROPERTY(active_tag),
         REG_PROPERTY(active_workspace),

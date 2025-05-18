@@ -13,7 +13,9 @@ enum container_state_mask {
     CONTAINER_STATE_MINIMIZED  = 1 << 2,
     CONTAINER_STATE_MAXIMIZED  = 1 << 3,
     CONTAINER_STATE_FULLSCREEN = 1 << 4,
-    CONTAINER_STATE_STICKY     = 1 << 5,
+    CONTAINER_STATE_STICKY     = 1 << 5, // shown at every tags
+    CONTAINER_STATE_MOVING     = 1 << 6, // dragged by interactive move
+    CONTAINER_STATE_RESIZING   = 1 << 7, // resized by interactive resize
 };
 
 struct border_buffer {
@@ -207,6 +209,16 @@ static inline bool cwc_container_is_fullscreen(struct cwc_container *cont)
 static inline bool cwc_container_is_sticky(struct cwc_container *cont)
 {
     return cont->state & CONTAINER_STATE_STICKY;
+}
+
+static inline bool cwc_container_is_moving(struct cwc_container *cont)
+{
+    return cont->state & CONTAINER_STATE_MOVING;
+}
+
+static inline bool cwc_container_is_resizing(struct cwc_container *cont)
+{
+    return cont->state & CONTAINER_STATE_RESIZING;
 }
 
 static inline bool

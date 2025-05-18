@@ -29,14 +29,14 @@ guaranteed not to break your configuration.
 - Tags instead of workspaces.
 - Documented Lua API.
 - wlr protocols support.
-- Multihead support + hotplugging (not heavily tested).
+- Multihead support with hotplugging and restore.
 
 ## Building and installation
 
 Required dependencies:
 
 - wayland
-- wlroots 0.19 (git)
+- wlroots 0.19
 - hyprcursor
 - cairo
 - xkbcommon

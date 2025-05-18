@@ -54,7 +54,7 @@
 
 void cwc_output_focus(struct cwc_output *output)
 {
-    if (server.focused_output == output)
+    if (server.focused_output == output || !output->enabled)
         return;
 
     if (output == server.fallback_output) {
@@ -141,6 +141,7 @@ cwc_output_state_create(struct cwc_output *output)
 
 static inline void cwc_output_state_save(struct cwc_output *output)
 {
+    output->state->old_output = output;
     cwc_hhmap_insert(server.output_state_cache, output->wlr_output->name,
                      output->state);
 }
@@ -170,8 +171,7 @@ static bool cwc_output_state_try_restore(struct cwc_output *output)
         container->tag       = container->old_prop.tag;
         container->workspace = container->old_prop.workspace;
 
-        container->old_prop.bsp_node = NULL;
-        container->old_prop.output   = NULL;
+        container->old_prop = (struct old_output){0};
     }
 
     struct cwc_toplevel *toplevel;
@@ -348,24 +348,36 @@ static void on_output_frame(struct wl_listener *listener, void *data)
     wlr_scene_output_send_frame_done(scene_output, &now);
 }
 
-static void rescue_output_toplevel_container(struct cwc_output *source,
-                                             struct cwc_output *target)
+void cwc_output_rescue_toplevel_container(struct cwc_output *source,
+                                          struct cwc_output *target)
 {
+    if (source == target)
+        return;
+
     struct cwc_container *container;
     struct cwc_container *tmp;
     wl_list_for_each_safe(container, tmp, &source->state->containers,
                           link_output_container)
     {
+        bool movetag = true;
         if (container->old_prop.output == NULL) {
-            container->old_prop.output    = source;
-            container->old_prop.bsp_node  = container->bsp_node;
-            container->old_prop.workspace = container->workspace;
-            container->old_prop.tag       = container->tag;
+            // don't move client that spawned in fallback output otherwise it'll
+            // always spawn at tag 1
+            if (source == server.fallback_output) {
+                movetag = false;
+            } else {
+                container->old_prop.output    = source;
+                container->old_prop.bsp_node  = container->bsp_node;
+                container->old_prop.workspace = container->workspace;
+                container->old_prop.tag       = container->tag;
 
-            container->bsp_node = NULL;
+                container->bsp_node = NULL;
+            }
         }
 
         cwc_container_move_to_output(container, target);
+        if (movetag)
+            cwc_container_move_to_tag(container, container->old_prop.workspace);
     }
 
     struct cwc_toplevel *toplevel;
@@ -378,21 +390,22 @@ static void rescue_output_toplevel_container(struct cwc_output *source,
     }
 }
 
-static void server_focus_previous_output(struct cwc_output *reference)
+static struct cwc_output *
+cwc_output_get_other_available_output(struct cwc_output *reference)
 {
     if (wl_list_length_at_least(&server.outputs, 2)) {
         struct cwc_output *o;
         wl_list_for_each_reverse(o, &reference->link, link)
         {
-            if (&o->link == &server.outputs)
+            if (&o->link == &server.outputs || !o->enabled)
                 continue;
 
             cwc_output_focus(o);
-            return;
+            return o;
         }
     }
 
-    cwc_output_focus(server.fallback_output);
+    return server.fallback_output;
 }
 
 /* unmanaged surface is commonly short lived just destroy it with the output */
@@ -412,12 +425,39 @@ static void _close_unmanaged(struct cwc_output *output)
     }
 }
 
+/* same alg as move to output with translate */
+static void constraint_floating_container(void *data)
+{
+    struct cwc_container *container;
+    wl_list_for_each(container, &server.containers, link)
+    {
+        if (!cwc_container_is_floating(container))
+            continue;
+
+        struct cwc_output *output = container->output;
+        struct wlr_box contbox    = cwc_container_get_box(container);
+        double x, y;
+        normalized_region_at(&output->output_layout_box, contbox.x, contbox.y,
+                             &x, &y);
+
+        x = fabs(x);
+        y = fabs(y);
+        x = x - (int)x;
+        y = y - (int)y;
+        x *= output->output_layout_box.width;
+        y *= output->output_layout_box.height;
+        container->floating_box.x = x + output->output_layout_box.x;
+        container->floating_box.y = y + output->output_layout_box.y;
+
+        cwc_container_set_position(container, x, y);
+    }
+}
+
 static void output_layers_fini(struct cwc_output *output);
 
 static void on_output_destroy(struct wl_listener *listener, void *data)
 {
     struct cwc_output *output = wl_container_of(listener, output, destroy_l);
-    output->state->old_output = output;
     cwc_output_state_save(output);
     cwc_object_emit_signal_simple("screen::destroy", g_config_get_lua_State(),
                                   output);
@@ -442,26 +482,27 @@ static void on_output_destroy(struct wl_listener *listener, void *data)
 
     wl_list_remove(&output->config_commit_l.link);
 
-    // change focus to previous inserted outputs although the order may wrong
-    server_focus_previous_output(output);
+    struct cwc_output *available_o =
+        cwc_output_get_other_available_output(output);
+    cwc_output_focus(available_o);
 
-    struct cwc_output *focused = server.focused_output;
+    _close_unmanaged(output);
+    cwc_output_rescue_toplevel_container(output, available_o);
+    wl_event_loop_add_idle(server.wl_event_loop, constraint_floating_container,
+                           NULL);
 
     // update output layout
     wlr_output_layout_remove(server.output_layout, output->wlr_output);
-    wlr_output_layout_get_box(server.output_layout, focused->wlr_output,
-                              &focused->output_layout_box);
-
-    _close_unmanaged(output);
-    rescue_output_toplevel_container(output, focused);
+    wlr_output_layout_get_box(server.output_layout, available_o->wlr_output,
+                              &available_o->output_layout_box);
 
     for (int i = 1; i < MAX_WORKSPACE; i++) {
-        if (focused != server.fallback_output)
-            cwc_output_set_layout_mode(focused, i,
-                                       focused->state->tag_info[i].layout_mode);
+        if (available_o != server.fallback_output)
+            cwc_output_set_layout_mode(
+                available_o, i, available_o->state->tag_info[i].layout_mode);
     }
 
-    transaction_schedule_output(focused);
+    transaction_schedule_output(available_o);
 
     luaC_object_unregister(g_config_get_lua_State(), output);
     wl_list_remove(&output->link);
@@ -496,23 +537,17 @@ static void sort_output_index()
     wl_list_for_each_safe(o, tmp, &server.outputs, link)
     {
         struct cwc_output *target = NULL;
-        int lowest_y              = INT_MAX;
+        int ox                    = o->output_layout_box.x;
+        int oy                    = o->output_layout_box.y;
 
         wl_list_for_each(sorted_o, &sorted_list_temp, link)
         {
+            int sorted_o_x = sorted_o->output_layout_box.x;
             int sorted_o_y = sorted_o->output_layout_box.y;
-            if (o->output_layout_box.y > sorted_o_y)
-                continue;
 
-            if (!target) {
-                target   = sorted_o;
-                lowest_y = sorted_o_y;
-                continue;
-            }
-
-            if (sorted_o_y < lowest_y) {
-                target   = sorted_o;
-                lowest_y = sorted_o_y;
+            if (oy <= sorted_o_y && ox <= sorted_o_x) {
+                target = sorted_o;
+                break;
             }
         }
 
@@ -529,6 +564,11 @@ static void sort_output_index()
     }
 }
 
+static void _sort_output_index(void *data)
+{
+    sort_output_index();
+}
+
 void cwc_output_update_outputs_state()
 {
     struct wlr_output_configuration_v1 *cfg =
@@ -536,6 +576,9 @@ void cwc_output_update_outputs_state()
     struct cwc_output *output;
     wl_list_for_each(output, &server.outputs, link)
     {
+        if (!wlr_output_layout_get(server.output_layout, output->wlr_output))
+            continue; // output is disabled, continue
+
         struct wlr_output_configuration_head_v1 *config_head =
             wlr_output_configuration_head_v1_create(cfg, output->wlr_output);
         struct wlr_box output_box;
@@ -553,7 +596,11 @@ void cwc_output_update_outputs_state()
     wlr_output_manager_v1_set_configuration(server.output_manager, cfg);
 
     cwc_input_manager_update_cursor_scale();
-    sort_output_index();
+    wl_event_loop_add_idle(server.wl_event_loop, _sort_output_index, NULL);
+
+    // fallback output layout box change to 0, idk why
+    server.fallback_output->output_layout_box.width  = 1920;
+    server.fallback_output->output_layout_box.height = 1080;
 }
 
 static void on_request_state(struct wl_listener *listener, void *data)
@@ -599,6 +646,7 @@ static void output_layers_fini(struct cwc_output *output)
 static struct cwc_output *cwc_output_create(struct wlr_output *wlr_output)
 {
     struct cwc_output *output = calloc(1, sizeof(*output));
+    output->enabled           = true;
     output->type              = DATA_TYPE_OUTPUT;
     output->wlr_output        = wlr_output;
     output->tearing_allowed   = false;
@@ -609,10 +657,10 @@ static struct cwc_output *cwc_output_create(struct wlr_output *wlr_output)
 
     output->usable_area = output->output_layout_box;
 
-    if (!cwc_output_state_try_restore(output))
-        output->state = cwc_output_state_create(output);
-    else
+    if (cwc_output_state_try_restore(output))
         output->restored = true;
+    else
+        output->state = cwc_output_state_create(output);
 
     output_layers_init(output);
 
@@ -653,7 +701,7 @@ static void on_new_output(struct wl_listener *listener, void *data)
     wlr_output_state_finish(&state);
 
     struct cwc_output *output = cwc_output_create(wlr_output);
-    rescue_output_toplevel_container(server.fallback_output, output);
+    cwc_output_rescue_toplevel_container(server.fallback_output, output);
 
     output->destroy_l.notify = on_output_destroy;
     wl_signal_add(&wlr_output->events.destroy, &output->destroy_l);
@@ -697,6 +745,9 @@ static void on_new_output(struct wl_listener *listener, void *data)
 
     if (wl_list_length(&server.outputs) == 1)
         cwc_output_focus(output);
+
+    wl_event_loop_add_idle(server.wl_event_loop, constraint_floating_container,
+                           NULL);
 }
 
 static void output_manager_apply(struct wlr_output_configuration_v1 *config,
@@ -780,6 +831,7 @@ static void on_opm_set_mode(struct wl_listener *listener, void *data)
     wlr_output_commit_state(event->output, &state);
 
     wlr_output_state_finish(&state);
+    cwc_output_update_outputs_state();
 }
 
 struct tearing_object {
@@ -822,15 +874,23 @@ static void on_new_tearing_object(struct wl_listener *listener, void *data)
     wl_signal_add(&tearing_control->events.destroy, &obj->destroy_l);
 }
 
+static void on_output_layout_change(struct wl_listener *listener, void *data)
+{
+    wl_event_loop_add_idle(server.wl_event_loop, _sort_output_index, NULL);
+}
+
 void setup_output(struct cwc_server *s)
 {
     struct wlr_output *headless =
-        wlr_headless_add_output(s->headless_backend, 1280, 720);
+        wlr_headless_add_output(s->headless_backend, 1920, 1080);
     wlr_output_set_name(headless, "FALLBACK");
     s->fallback_output = cwc_output_create(headless);
 
     // wlr output layout
-    s->output_layout       = wlr_output_layout_create(s->wl_display);
+    s->output_layout                 = wlr_output_layout_create(s->wl_display);
+    s->output_layout_change_l.notify = on_output_layout_change;
+    wl_signal_add(&s->output_layout->events.change, &s->output_layout_change_l);
+
     s->new_output_l.notify = on_new_output;
     wl_signal_add(&s->backend->events.new_output, &s->new_output_l);
 
@@ -862,6 +922,8 @@ void setup_output(struct cwc_server *s)
 void cleanup_output(struct cwc_server *s)
 {
     wl_list_remove(&s->new_output_l.link);
+
+    wl_list_remove(&s->output_layout_change_l.link);
 
     wl_list_remove(&s->output_manager_test_l.link);
     wl_list_remove(&s->output_manager_apply_l.link);
@@ -1064,6 +1126,12 @@ void cwc_output_set_position(struct cwc_output *output, int x, int y)
     wlr_output_layout_add(server.output_layout, output->wlr_output, x, y);
     cwc_output_update_outputs_state();
     arrange_layers(output);
+
+    struct cwc_output *o;
+    wl_list_for_each(o, &server.outputs, link)
+    {
+        transaction_schedule_tag(cwc_output_get_current_tag_info(output));
+    }
 }
 
 //================== TAGS OPERATION ===================
