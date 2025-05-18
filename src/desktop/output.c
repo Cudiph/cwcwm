@@ -145,9 +145,16 @@ static inline void cwc_output_state_save(struct cwc_output *output)
                      output->state);
 }
 
-static void _restore(void *data)
+/* return true if restored, false otherwise */
+static bool cwc_output_state_try_restore(struct cwc_output *output)
 {
-    struct cwc_output *output     = data;
+    output->state =
+        cwc_hhmap_get(server.output_state_cache, output->wlr_output->name);
+
+    if (!output->state)
+        return false;
+
+    output->state->output         = output;
     struct cwc_output *old_output = output->state->old_output;
 
     /* restore container to old output */
@@ -197,20 +204,6 @@ static void _restore(void *data)
 
     cwc_hhmap_remove(server.output_state_cache, output->wlr_output->name);
     free(old_output);
-}
-
-/* return true if restored, false otherwise */
-static bool cwc_output_state_try_restore(struct cwc_output *output)
-{
-    output->state =
-        cwc_hhmap_get(server.output_state_cache, output->wlr_output->name);
-
-    if (!output->state)
-        return false;
-
-    output->state->output = output;
-
-    wl_event_loop_add_idle(server.wl_event_loop, _restore, output);
 
     return true;
 }
@@ -358,6 +351,9 @@ static void on_output_frame(struct wl_listener *listener, void *data)
 void cwc_output_rescue_toplevel_container(struct cwc_output *source,
                                           struct cwc_output *target)
 {
+    if (source == target)
+        return;
+
     struct cwc_container *container;
     struct cwc_container *tmp;
     wl_list_for_each_safe(container, tmp, &source->state->containers,
@@ -386,21 +382,22 @@ void cwc_output_rescue_toplevel_container(struct cwc_output *source,
     }
 }
 
-static void server_focus_previous_output(struct cwc_output *reference)
+static struct cwc_output *
+cwc_output_get_other_available_output(struct cwc_output *reference)
 {
     if (wl_list_length_at_least(&server.outputs, 2)) {
         struct cwc_output *o;
         wl_list_for_each_reverse(o, &reference->link, link)
         {
-            if (&o->link == &server.outputs)
+            if (&o->link == &server.outputs || !o->enabled)
                 continue;
 
             cwc_output_focus(o);
-            return;
+            return o;
         }
     }
 
-    cwc_output_focus(server.fallback_output);
+    return server.fallback_output;
 }
 
 /* unmanaged surface is commonly short lived just destroy it with the output */
@@ -450,26 +447,25 @@ static void on_output_destroy(struct wl_listener *listener, void *data)
 
     wl_list_remove(&output->config_commit_l.link);
 
-    // change focus to previous inserted outputs although the order may wrong
-    server_focus_previous_output(output);
-
-    struct cwc_output *focused = server.focused_output;
+    struct cwc_output *available_o =
+        cwc_output_get_other_available_output(output);
+    cwc_output_focus(available_o);
 
     // update output layout
     wlr_output_layout_remove(server.output_layout, output->wlr_output);
-    wlr_output_layout_get_box(server.output_layout, focused->wlr_output,
-                              &focused->output_layout_box);
+    wlr_output_layout_get_box(server.output_layout, available_o->wlr_output,
+                              &available_o->output_layout_box);
 
     _close_unmanaged(output);
-    cwc_output_rescue_toplevel_container(output, focused);
+    cwc_output_rescue_toplevel_container(output, available_o);
 
     for (int i = 1; i < MAX_WORKSPACE; i++) {
-        if (focused != server.fallback_output)
-            cwc_output_set_layout_mode(focused, i,
-                                       focused->state->tag_info[i].layout_mode);
+        if (available_o != server.fallback_output)
+            cwc_output_set_layout_mode(
+                available_o, i, available_o->state->tag_info[i].layout_mode);
     }
 
-    transaction_schedule_output(focused);
+    transaction_schedule_output(available_o);
 
     luaC_object_unregister(g_config_get_lua_State(), output);
     wl_list_remove(&output->link);
@@ -663,7 +659,8 @@ static void on_new_output(struct wl_listener *listener, void *data)
     wlr_output_state_finish(&state);
 
     struct cwc_output *output = cwc_output_create(wlr_output);
-    output->enabled           = true;
+    // cwc_output_rescue_toplevel_container(server.fallback_output, output);
+    output->enabled = true;
 
     output->destroy_l.notify = on_output_destroy;
     wl_signal_add(&wlr_output->events.destroy, &output->destroy_l);

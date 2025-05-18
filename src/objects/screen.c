@@ -405,7 +405,7 @@ static int luaC_screen_set_enabled(lua_State *L)
     bool set                  = lua_toboolean(L, 2);
 
     if (set == output->enabled)
-        goto schedule;
+        return 0;
 
     // TODO: do rescue and restore
     struct cwc_output *o;
@@ -437,7 +437,6 @@ static int luaC_screen_set_enabled(lua_State *L)
         output->output_layout_box.y = saved_y;
     }
 
-schedule:
     wlr_output_state_set_enabled(&output->pending, set);
     transaction_schedule_output(output);
 
