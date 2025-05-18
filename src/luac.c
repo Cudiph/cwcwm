@@ -132,7 +132,7 @@ static void cwc_restart_lua(void *data)
         cwc_keybind_map_destroy(kmap);
     }
     cwc_keybind_map_destroy(server.main_kbd_kmap);
-    server.main_kbd_kmap = cwc_keybind_map_create(&server.kbd_kmaps);
+    server.main_kbd_kmap = cwc_keybind_map_create(NULL);
     cwc_keybind_map_clear(server.main_mouse_kmap);
 
     cwc_lua_signal_clear(server.signal_map);
