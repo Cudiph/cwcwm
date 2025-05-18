@@ -28,6 +28,11 @@ local function scr_list()
             "\tPosition: %s,%s\n" ..
             "\tPhysical size: %dx%d mm\n" ..
             "\tScale: %f\n" ..
+            "\tScreen Geometry:\n" ..
+            "\t\tx: %d\n" ..
+            "\t\ty: %d\n" ..
+            "\t\tw: %d\n" ..
+            "\t\th: %d\n" ..
             "\tScreen work area:\n" ..
             "\t\tx: %d\n" ..
             "\t\ty: %d\n" ..
@@ -52,6 +57,7 @@ local function scr_list()
             s.geometry.x, s.geometry.y,
             s.phys_width, s.phys_height,
             s.scale,
+            s.geometry.x, s.geometry.y, s.geometry.width, s.geometry.height,
             s.workarea.x, s.workarea.y, s.workarea.width, s.workarea.height,
             s.non_desktop,
             s.restored,
