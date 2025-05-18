@@ -257,7 +257,7 @@ static int luaC_client_get(lua_State *L)
 
     struct cwc_toplevel *toplevel;
     int i = 1;
-    wl_list_for_each(toplevel, &server.toplevels, link)
+    wl_list_for_each_reverse(toplevel, &server.toplevels, link)
     {
         if (!toplevel->container)
             continue;
@@ -504,6 +504,7 @@ static int luaC_client_center(lua_State *L)
                                                                       \
     static int luaC_client_set_##name(lua_State *L)                   \
     {                                                                 \
+        luaL_checktype(L, 2, LUA_TBOOLEAN);                           \
         struct cwc_toplevel *toplevel = luaC_client_checkudata(L, 1); \
         bool set                      = lua_toboolean(L, 2);          \
         cwc_toplevel_set_##name(toplevel, set);                       \
@@ -787,6 +788,7 @@ static int luaC_client_get_border_enabled(lua_State *L)
 
 static int luaC_client_set_border_enabled(lua_State *L)
 {
+    luaL_checktype(L, 2, LUA_TBOOLEAN);
     struct cwc_toplevel *toplevel = luaC_client_checkudata(L, 1);
 
     bool enable = lua_toboolean(L, 2);

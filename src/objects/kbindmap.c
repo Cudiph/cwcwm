@@ -51,6 +51,7 @@ static int luaC_kbindmap_get_active(lua_State *L)
 
 static int luaC_kbindmap_set_active(lua_State *L)
 {
+    luaL_checktype(L, 2, LUA_TBOOLEAN);
     struct cwc_keybind_map *kmap = luaC_kbindmap_checkudata(L, 1);
 
     kmap->active = lua_toboolean(L, 2);

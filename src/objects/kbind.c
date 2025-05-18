@@ -103,6 +103,7 @@ static int luaC_kbind_get_exclusive(lua_State *L)
 }
 static int luaC_kbind_set_exclusive(lua_State *L)
 {
+    luaL_checktype(L, 2, LUA_TBOOLEAN);
     struct cwc_keybind_info *kbind = luaC_kbind_checkudata(L, 1);
 
     kbind->exclusive = lua_toboolean(L, 2);
@@ -125,6 +126,7 @@ static int luaC_kbind_get_repeated(lua_State *L)
 }
 static int luaC_kbind_set_repeated(lua_State *L)
 {
+    luaL_checktype(L, 2, LUA_TBOOLEAN);
     struct cwc_keybind_info *kbind = luaC_kbind_checkudata(L, 1);
 
     kbind->repeat = lua_toboolean(L, 2);

@@ -21,6 +21,7 @@
 #include <limits.h>
 #include <math.h>
 #include <stdlib.h>
+#include <wayland-server-core.h>
 #include <wayland-util.h>
 #include <wlr/types/wlr_foreign_toplevel_management_v1.h>
 #include <wlr/types/wlr_scene.h>
@@ -759,6 +760,30 @@ static void all_toplevel_send_output_leave(struct cwc_toplevel *toplevel,
     }
 }
 
+struct translate_data {
+    double x, y;
+    struct cwc_container *container;
+    struct cwc_output *output;
+};
+
+static void _delayed_translate(void *data)
+{
+    struct translate_data *tdata    = data;
+    struct cwc_container *container = tdata->container;
+    struct cwc_output *output       = tdata->output;
+    double x                        = tdata->x;
+    double y                        = tdata->y;
+
+    container->floating_box.x = x + output->output_layout_box.x;
+    container->floating_box.y = y + output->output_layout_box.y;
+
+    cwc_container_set_position(container, x, y);
+    // container->tag = output->state->active_tag;
+    // container->workspace = output->state->active_workspace;
+
+    free(tdata);
+}
+
 static void __cwc_container_move_to_output(struct cwc_container *container,
                                            struct cwc_output *output,
                                            bool translate)
@@ -767,7 +792,11 @@ static void __cwc_container_move_to_output(struct cwc_container *container,
     if (old == output)
         return;
 
-    bool floating = cwc_container_is_floating(container);
+    bool floating =
+        cwc_container_is_floating(container)
+        || cwc_output_get_tag(output, output->state->active_workspace)
+                   ->layout_mode
+               == CWC_LAYOUT_FLOATING;
 
     if (container->bsp_node)
         bsp_remove_container(container, false);
@@ -796,7 +825,7 @@ static void __cwc_container_move_to_output(struct cwc_container *container,
      * because it'll ruin the layout since the fallback output is not attached
      * to scene output
      */
-    if (!translate || old == server.fallback_output
+    if (!floating || !translate || old == server.fallback_output
         || output == server.fallback_output)
         return;
 
@@ -805,19 +834,14 @@ static void __cwc_container_move_to_output(struct cwc_container *container,
     normalized_region_at(&old->output_layout_box, oldbox.x, oldbox.y, &x, &y);
     x *= output->output_layout_box.width;
     y *= output->output_layout_box.height;
-    x += output->output_layout_box.x;
-    y += output->output_layout_box.y;
 
-    container->floating_box.x = x;
-    container->floating_box.y = y;
+    struct translate_data *data = calloc(1, sizeof(*data));
+    data->x                     = x;
+    data->y                     = y;
+    data->container             = container;
+    data->output                = output;
 
-    /* set to float when it's floating in previous output to prevent dragged
-     * container to get tiled */
-    if (floating) {
-        cwc_container_set_position(container, x, y);
-        cwc_container_move_to_tag(container, output->state->active_workspace);
-        container->state |= CONTAINER_STATE_FLOATING;
-    }
+    wl_event_loop_add_idle(server.wl_event_loop, _delayed_translate, data);
 }
 
 void cwc_container_move_to_output_without_translate(

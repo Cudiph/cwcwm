@@ -48,6 +48,7 @@ struct cwc_output {
     bool pending_transaction;
     bool restored;
     bool tearing_allowed;
+    bool enabled;
 
     struct timespec waiting_since;
 
@@ -117,6 +118,10 @@ void cwc_output_update_outputs_state();
 
 /* set output position in the global coordinate */
 void cwc_output_set_position(struct cwc_output *output, int x, int y);
+
+/* rescue toplevels allowing it to restore to the source output */
+void cwc_output_rescue_toplevel_container(struct cwc_output *source,
+                                          struct cwc_output *target);
 
 //================== TAGS ===================
 

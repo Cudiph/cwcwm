@@ -54,7 +54,7 @@
 
 void cwc_output_focus(struct cwc_output *output)
 {
-    if (server.focused_output == output)
+    if (server.focused_output == output || !output->enabled)
         return;
 
     if (output == server.fallback_output) {
@@ -145,16 +145,9 @@ static inline void cwc_output_state_save(struct cwc_output *output)
                      output->state);
 }
 
-/* return true if restored, false otherwise */
-static bool cwc_output_state_try_restore(struct cwc_output *output)
+static void _restore(void *data)
 {
-    output->state =
-        cwc_hhmap_get(server.output_state_cache, output->wlr_output->name);
-
-    if (!output->state)
-        return false;
-
-    output->state->output         = output;
+    struct cwc_output *output     = data;
     struct cwc_output *old_output = output->state->old_output;
 
     /* restore container to old output */
@@ -204,6 +197,20 @@ static bool cwc_output_state_try_restore(struct cwc_output *output)
 
     cwc_hhmap_remove(server.output_state_cache, output->wlr_output->name);
     free(old_output);
+}
+
+/* return true if restored, false otherwise */
+static bool cwc_output_state_try_restore(struct cwc_output *output)
+{
+    output->state =
+        cwc_hhmap_get(server.output_state_cache, output->wlr_output->name);
+
+    if (!output->state)
+        return false;
+
+    output->state->output = output;
+
+    wl_event_loop_add_idle(server.wl_event_loop, _restore, output);
 
     return true;
 }
@@ -348,8 +355,8 @@ static void on_output_frame(struct wl_listener *listener, void *data)
     wlr_scene_output_send_frame_done(scene_output, &now);
 }
 
-static void rescue_output_toplevel_container(struct cwc_output *source,
-                                             struct cwc_output *target)
+void cwc_output_rescue_toplevel_container(struct cwc_output *source,
+                                          struct cwc_output *target)
 {
     struct cwc_container *container;
     struct cwc_container *tmp;
@@ -366,6 +373,7 @@ static void rescue_output_toplevel_container(struct cwc_output *source,
         }
 
         cwc_container_move_to_output(container, target);
+        cwc_container_move_to_tag(container, container->old_prop.workspace);
     }
 
     struct cwc_toplevel *toplevel;
@@ -453,7 +461,7 @@ static void on_output_destroy(struct wl_listener *listener, void *data)
                               &focused->output_layout_box);
 
     _close_unmanaged(output);
-    rescue_output_toplevel_container(output, focused);
+    cwc_output_rescue_toplevel_container(output, focused);
 
     for (int i = 1; i < MAX_WORKSPACE; i++) {
         if (focused != server.fallback_output)
@@ -496,23 +504,17 @@ static void sort_output_index()
     wl_list_for_each_safe(o, tmp, &server.outputs, link)
     {
         struct cwc_output *target = NULL;
-        int lowest_y              = INT_MAX;
+        int ox                    = o->output_layout_box.x;
+        int oy                    = o->output_layout_box.y;
 
         wl_list_for_each(sorted_o, &sorted_list_temp, link)
         {
+            int sorted_o_x = sorted_o->output_layout_box.x;
             int sorted_o_y = sorted_o->output_layout_box.y;
-            if (o->output_layout_box.y > sorted_o_y)
-                continue;
 
-            if (!target) {
-                target   = sorted_o;
-                lowest_y = sorted_o_y;
-                continue;
-            }
-
-            if (sorted_o_y < lowest_y) {
-                target   = sorted_o;
-                lowest_y = sorted_o_y;
+            if (oy <= sorted_o_y && ox <= sorted_o_x) {
+                target = sorted_o;
+                break;
             }
         }
 
@@ -529,6 +531,11 @@ static void sort_output_index()
     }
 }
 
+static void _sort_output_index(void *data)
+{
+    sort_output_index();
+}
+
 void cwc_output_update_outputs_state()
 {
     struct wlr_output_configuration_v1 *cfg =
@@ -536,6 +543,9 @@ void cwc_output_update_outputs_state()
     struct cwc_output *output;
     wl_list_for_each(output, &server.outputs, link)
     {
+        if (!wlr_output_layout_get(server.output_layout, output->wlr_output))
+            continue; // output is disabled, continue
+
         struct wlr_output_configuration_head_v1 *config_head =
             wlr_output_configuration_head_v1_create(cfg, output->wlr_output);
         struct wlr_box output_box;
@@ -553,7 +563,7 @@ void cwc_output_update_outputs_state()
     wlr_output_manager_v1_set_configuration(server.output_manager, cfg);
 
     cwc_input_manager_update_cursor_scale();
-    sort_output_index();
+    wl_event_loop_add_idle(server.wl_event_loop, _sort_output_index, NULL);
 }
 
 static void on_request_state(struct wl_listener *listener, void *data)
@@ -653,7 +663,7 @@ static void on_new_output(struct wl_listener *listener, void *data)
     wlr_output_state_finish(&state);
 
     struct cwc_output *output = cwc_output_create(wlr_output);
-    rescue_output_toplevel_container(server.fallback_output, output);
+    output->enabled           = true;
 
     output->destroy_l.notify = on_output_destroy;
     wl_signal_add(&wlr_output->events.destroy, &output->destroy_l);
@@ -780,6 +790,7 @@ static void on_opm_set_mode(struct wl_listener *listener, void *data)
     wlr_output_commit_state(event->output, &state);
 
     wlr_output_state_finish(&state);
+    cwc_output_update_outputs_state();
 }
 
 struct tearing_object {
@@ -822,6 +833,11 @@ static void on_new_tearing_object(struct wl_listener *listener, void *data)
     wl_signal_add(&tearing_control->events.destroy, &obj->destroy_l);
 }
 
+static void on_output_layout_change(struct wl_listener *listener, void *data)
+{
+    wl_event_loop_add_idle(server.wl_event_loop, _sort_output_index, NULL);
+}
+
 void setup_output(struct cwc_server *s)
 {
     struct wlr_output *headless =
@@ -830,7 +846,10 @@ void setup_output(struct cwc_server *s)
     s->fallback_output = cwc_output_create(headless);
 
     // wlr output layout
-    s->output_layout       = wlr_output_layout_create(s->wl_display);
+    s->output_layout                 = wlr_output_layout_create(s->wl_display);
+    s->output_layout_change_l.notify = on_output_layout_change;
+    wl_signal_add(&s->output_layout->events.change, &s->output_layout_change_l);
+
     s->new_output_l.notify = on_new_output;
     wl_signal_add(&s->backend->events.new_output, &s->new_output_l);
 
@@ -862,6 +881,8 @@ void setup_output(struct cwc_server *s)
 void cleanup_output(struct cwc_server *s)
 {
     wl_list_remove(&s->new_output_l.link);
+
+    wl_list_remove(&s->output_layout_change_l.link);
 
     wl_list_remove(&s->output_manager_test_l.link);
     wl_list_remove(&s->output_manager_apply_l.link);
@@ -1064,6 +1085,12 @@ void cwc_output_set_position(struct cwc_output *output, int x, int y)
     wlr_output_layout_add(server.output_layout, output->wlr_output, x, y);
     cwc_output_update_outputs_state();
     arrange_layers(output);
+
+    struct cwc_output *o;
+    wl_list_for_each(o, &server.outputs, link)
+    {
+        transaction_schedule_tag(cwc_output_get_current_tag_info(output));
+    }
 }
 
 //================== TAGS OPERATION ===================
