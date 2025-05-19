@@ -616,10 +616,10 @@ static struct cwc_output *cwc_output_create(struct wlr_output *wlr_output)
 
     output->usable_area = output->output_layout_box;
 
-    if (!cwc_output_state_try_restore(output))
-        output->state = cwc_output_state_create(output);
-    else
+    if (cwc_output_state_try_restore(output))
         output->restored = true;
+    else
+        output->state = cwc_output_state_create(output);
 
     output_layers_init(output);
 

@@ -832,6 +832,13 @@ static void __cwc_container_move_to_output(struct cwc_container *container,
     struct wlr_box oldbox = cwc_container_get_box(container);
     double x, y;
     normalized_region_at(&old->output_layout_box, oldbox.x, oldbox.y, &x, &y);
+
+    // prevent client out of bounds when an error occur in translating  by
+    // constraining value to range -0.4 - 1
+    x = x > -0.4 && x < 0 ? x : fabs(x);
+    y = y > -0.4 && y < 0 ? y : fabs(y);
+    x = x - (int)x;
+    y = y - (int)y;
     x *= output->output_layout_box.width;
     y *= output->output_layout_box.height;
 
