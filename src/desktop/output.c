@@ -660,7 +660,7 @@ static void on_new_output(struct wl_listener *listener, void *data)
     wlr_output_state_finish(&state);
 
     struct cwc_output *output = cwc_output_create(wlr_output);
-    // cwc_output_rescue_toplevel_container(server.fallback_output, output);
+    cwc_output_rescue_toplevel_container(server.fallback_output, output);
 
     output->destroy_l.notify = on_output_destroy;
     wl_signal_add(&wlr_output->events.destroy, &output->destroy_l);
