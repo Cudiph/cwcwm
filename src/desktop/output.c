@@ -1122,7 +1122,8 @@ void cwc_output_set_view_only(struct cwc_output *output, int workspace)
         output->state->active_tag = single_tag;
     else
         output->state->active_tag = 0;
-    output->state->active_workspace = workspace;
+    output->state->active_workspace                 = workspace;
+    server.fallback_output->state->active_workspace = workspace;
 
     transaction_schedule_tag(cwc_output_get_current_tag_info(output));
     transaction_schedule_output(output);
