@@ -605,6 +605,7 @@ static void output_layers_fini(struct cwc_output *output)
 static struct cwc_output *cwc_output_create(struct wlr_output *wlr_output)
 {
     struct cwc_output *output = calloc(1, sizeof(*output));
+    output->enabled           = true;
     output->type              = DATA_TYPE_OUTPUT;
     output->wlr_output        = wlr_output;
     output->tearing_allowed   = false;
@@ -660,7 +661,6 @@ static void on_new_output(struct wl_listener *listener, void *data)
 
     struct cwc_output *output = cwc_output_create(wlr_output);
     // cwc_output_rescue_toplevel_container(server.fallback_output, output);
-    output->enabled = true;
 
     output->destroy_l.notify = on_output_destroy;
     wl_signal_add(&wlr_output->events.destroy, &output->destroy_l);
