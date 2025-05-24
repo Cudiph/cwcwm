@@ -29,7 +29,7 @@ guaranteed not to break your configuration.
 - Tags instead of workspaces.
 - Documented Lua API.
 - wlr protocols support.
-- Multihead support + hotplugging (tested on 2 monitor setup).
+- Multihead support + hotplugging .
 
 ## Building and installation
 

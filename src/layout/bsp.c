@@ -401,8 +401,7 @@ void _bsp_insert_container_entry(struct cwc_container *new,
         new->bsp_node = bsp_node_leaf_create(NULL, new, ROOT);
         root_entry    = bsp_entry_init(output, workspace, new->bsp_node);
 
-        transaction_schedule_tag(
-            cwc_output_get_tag(new->output, new->workspace));
+        bsp_update_root(new->output, new->workspace);
         goto update_last_focused;
     }
 
@@ -518,13 +517,14 @@ struct bsp_root_entry *bsp_entry_get(struct cwc_output *output, int workspace)
 void bsp_entry_fini(struct cwc_output *output, int workspace)
 {
     struct bsp_root_entry *entry = bsp_entry_get(output, workspace);
-    if (entry) {
-        if (entry->root)
-            bsp_node_destroy(entry->root);
+    if (!entry)
+        return;
 
-        entry->root         = NULL;
-        entry->last_focused = NULL;
-    }
+    if (entry->root)
+        bsp_node_destroy(entry->root);
+
+    entry->root         = NULL;
+    entry->last_focused = NULL;
 }
 
 enum Position
