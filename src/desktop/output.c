@@ -359,17 +359,25 @@ void cwc_output_rescue_toplevel_container(struct cwc_output *source,
     wl_list_for_each_safe(container, tmp, &source->state->containers,
                           link_output_container)
     {
+        bool movetag = true;
         if (container->old_prop.output == NULL) {
-            container->old_prop.output    = source;
-            container->old_prop.bsp_node  = container->bsp_node;
-            container->old_prop.workspace = container->workspace;
-            container->old_prop.tag       = container->tag;
+            // don't move client that spawned in fallback output otherwise it'll
+            // always spawn at tag 1
+            if (source == server.fallback_output) {
+                movetag = false;
+            } else {
+                container->old_prop.output    = source;
+                container->old_prop.bsp_node  = container->bsp_node;
+                container->old_prop.workspace = container->workspace;
+                container->old_prop.tag       = container->tag;
 
-            container->bsp_node = NULL;
+                container->bsp_node = NULL;
+            }
         }
 
         cwc_container_move_to_output(container, target);
-        cwc_container_move_to_tag(container, container->old_prop.workspace);
+        if (movetag)
+            cwc_container_move_to_tag(container, container->old_prop.workspace);
     }
 
     struct cwc_toplevel *toplevel;
@@ -451,13 +459,13 @@ static void on_output_destroy(struct wl_listener *listener, void *data)
         cwc_output_get_other_available_output(output);
     cwc_output_focus(available_o);
 
+    _close_unmanaged(output);
+    cwc_output_rescue_toplevel_container(output, available_o);
+
     // update output layout
     wlr_output_layout_remove(server.output_layout, output->wlr_output);
     wlr_output_layout_get_box(server.output_layout, available_o->wlr_output,
                               &available_o->output_layout_box);
-
-    _close_unmanaged(output);
-    cwc_output_rescue_toplevel_container(output, available_o);
 
     for (int i = 1; i < MAX_WORKSPACE; i++) {
         if (available_o != server.fallback_output)
@@ -838,7 +846,7 @@ static void on_output_layout_change(struct wl_listener *listener, void *data)
 void setup_output(struct cwc_server *s)
 {
     struct wlr_output *headless =
-        wlr_headless_add_output(s->headless_backend, 1280, 720);
+        wlr_headless_add_output(s->headless_backend, 1920, 1080);
     wlr_output_set_name(headless, "FALLBACK");
     s->fallback_output = cwc_output_create(headless);
 

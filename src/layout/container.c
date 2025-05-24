@@ -738,24 +738,27 @@ void cwc_container_for_each_toplevel_top_to_bottom(
     }
 }
 
-static void all_toplevel_send_output_enter(struct cwc_toplevel *toplevel,
-                                           void *data)
+static void all_toplevel_leave_output(struct cwc_toplevel *toplevel, void *data)
 {
     struct cwc_output *output = data;
 
+    wl_list_remove(&toplevel->link_output_toplevels);
+
     if (toplevel->wlr_foreign_handle) {
-        wlr_foreign_toplevel_handle_v1_output_enter(
+        wlr_foreign_toplevel_handle_v1_output_leave(
             toplevel->wlr_foreign_handle, output->wlr_output);
     }
 }
 
-static void all_toplevel_send_output_leave(struct cwc_toplevel *toplevel,
-                                           void *data)
+static void all_toplevel_enter_output(struct cwc_toplevel *toplevel, void *data)
 {
     struct cwc_output *output = data;
 
+    wl_list_insert(output->state->toplevels.prev,
+                   &toplevel->link_output_toplevels);
+
     if (toplevel->wlr_foreign_handle) {
-        wlr_foreign_toplevel_handle_v1_output_leave(
+        wlr_foreign_toplevel_handle_v1_output_enter(
             toplevel->wlr_foreign_handle, output->wlr_output);
     }
 }
@@ -774,12 +777,12 @@ static void _delayed_translate(void *data)
     double x                        = tdata->x;
     double y                        = tdata->y;
 
+    x *= output->output_layout_box.width;
+    y *= output->output_layout_box.height;
     container->floating_box.x = x + output->output_layout_box.x;
     container->floating_box.y = y + output->output_layout_box.y;
 
     cwc_container_set_position(container, x, y);
-    // container->tag = output->state->active_tag;
-    // container->workspace = output->state->active_workspace;
 
     free(tdata);
 }
@@ -792,11 +795,11 @@ static void __cwc_container_move_to_output(struct cwc_container *container,
     if (old == output)
         return;
 
+    int output_workspace = output->state->active_workspace;
+    enum cwc_layout_mode layout =
+        cwc_output_get_tag(output, output_workspace)->layout_mode;
     bool floating =
-        cwc_container_is_floating(container)
-        || cwc_output_get_tag(output, output->state->active_workspace)
-                   ->layout_mode
-               == CWC_LAYOUT_FLOATING;
+        cwc_container_is_floating(container) || layout == CWC_LAYOUT_FLOATING;
 
     if (container->bsp_node)
         bsp_remove_container(container, false);
@@ -811,15 +814,18 @@ static void __cwc_container_move_to_output(struct cwc_container *container,
         wl_list_reattach(output->state->minimized.prev,
                          &container->link_output_minimized);
 
-    cwc_container_for_each_toplevel(container, all_toplevel_send_output_enter,
+    cwc_container_for_each_toplevel(container, all_toplevel_leave_output, old);
+    cwc_container_for_each_toplevel(container, all_toplevel_enter_output,
                                     output);
-    cwc_container_for_each_toplevel(container, all_toplevel_send_output_leave,
-                                    old);
 
     container->tag       = output->state->active_tag;
-    container->workspace = output->state->active_workspace;
+    container->workspace = output_workspace;
 
     transaction_schedule_tag(cwc_output_get_current_tag_info(old));
+
+    if (!floating && layout == CWC_LAYOUT_BSP
+        && !cwc_container_is_moving(container) && !container->old_prop.bsp_node)
+        bsp_insert_container(container, output_workspace);
 
     /* don't translate position when move to fallback output or vice versa
      * because it'll ruin the layout since the fallback output is not attached
@@ -834,13 +840,11 @@ static void __cwc_container_move_to_output(struct cwc_container *container,
     normalized_region_at(&old->output_layout_box, oldbox.x, oldbox.y, &x, &y);
 
     // prevent client out of bounds when an error occur in translating  by
-    // constraining value to range -0.4 - 1
-    x = x > -0.4 && x < 0 ? x : fabs(x);
-    y = y > -0.4 && y < 0 ? y : fabs(y);
+    // constraining value to range 0 - 1.
+    x = fabs(x);
+    y = fabs(y);
     x = x - (int)x;
     y = y - (int)y;
-    x *= output->output_layout_box.width;
-    y *= output->output_layout_box.height;
 
     struct translate_data *data = calloc(1, sizeof(*data));
     data->x                     = x;

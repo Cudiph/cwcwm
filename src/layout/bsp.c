@@ -21,6 +21,7 @@
 
 #include "cwc/desktop/output.h"
 #include "cwc/desktop/toplevel.h"
+#include "cwc/desktop/transaction.h"
 #include "cwc/layout/bsp.h"
 #include "cwc/layout/container.h"
 #include "cwc/util.h"
@@ -32,7 +33,7 @@ bsp_node_get_sibling(struct bsp_node *parent_node, struct bsp_node *me)
     return parent_node->left == me ? parent_node->right : parent_node->left;
 }
 
-void bsp_node_destroy(struct bsp_node *node)
+static void bsp_node_destroy(struct bsp_node *node)
 {
     if (!node)
         return;
@@ -132,7 +133,7 @@ static inline struct bsp_node *find_closes_leaf_sibling(struct bsp_node *me)
     return _bsp_node_leaf_get(parent->right, true);
 }
 
-void bsp_update_node(struct bsp_node *parent)
+static void bsp_update_node(struct bsp_node *parent)
 {
     struct bsp_node *left  = parent->left;
     struct bsp_node *right = parent->right;
@@ -239,7 +240,8 @@ void bsp_node_enable(struct bsp_node *node)
     if (root->type == BSP_NODE_INTERNAL)
         bsp_update_node(root);
     else
-        bsp_update_root(root->container->output, root->container->workspace);
+        transaction_schedule_tag(cwc_output_get_tag(
+            root->container->output, root->container->workspace));
 }
 
 /* recursively disabled node if no one in the child node is enabled */
@@ -265,8 +267,9 @@ void bsp_node_disable(struct bsp_node *node)
     if (last_updated->type == BSP_NODE_INTERNAL && last_updated->parent)
         bsp_update_node(last_updated->parent);
     else if (last_updated->type == BSP_NODE_LEAF)
-        bsp_update_root(last_updated->container->output,
-                        last_updated->container->workspace);
+        transaction_schedule_tag(
+            cwc_output_get_tag(last_updated->container->output,
+                               last_updated->container->workspace));
 }
 
 void bsp_last_focused_update(struct cwc_container *container)
@@ -398,7 +401,8 @@ void _bsp_insert_container_entry(struct cwc_container *new,
         new->bsp_node = bsp_node_leaf_create(NULL, new, ROOT);
         root_entry    = bsp_entry_init(output, workspace, new->bsp_node);
 
-        bsp_update_root(new->output, new->workspace);
+        transaction_schedule_tag(
+            cwc_output_get_tag(new->output, new->workspace));
         goto update_last_focused;
     }
 
@@ -469,7 +473,8 @@ destroy_node:
         if (grandparent_node)
             bsp_update_node(grandparent_node);
         else
-            bsp_update_root(container->output, container->workspace);
+            transaction_schedule_tag(
+                cwc_output_get_tag(container->output, container->workspace));
     }
 }
 
