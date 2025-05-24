@@ -824,7 +824,7 @@ static void __cwc_container_move_to_output(struct cwc_container *container,
     transaction_schedule_tag(cwc_output_get_current_tag_info(old));
 
     if (!floating && layout == CWC_LAYOUT_BSP
-        && !cwc_container_is_moving(container) && !container->old_prop.bsp_node)
+        && !cwc_container_is_moving(container) && !container->old_prop.output)
         bsp_insert_container(container, output_workspace);
 
     /* don't translate position when move to fallback output or vice versa

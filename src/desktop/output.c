@@ -170,8 +170,7 @@ static bool cwc_output_state_try_restore(struct cwc_output *output)
         container->tag       = container->old_prop.tag;
         container->workspace = container->old_prop.workspace;
 
-        container->old_prop.bsp_node = NULL;
-        container->old_prop.output   = NULL;
+        container->old_prop = (struct old_output){0};
     }
 
     struct cwc_toplevel *toplevel;
