@@ -134,6 +134,16 @@ kbd.bind({ MODKEY, mod.CTRL }, "Return", function()
     if c then cful.client.set_master(c, true) end
 end, { description = "promote focused client to master", group = "client" })
 
+kbd.bind({ MODKEY }, "bracketleft", function()
+    local c = cwc.client.focused()
+    c:move_to_screen(cful.screen.idx(-1, c.screen))
+end, { description = "cycle move focused client to previous screen", group = "client" })
+
+kbd.bind({ MODKEY }, "bracketright", function()
+    local c = cwc.client.focused()
+    c:move_to_screen(cful.screen.idx(1, c.screen))
+end, { description = "cycle move focused client to next screen", group = "client" })
+
 --------------------- direction based
 kbd.bind(MODKEY, "j", function()
     local c = cwc.client.focused()
