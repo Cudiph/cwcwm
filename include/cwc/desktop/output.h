@@ -123,6 +123,16 @@ void cwc_output_set_position(struct cwc_output *output, int x, int y);
 void cwc_output_rescue_toplevel_container(struct cwc_output *source,
                                           struct cwc_output *target);
 
+/* try restoring container to the output when it first rescued */
+void cwc_output_restore(struct cwc_output *output,
+                        struct cwc_output *old_output);
+
+/* get output that exist and not disabled if no available output found,
+ * return fallback output.
+ */
+struct cwc_output *
+cwc_output_get_other_available_output(struct cwc_output *reference);
+
 //================== TAGS ===================
 
 /* if workspace is 0, it will use the active workspace of the output */

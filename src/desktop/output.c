@@ -146,18 +146,9 @@ static inline void cwc_output_state_save(struct cwc_output *output)
                      output->state);
 }
 
-/* return true if restored, false otherwise */
-static bool cwc_output_state_try_restore(struct cwc_output *output)
+void cwc_output_restore(struct cwc_output *output,
+                        struct cwc_output *old_output)
 {
-    output->state =
-        cwc_hhmap_get(server.output_state_cache, output->wlr_output->name);
-
-    if (!output->state)
-        return false;
-
-    output->state->output         = output;
-    struct cwc_output *old_output = output->state->old_output;
-
     /* restore container to old output */
     struct cwc_container *container;
     wl_list_for_each(container, &server.containers, link)
@@ -201,9 +192,25 @@ static bool cwc_output_state_try_restore(struct cwc_output *output)
         struct cwc_tag_info *tag_info = &output->state->tag_info[i];
         tag_info->pending_transaction = false;
     }
+}
+
+/* return true if restored, false otherwise */
+static bool cwc_output_state_try_restore(struct cwc_output *output)
+{
+    output->state =
+        cwc_hhmap_get(server.output_state_cache, output->wlr_output->name);
+
+    if (!output->state)
+        return false;
+
+    output->state->output         = output;
+    struct cwc_output *old_output = output->state->old_output;
+
+    cwc_output_restore(output, old_output);
 
     cwc_hhmap_remove(server.output_state_cache, output->wlr_output->name);
     free(old_output);
+    output->state->old_output = NULL;
 
     return true;
 }
@@ -390,7 +397,7 @@ void cwc_output_rescue_toplevel_container(struct cwc_output *source,
     }
 }
 
-static struct cwc_output *
+struct cwc_output *
 cwc_output_get_other_available_output(struct cwc_output *reference)
 {
     if (wl_list_length_at_least(&server.outputs, 2)) {
@@ -488,8 +495,6 @@ static void on_output_destroy(struct wl_listener *listener, void *data)
 
     _close_unmanaged(output);
     cwc_output_rescue_toplevel_container(output, available_o);
-    wl_event_loop_add_idle(server.wl_event_loop, constraint_floating_container,
-                           NULL);
 
     // update output layout
     wlr_output_layout_remove(server.output_layout, output->wlr_output);
@@ -597,6 +602,8 @@ void cwc_output_update_outputs_state()
 
     cwc_input_manager_update_cursor_scale();
     wl_event_loop_add_idle(server.wl_event_loop, _sort_output_index, NULL);
+    wl_event_loop_add_idle(server.wl_event_loop, constraint_floating_container,
+                           NULL);
 
     // fallback output layout box change to 0, idk why
     server.fallback_output->output_layout_box.width  = 1920;
@@ -745,9 +752,6 @@ static void on_new_output(struct wl_listener *listener, void *data)
 
     if (wl_list_length(&server.outputs) == 1)
         cwc_output_focus(output);
-
-    wl_event_loop_add_idle(server.wl_event_loop, constraint_floating_container,
-                           NULL);
 }
 
 static void output_manager_apply(struct wlr_output_configuration_v1 *config,
@@ -1130,7 +1134,7 @@ void cwc_output_set_position(struct cwc_output *output, int x, int y)
     struct cwc_output *o;
     wl_list_for_each(o, &server.outputs, link)
     {
-        transaction_schedule_tag(cwc_output_get_current_tag_info(output));
+        transaction_schedule_tag(cwc_output_get_current_tag_info(o));
     }
 }
 

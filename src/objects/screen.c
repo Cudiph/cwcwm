@@ -407,7 +407,6 @@ static int luaC_screen_set_enabled(lua_State *L)
     if (set == output->enabled)
         return 0;
 
-    // TODO: do rescue and restore
     struct cwc_output *o;
     if (set) {
         wlr_output_layout_add_auto(server.output_layout, output->wlr_output);
@@ -416,6 +415,8 @@ static int luaC_screen_set_enabled(lua_State *L)
             cwc_output_set_position(o, o->output_layout_box.x,
                                     o->output_layout_box.y);
         }
+
+        cwc_output_restore(output, output);
     } else {
         bool at_least_one_active = false;
         wl_list_for_each(o, &server.outputs, link)
@@ -435,6 +436,11 @@ static int luaC_screen_set_enabled(lua_State *L)
         // assign to keep it sorted
         output->output_layout_box.x = saved_x;
         output->output_layout_box.y = saved_y;
+
+        struct cwc_output *available_o =
+            cwc_output_get_other_available_output(output);
+        cwc_output_focus(available_o);
+        cwc_output_rescue_toplevel_container(output, available_o);
     }
 
     wlr_output_state_set_enabled(&output->pending, set);
