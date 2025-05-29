@@ -3,6 +3,14 @@
 
 #include <wayland-server-core.h>
 
+enum server_init_return_code {
+    SERVER_INIT_SUCCESS = 0,
+    SERVER_INIT_FAILED  = 1,
+
+    LUACHECK_OK    = 10,
+    LUACHECK_ERROR = 11,
+};
+
 struct cwc_server {
     struct wl_display *wl_display;
     struct wl_event_loop *wl_event_loop;
@@ -114,7 +122,8 @@ struct cwc_server {
 /* global server instance from main */
 extern struct cwc_server server;
 
-int server_init(struct cwc_server *s, char *config_path, char *library_path);
+enum server_init_return_code
+server_init(struct cwc_server *s, char *config_path, char *library_path);
 void server_fini(struct cwc_server *s);
 
 void spawn(char **argv);

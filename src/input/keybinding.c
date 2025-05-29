@@ -518,7 +518,7 @@ static int luaC_kbd_clear(lua_State *L)
 /** Create a new keybind map.
  *
  * @configfct create_bindmap
- * @return cwc_kbind
+ * @treturn cwc_kbindmap
  */
 static int luaC_kbd_create_bindmap(lua_State *L)
 {

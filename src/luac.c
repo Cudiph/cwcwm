@@ -441,20 +441,28 @@ static void add_to_search_path(lua_State *L, char *_dirname)
     lua_setfield(L, -2, "path");
 }
 
-/* true if success, false if failed */
-static bool luaC_loadrc(lua_State *L, char *path)
+/* return 0 if success */
+static int luaC_loadrc(lua_State *L, char *path)
 {
     char *dir = dirname(strdup(path));
     add_to_search_path(L, dir);
     free(dir);
 
+    if (luacheck)
+        printf("Checking config '%s'...", path);
+
     if (luaL_dofile(L, path)) {
+        if (luacheck)
+            printf("\nERROR: %s\n", lua_tostring(L, -1));
         cwc_log(CWC_ERROR, "cannot run configuration file: %s",
                 lua_tostring(L, -1));
-        return false;
+        return 1;
     }
 
-    return true;
+    if (luacheck)
+        puts(" OK");
+
+    return 0;
 }
 
 /* lua stuff start here */
@@ -538,24 +546,25 @@ int luaC_init()
     luaC_tag_setup(L);
 
     char *luarc_default_location = get_luarc_path();
+    int has_error                = 0;
     if (config_path && access(config_path, R_OK) == 0) {
-        luaC_loadrc(L, config_path);
+        has_error = luaC_loadrc(L, config_path);
     } else if (access(luarc_default_location, R_OK) == 0) {
-        if (!luaC_loadrc(L, luarc_default_location)) {
+        if ((has_error = luaC_loadrc(L, luarc_default_location))) {
             cwc_log(CWC_ERROR, "falling back to default configuration");
-            luaC_loadrc(L, CWC_DATADIR "/defconfig/rc.lua");
+            has_error = luaC_loadrc(L, CWC_DATADIR "/defconfig/rc.lua");
         }
     } else {
         cwc_log(CWC_ERROR,
                 "lua configuration not found, try create one at \"%s\"",
                 luarc_default_location);
-        luaC_loadrc(L, CWC_DATADIR "/defconfig/rc.lua");
+        has_error = luaC_loadrc(L, CWC_DATADIR "/defconfig/rc.lua");
     }
 
-    free(luarc_default_location);
     lua_initial_load = false;
     lua_settop(L, 0);
-    return 0;
+    free(luarc_default_location);
+    return has_error;
 }
 
 void luaC_fini()

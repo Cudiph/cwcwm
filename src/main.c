@@ -36,6 +36,7 @@ static char *help_txt = "Usage:\n"
                         "  -h, --help       show this message\n"
                         "  -v, --version    show version\n"
                         "  -c, --config     lua configuration file to use\n"
+                        "  -k, --check      check configuration file syntax\n"
                         "  -s, --startup    startup command\n"
                         "  -l, --library    library directory search path\n"
                         "  -d, --debug      +increase debug verbosity level\n"
@@ -49,6 +50,7 @@ static struct option long_options[] = {
     {"help",    NO_ARG, NULL, 'h'},
     {"version", NO_ARG, NULL, 'v'},
     {"config",  ARG,    NULL, 'c'},
+    {"check",   NO_ARG, NULL, 'k'},
     {"startup", ARG,    NULL, 's'},
     {"library", ARG,    NULL, 'l'},
     {"debug",   NO_ARG, NULL, 'd'},
@@ -58,6 +60,7 @@ static struct option long_options[] = {
 struct cwc_server server   = {0};
 struct cwc_config g_config = {0};
 bool lua_initial_load      = true;
+bool luacheck              = false;
 char *config_path          = NULL;
 char *library_path         = NULL;
 
@@ -91,6 +94,9 @@ int main(int argc, char **argv)
         case 'c':
             config_path = optarg;
             break;
+        case 'k':
+            luacheck = true;
+            break;
         case 's':
             startup_cmd = optarg;
             break;
@@ -123,5 +129,15 @@ int main(int argc, char **argv)
 shutdown:
     server_fini(&server);
     luaC_fini();
-    return exit_value;
+
+    switch (exit_value) {
+    case LUACHECK_OK:
+        return 0;
+    case LUACHECK_ERROR:
+    case SERVER_INIT_SUCCESS:
+    case SERVER_INIT_FAILED:
+    default:
+        return exit_value;
+        break;
+    }
 }

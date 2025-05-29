@@ -181,12 +181,13 @@ static int setup_wayland_core(struct cwc_server *s)
 static void server_subscribe_signal();
 
 /* return non zero if error */
-int server_init(struct cwc_server *s, char *config_path, char *library_path)
+enum server_init_return_code
+server_init(struct cwc_server *s, char *config_path, char *library_path)
 {
     cwc_log(CWC_INFO, "Initializing cwc server...");
 
     if (setup_wayland_core(s) != EXIT_SUCCESS)
-        return EXIT_FAILURE;
+        return SERVER_INIT_FAILED;
 
     struct wl_display *dpy = s->wl_display;
     s->compositor          = wlr_compositor_create(dpy, 6, s->renderer);
@@ -206,7 +207,7 @@ int server_init(struct cwc_server *s, char *config_path, char *library_path)
     s->signal_map         = cwc_hhmap_create(50);
 
     server_subscribe_signal();
-    luaC_init();
+    int lua_status = luaC_init();
     keybind_register_common_key();
 
     // wlroots plug and play
@@ -280,18 +281,26 @@ int server_init(struct cwc_server *s, char *config_path, char *library_path)
 
     const char *socket = wl_display_add_socket_auto(dpy);
     if (!socket)
-        return EXIT_FAILURE;
+        return SERVER_INIT_FAILED;
 
     if (!wlr_backend_start(s->backend)) {
         cwc_log(CWC_ERROR, "Failed to start wlr backend");
-        return EXIT_FAILURE;
+        return SERVER_INIT_FAILED;
     }
 
     setenv("WAYLAND_DISPLAY", socket, true);
     cwc_log(CWC_INFO, "Starting Wayland compositor on WAYLAND_DISPLAY=%s",
             socket);
 
-    return EXIT_SUCCESS;
+    if (luacheck) {
+        if (lua_status) {
+            return LUACHECK_ERROR;
+        } else {
+            return LUACHECK_OK;
+        }
+    }
+
+    return SERVER_INIT_SUCCESS;
 }
 
 void server_fini(struct cwc_server *s)

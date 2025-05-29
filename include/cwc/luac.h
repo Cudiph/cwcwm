@@ -30,6 +30,7 @@
 #include <wlr/util/box.h>
 
 extern bool lua_initial_load;
+extern bool luacheck;
 extern char *config_path;
 extern char *library_path;
 

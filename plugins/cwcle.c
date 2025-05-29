@@ -250,6 +250,7 @@ static int cwcle_init()
      * when the event loop run. */
     wl_event_loop_add_idle(server.wl_event_loop, setup_cwcle, NULL);
 
+    wl_list_init(&lifecwcle.on_modifier_l.link);
     cwc_signal_connect("cwc::shutdown", on_cwc_shutdown);
     cwc_signal_connect("lua::reload", register_lualibs);
     cwc_signal_connect("container::destroy", handle_destroyed_raised_client);
