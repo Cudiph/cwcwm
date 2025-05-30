@@ -446,7 +446,10 @@ kbd.bind({}, "XF86MonBrightnessDown", function()
 end, { exclusive = true, repeated = true })
 
 local function toggle_mon()
-    cwc.spawn_with_shell("wlopm --toggle '*'")
+    local scrs = cwc.screen.get();
+    for _, s in pairs(scrs) do
+        s.dpms = not s.dpms
+    end
 end
 -- there is 2 variant of XF86ScreenSaver and the xkb_state_key_get_syms only send one of the
 -- key. The solution is that to use the keysym number as the "key" as specified in

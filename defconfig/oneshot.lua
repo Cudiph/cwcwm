@@ -6,8 +6,11 @@ local cwc = cwc
 cwc.spawn_with_shell("swaybg --output '*' --color '#222222'")
 cwc.spawn_with_shell("waybar")
 cwc.spawn_with_shell("playerctld daemon")
-cwc.spawn_with_shell(
-    'swayidle -w timeout 3600 "playerctl pause; wlopm --off \\*" resume "playerctl play; wlopm --on \\*"')
+
+local idle_cmd = "playerctl pause; cwctl screen --filter '*' set dpms false"
+local resume_cmd = "playerctl play; cwctl screen --filter='*' set dpms true"
+local swayidle_cmd = string.format('swayidle -w timeout 3 "%s" resume "%s"', idle_cmd, resume_cmd)
+cwc.spawn_with_shell(swayidle_cmd)
 
 -- for app that use tray better to wait for the bar to load
 cwc.spawn_with_shell("sleep 3 && copyq")
@@ -17,7 +20,8 @@ cwc.spawn_with_shell("sleep 3 && aria2tray --hide-window")
 cwc.setenv("HYPRCURSOR_THEME", "Bibata-Modern-Classic")
 
 -- xdg-desktop-portal-wlr
-cwc.spawn_with_shell("dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP")
+cwc.spawn_with_shell(
+    "dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP")
 
 -- load builtin cwc C plugin
 local plugins_folder = cwc.is_nested() and "./build/plugins" or cwc.get_datadir() .. "/plugins"

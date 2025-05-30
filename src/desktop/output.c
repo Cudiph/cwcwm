@@ -955,7 +955,8 @@ void cwc_output_update_visible(struct cwc_output *output)
 
     update_idle_inhibitor(NULL);
 
-    cwc_output_focus_newest_focus_visible_toplevel(output);
+    if (output == cwc_output_get_focused())
+        cwc_output_focus_newest_focus_visible_toplevel(output);
 }
 
 struct cwc_output *cwc_output_get_focused()

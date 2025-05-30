@@ -4,25 +4,24 @@ assets = {
   'binds': 'script/binds.lua',
 }
 
-assets_code = {}
-foreach name, path : assets
-  code = custom_target(
-    name.underscorify() + '_h',
-    input: path,
-    output: '@BASENAME@-asset.h',
-    command: ['python', meson.current_source_dir() / 'gen.py', '@INPUT@', '@OUTPUT@'],
-  )
-
-  assets_code += { name: code }
+script_assets = []
+foreach _, path : assets
+  script_assets += path
 endforeach
+
+script_header = custom_target(
+  name.underscorify() + '_h',
+  input: script_assets,
+  output: 'script-asset.h',
+  command: ['python', meson.current_source_dir() / 'gen.py', '@INPUT@', '@OUTPUT@'],
+)
 
 srcs = [
   'main.c',
   'ipc-common.c',
+  'cmd-screen.c',
 
-  assets_code['client'],
-  assets_code['screen'],
-  assets_code['binds'],
+  script_header,
 ]
 
 executable(

@@ -1,4 +1,5 @@
 local bit = require("bit")
+local gears = require("gears")
 
 local cwc = cwc
 
@@ -73,4 +74,54 @@ local function scr_list()
     return out
 end
 
-return scr_list()
+local function scr_set(filter, key, value)
+    local scrs = cwc.screen.get()
+    local focused = cwc.screen.focused()
+
+    if scrs[1][key] == nil then
+        return "error: screen `" .. key .. "` property is read only/doesn't exist"
+    end
+
+    for _, s in pairs(scrs) do
+        if value == "toggle" then value = not s[key] end
+
+        if filter == "*" then
+            s[key] = value
+        elseif filter == "focused" and s == focused then
+            s[key] = value
+            break
+        elseif filter == s.name then
+            s[key] = value
+            break
+        end
+    end
+
+    return "OK"
+end
+
+local function scr_get(filter, key)
+    local scrs = cwc.screen.get()
+    local focused = cwc.screen.focused()
+
+    if scrs[1][key] == nil then
+        return "error: screen `" .. key .. "` property is empty or doesn't exist"
+    end
+
+    local out = ""
+    for i, s in pairs(scrs) do
+        local formatted = string.format('\n[%d] "%s".%s = %s \n', i, s.name, key,
+            gears.debug.dump_return(s[key]))
+
+        if filter == "*" then
+            out = out .. formatted
+        elseif filter == "focused" and s == focused then
+            out = out .. formatted
+            break
+        elseif filter == s.name then
+            out = out .. formatted
+            break
+        end
+    end
+
+    return out
+end

@@ -26,10 +26,9 @@
 #include <sys/un.h>
 #include <unistd.h>
 
-#include "binds-asset.h"
-#include "client-asset.h"
 #include "cwc/ipc.h"
-#include "screen-asset.h"
+#include "cwctl.h"
+#include "script-asset.h"
 
 static char *help_txt =
     "Usage:\n"
@@ -45,19 +44,20 @@ static char *help_txt =
     "  client    Get all client information\n"
     "  screen    Get all screen information\n"
     "  binds     Get all active keybinds information\n"
+    "  help      Help about any command/subcommand\n"
     "\n"
     "Example:\n"
     "  cwc -s /tmp/cwc.sock -c 'return cwc.client.focused().title'\n"
     "  cwc -f ./show-all-client.lua\n"
-    "  cwc screen";
+    "  cwc screen\n"
+    "  cwc -s /tmp/cwc.sock screen --filter 'DP-1' set enabled false";
 
-#define ARG    1
-#define NO_ARG 0
 static struct option long_options[] = {
     {"help",    NO_ARG, NULL, 'h'},
     {"socket",  ARG,    NULL, 's'},
     {"command", ARG,    NULL, 'c'},
     {"file",    ARG,    NULL, 'f'},
+    {NULL,      0,      NULL, 0  },
 };
 
 static char *socket_path = NULL;
@@ -65,7 +65,6 @@ static char *input       = NULL;
 static char *result      = NULL;
 static int client_fd     = 0;
 
-#define BUFFER_SIZE 1e6
 void repl(char *cmd)
 {
     int cfd = client_fd;
@@ -110,24 +109,26 @@ void repl(char *cmd)
     }
 }
 
-int object_command(int argc, char **argv)
+static int object_command(int argc, char **argv)
 {
     if (optind >= argc)
         return 1;
 
-    char *subcmd = argv[optind];
+    char *command = argv[optind++];
 
-    if (strcmp(subcmd, "screen") == 0) {
-        repl((char *)_cwctl_script_screen_lua);
-    } else if (strcmp(subcmd, "client") == 0) {
+    if (strcmp(command, "help") == 0) {
+        puts(help_txt);
+    } else if (strcmp(command, "screen") == 0) {
+        return screen_cmd(argc, argv);
+    } else if (strcmp(command, "client") == 0) {
         repl((char *)_cwctl_script_client_lua);
-    } else if (strcmp(subcmd, "binds") == 0) {
+    } else if (strcmp(command, "binds") == 0) {
         repl((char *)_cwctl_script_binds_lua);
     } else {
         fprintf(
             stderr,
             "command %s not found, run 'cwctl --help' to show all command\n",
-            subcmd);
+            command);
         return 1;
     }
 
@@ -141,7 +142,7 @@ int main(int argc, char **argv)
     char *file  = NULL;
 
     int c;
-    while ((c = getopt_long(argc, argv, "hs:c:f:", long_options, NULL)) != -1)
+    while ((c = getopt_long(argc, argv, "+hs:c:f:", long_options, NULL)) != -1)
         switch (c) {
         case 's':
             socket_path = optarg;
