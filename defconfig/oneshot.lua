@@ -9,7 +9,7 @@ cwc.spawn_with_shell("playerctld daemon")
 
 local idle_cmd = "playerctl pause; cwctl screen --filter '*' set dpms false"
 local resume_cmd = "playerctl play; cwctl screen --filter='*' set dpms true"
-local swayidle_cmd = string.format('swayidle -w timeout 3 "%s" resume "%s"', idle_cmd, resume_cmd)
+local swayidle_cmd = string.format('swayidle -w timeout 3600 "%s" resume "%s"', idle_cmd, resume_cmd)
 cwc.spawn_with_shell(swayidle_cmd)
 
 -- for app that use tray better to wait for the bar to load
