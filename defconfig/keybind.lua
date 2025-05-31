@@ -364,12 +364,24 @@ kbd.bind(MODKEY, "minus", function()
 end, { description = "decrease gaps", group = "tag", repeated = true })
 
 kbd.bind({ mod.LOGO, mod.ALT }, "l", function()
-    cful.tag.incmwfact(0.05)
-end, { description = "increase master width factor", group = "tag", repeated = true })
+    local s = cwc.screen.focused()
+    local c = cwc.client.focused()
+    if s.selected_tag.layout_mode == enum.layout_mode.BSP and c.bspfact then
+        c.bspfact = c.bspfact + 0.05
+    else
+        cful.tag.incmwfact(0.05)
+    end
+end, { description = "increase master/bsp width factor", group = "tag", repeated = true })
 
 kbd.bind({ mod.LOGO, mod.ALT }, "h", function()
-    cful.tag.incmwfact(-0.05)
-end, { description = "decrease master width factor", group = "tag", repeated = true })
+    local s = cwc.screen.focused()
+    local c = cwc.client.focused()
+    if s.selected_tag.layout_mode == enum.layout_mode.BSP and c.bspfact then
+        c.bspfact = c.bspfact - 0.05
+    else
+        cful.tag.incmwfact(-0.05)
+    end
+end, { description = "decrease master/bsp width factor", group = "tag", repeated = true })
 
 ----------------------- bsp hotkey
 kbd.bind(MODKEY, "e", function()

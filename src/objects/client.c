@@ -849,6 +849,42 @@ static int luaC_client_set_border_width(lua_State *L)
     return 0;
 }
 
+/** The left factor of bsp node between two sibling node.
+ *
+ * @property bspfact
+ * @tparam[opt=nil] number bspfact
+ * @negativeallowed false
+ */
+static int luaC_client_get_bspfact(lua_State *L)
+{
+    struct cwc_toplevel *toplevel = luaC_client_checkudata(L, 1);
+    struct bsp_node *node         = toplevel->container->bsp_node;
+
+    if (!node || !node->parent)
+        return 0;
+
+    lua_pushnumber(L, node->parent->left_wfact);
+
+    return 1;
+}
+
+static int luaC_client_set_bspfact(lua_State *L)
+{
+    struct cwc_toplevel *toplevel = luaC_client_checkudata(L, 1);
+    struct bsp_node *node         = toplevel->container->bsp_node;
+
+    if (!node || !node->parent)
+        return 0;
+
+    double newfact           = CLAMP(luaL_checknumber(L, 2), 0.05, 0.95);
+    node->parent->left_wfact = newfact;
+
+    transaction_schedule_tag(
+        cwc_output_get_current_tag_info(toplevel->container->output));
+
+    return 0;
+}
+
 /** The client parent.
  *
  * @property parent
@@ -1116,6 +1152,8 @@ void luaC_client_setup(lua_State *L)
         REG_PROPERTY(border_enabled),
         REG_PROPERTY(border_rotation),
         REG_PROPERTY(border_width),
+
+        REG_PROPERTY(bspfact),
 
         {NULL,          NULL                     },
     };
