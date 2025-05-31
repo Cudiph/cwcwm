@@ -107,11 +107,6 @@ int screen_cmd(int argc, char **argv)
     char *script = calloc(1, _cwctl_script_screen_lua_len + 100);
     strcpy(script, (char *)_cwctl_script_screen_lua);
 
-    if (argc == 1) {
-        handle_list(script);
-        goto cleanup;
-    }
-
     int c;
     while ((c = getopt_long(argc, argv, "hf:", screen_long_opt, NULL)) != -1)
         switch (c) {
@@ -125,6 +120,11 @@ int screen_cmd(int argc, char **argv)
             puts(screen_help);
             goto cleanup;
         }
+
+    if ((argc - optind) == 0) {
+        handle_list(script);
+        goto cleanup;
+    }
 
     char *command    = argv[optind];
     int cmd_argcount = argc - optind - 1;
