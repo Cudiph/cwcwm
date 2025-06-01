@@ -822,6 +822,7 @@ static void __cwc_container_move_to_output(struct cwc_container *container,
     container->workspace = output_workspace;
 
     transaction_schedule_tag(cwc_output_get_current_tag_info(old));
+    transaction_schedule_tag(cwc_output_get_current_tag_info(output));
 
     if (!floating && layout == CWC_LAYOUT_BSP
         && !cwc_container_is_moving(container) && !container->old_prop.output)

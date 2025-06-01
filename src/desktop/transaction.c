@@ -24,13 +24,14 @@
 #include "cwc/desktop/transaction.h"
 #include "cwc/server.h"
 
-struct transaction {
+static struct transaction {
     struct wl_event_source *idle_source;
 
     struct wl_array tags; // struct cwc_tag_info*
 
     bool output_pending;
     bool paused;
+    bool processing; // prevent scheduling loop
 } T = {0};
 
 static inline void _process_pending_outputs(struct cwc_output *output)
@@ -62,6 +63,8 @@ static inline void _process_pending_tag(struct cwc_tag_info *tag)
 
 static void process_pending(void *data)
 {
+    T.processing = true;
+
     if (T.output_pending) {
         struct cwc_output *output;
         wl_list_for_each(output, &server.outputs, link)
@@ -84,6 +87,7 @@ static void process_pending(void *data)
     }
 
     T.idle_source = NULL;
+    T.processing  = false;
 }
 
 static void transaction_start()
@@ -112,6 +116,9 @@ void transaction_resume()
 
 void transaction_schedule_output(struct cwc_output *output)
 {
+    if (T.processing)
+        return;
+
     transaction_start();
     output->pending_transaction = true;
     T.output_pending            = true;
@@ -119,7 +126,7 @@ void transaction_schedule_output(struct cwc_output *output)
 
 void transaction_schedule_tag(struct cwc_tag_info *tag)
 {
-    if (tag->pending_transaction)
+    if (tag->pending_transaction || T.processing)
         return;
 
     struct cwc_tag_info **elem = wl_array_add(&T.tags, sizeof(&tag));
