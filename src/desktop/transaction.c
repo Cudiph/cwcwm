@@ -36,7 +36,6 @@ static struct transaction {
 
 static inline void _process_pending_outputs(struct cwc_output *output)
 {
-
     if (!cwc_output_is_exist(output) || !output->pending_transaction)
         return;
 

@@ -154,6 +154,9 @@ void arrange_layers(struct cwc_output *output)
     struct cwc_layer_surface *lsurf;
     wl_list_for_each(lsurf, &server.layer_shells, link)
     {
+        if (!lsurf->mapped)
+            continue;
+
         if (lsurf->wlr_layer_surface->current.keyboard_interactive
             == ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_EXCLUSIVE) {
             keyboard_focus_surface(server.seat,
@@ -186,6 +189,8 @@ static void on_layer_surface_unmap(struct wl_listener *listener, void *data)
     struct cwc_layer_surface *layer_surface =
         wl_container_of(listener, layer_surface, unmap_l);
 
+    layer_surface->mapped = false;
+
     if (layer_surface == server.seat->exclusive_kbd_interactive) {
         server.seat->exclusive_kbd_interactive = NULL;
         cwc_output_focus_newest_focus_visible_toplevel(layer_surface->output);
@@ -194,7 +199,7 @@ static void on_layer_surface_unmap(struct wl_listener *listener, void *data)
     struct wlr_layer_surface_v1_state *state =
         &layer_surface->wlr_layer_surface->current;
     if (state->exclusive_zone || state->exclusive_edge)
-        transaction_schedule_output(layer_surface->output);
+        arrange_layers(layer_surface->output);
 }
 
 static void on_layer_surface_commit(struct wl_listener *listener, void *data)
