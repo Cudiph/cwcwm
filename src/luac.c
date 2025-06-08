@@ -52,6 +52,7 @@
 #include "cwc/plugin.h"
 #include "cwc/server.h"
 #include "cwc/signal.h"
+#include "cwc/timer.h"
 #include "cwc/util.h"
 #include "private/luac.h"
 
@@ -135,8 +136,17 @@ static void cwc_restart_lua(void *data)
     server.main_kbd_kmap = cwc_keybind_map_create(NULL);
     cwc_keybind_map_clear(server.main_mouse_kmap);
 
+    struct cwc_timer *timer, *timer_tmp;
+    wl_list_for_each_safe(timer, timer_tmp, &server.timers, link)
+    {
+        cwc_timer_destroy(timer);
+    }
+
     cwc_lua_signal_clear(server.signal_map);
     luaC_fini();
+
+    /****************** OLD -> NEW STATE BARRIER ********************/
+
     luaC_init();
     reregister_lua_object();
     cwc_signal_emit_c("lua::reload", NULL);
@@ -544,6 +554,9 @@ int luaC_init()
 
     /* cwc_tag */
     luaC_tag_setup(L);
+
+    /* cwc_timer */
+    luaC_timer_setup(L);
 
     char *luarc_default_location = get_luarc_path();
     int has_error                = 0;

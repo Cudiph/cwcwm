@@ -13,8 +13,10 @@ local swayidle_cmd = string.format('swayidle -w timeout 3600 "%s" resume "%s"', 
 cwc.spawn_with_shell(swayidle_cmd)
 
 -- for app that use tray better to wait for the bar to load
-cwc.spawn_with_shell("sleep 3 && copyq")
-cwc.spawn_with_shell("sleep 3 && aria2tray --hide-window")
+cwc.timer.new(3, function()
+    cwc.spawn { "copyq" }
+    cwc.spawn { "aria2tray", "--hide-window" }
+end, { one_shot = true })
 
 -- env var
 cwc.setenv("HYPRCURSOR_THEME", "Bibata-Modern-Classic")

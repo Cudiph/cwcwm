@@ -105,7 +105,8 @@ struct cwc_server {
     struct wl_list toplevels;    // cwc_toplevel.link
     struct wl_list containers;   // cwc_container.link
     struct wl_list layer_shells; // cwc_layer_surface.link
-    struct wl_list kbd_kmaps;    // cwc_keybind_map
+    struct wl_list kbd_kmaps;    // cwc_keybind_map.link
+    struct wl_list timers;       // cwc_timer.link
 
     // maps
     struct cwc_hhmap *output_state_cache;    // struct cwc_output_state

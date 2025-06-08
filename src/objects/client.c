@@ -852,7 +852,7 @@ static int luaC_client_set_border_width(lua_State *L)
 /** The left factor of bsp node between two sibling node.
  *
  * @property bspfact
- * @tparam[opt=nil] number bspfact
+ * @tparam[opt=0.5] number bspfact
  * @negativeallowed false
  */
 static int luaC_client_get_bspfact(lua_State *L)

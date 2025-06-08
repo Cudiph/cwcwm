@@ -42,6 +42,7 @@ file                                          = {
     "../src/objects/layer_shell.c",
     "../src/objects/screen.c",
     "../src/objects/tag.c",
+    "../src/objects/timer.c",
 
     "../src/input/cursor.c",
     "../src/input/keybinding.c",
@@ -1614,8 +1615,8 @@ sort_modules = true
 
 -- Add more project level (left side index) types.
 new_type("coreclassmod", "Core_components", true)
-new_type("pluginlib", "Plugins", true)
 new_type("inputmodule", "Input_handling", true)
+new_type("pluginlib", "Plugins", true)
 new_type("ruleslib", "Declarative_rules", true)
 new_type("widgetmod", "Widgets", true)
 new_type("containermod", "Widget_containers", true)
@@ -2236,6 +2237,7 @@ local coreclassmap = {
     ["cwc.container"] = "cwc.container<span class='listplusign'> + cwc_container</span>",
     ["cwc.input"] = "cwc.input<span class='listplusign'> + cwc_input</span>",
     ["cwc.layer_shell"] = "cwc.layer_shell<span class='listplusign'> + cwc_layer_shell</span>",
+    ["cwc.timer"] = "cwc.timer<span class='listplusign'> + cwc_timer</span>",
 }
 
 -- Add the full module name in front.

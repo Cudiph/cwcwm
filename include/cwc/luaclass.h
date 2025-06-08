@@ -121,4 +121,5 @@ LUAC_CLASS_CREATE(cwc_libinput_device, input)
 LUAC_CLASS_CREATE(cwc_layer_surface, layer_shell)
 LUAC_CLASS_CREATE(cwc_keybind_map, kbindmap)
 LUAC_CLASS_CREATE(cwc_keybind_info, kbind)
+LUAC_CLASS_CREATE(cwc_timer, timer)
 #endif // !_CWC_LUACLASS_H

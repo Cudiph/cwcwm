@@ -21,7 +21,7 @@
  * @author Dwi Asmoro Bangun
  * @copyright 2024
  * @license GPLv3
- * @coreclassmod cwc.pointer
+ * @inputmodule cwc.pointer
  */
 
 #include <drm_fourcc.h>

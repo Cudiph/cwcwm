@@ -21,7 +21,7 @@
  * @author Dwi Asmoro Bangun
  * @copyright 2025
  * @license GPLv3
- * @coreclassmod cwc_kbind
+ * @inputmodule cwc_kbind
  */
 
 #include <lauxlib.h>

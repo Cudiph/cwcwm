@@ -21,7 +21,7 @@
  * @author Dwi Asmoro Bangun
  * @copyright 2025
  * @license GPLv3
- * @coreclassmod cwc.input
+ * @inputmodule cwc.input
  */
 
 #include <lauxlib.h>

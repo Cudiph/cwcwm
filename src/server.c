@@ -199,6 +199,7 @@ server_init(struct cwc_server *s, char *config_path, char *library_path)
     wl_list_init(&s->containers);
     wl_list_init(&s->layer_shells);
     wl_list_init(&s->kbd_kmaps);
+    wl_list_init(&s->timers);
 
     // initialize map so that luaC can insert something at startup
     s->main_kbd_kmap      = cwc_keybind_map_create(NULL);
