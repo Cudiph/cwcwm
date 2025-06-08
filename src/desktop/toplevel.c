@@ -542,6 +542,8 @@ static void on_popup_commit(struct wl_listener *listener, void *data)
         node                        = &l->scene_layer->tree->node;
         parent_stree                = l->popup_tree;
         box                         = l->output->output_layout_box;
+        box.x = 0;
+        box.y = 0;
     } else {
         unreachable_();
         return;
