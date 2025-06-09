@@ -156,6 +156,18 @@
  * @tparam cwc_client c The client object.
  */
 
+/** Property signal.
+ *
+ * @signal client::property::tag
+ * @tparam cwc_client c The client object.
+ */
+
+/** Property signal.
+ *
+ * @signal client::property::workspace
+ * @tparam cwc_client c The client object.
+ */
+
 //============================ CODE =================================
 
 /** Resize client relative to current size.
@@ -705,8 +717,7 @@ static int luaC_client_set_tag(lua_State *L)
     struct cwc_toplevel *toplevel = luaC_client_checkudata(L, 1);
     tag_bitfield_t tag            = luaL_checkint(L, 2);
 
-    toplevel->container->tag = tag;
-    transaction_schedule_output(toplevel->container->output);
+    cwc_toplevel_set_tag(toplevel, tag);
 
     return 0;
 }
@@ -1008,9 +1019,9 @@ static int luaC_client_toggle_tag(lua_State *L)
 {
     struct cwc_toplevel *toplevel = luaC_client_checkudata(L, 1);
 
-    int tag = luaL_checkint(L, 2);
-    toplevel->container->tag ^= 1 << (tag - 1);
-    transaction_schedule_output(toplevel->container->output);
+    int tagidx = luaL_checkint(L, 2);
+    cwc_toplevel_set_tag(toplevel,
+                         toplevel->container->tag ^ 1 << (tagidx - 1));
 
     return 0;
 }

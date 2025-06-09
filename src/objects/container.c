@@ -63,7 +63,8 @@
 /** Emitted when a container is swapped.
  *
  * @signal container::swap
- * @tparam cwc_container cont The container object.
+ * @tparam cwc_container cont1 The container object.
+ * @tparam cwc_container cont2 The container object.
  */
 
 //=================== CODE ===========================

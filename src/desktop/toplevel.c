@@ -542,8 +542,8 @@ static void on_popup_commit(struct wl_listener *listener, void *data)
         node                        = &l->scene_layer->tree->node;
         parent_stree                = l->popup_tree;
         box                         = l->output->output_layout_box;
-        box.x = 0;
-        box.y = 0;
+        box.x                       = 0;
+        box.y                       = 0;
     } else {
         unreachable_();
         return;
@@ -674,6 +674,7 @@ void cwc_toplevel_focus(struct cwc_toplevel *toplevel, bool raise)
 void cwc_toplevel_jump_to(struct cwc_toplevel *toplevel, bool merge)
 {
     cwc_toplevel_focus(toplevel, true);
+    cwc_container_set_front_toplevel(toplevel);
 
     /* change the tag if its not visible */
     if (!cwc_toplevel_is_visible(toplevel)) {

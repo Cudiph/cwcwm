@@ -206,6 +206,12 @@ static inline void cwc_toplevel_move_to_tag(struct cwc_toplevel *toplevel,
     cwc_container_move_to_tag(toplevel->container, workspace);
 }
 
+static inline void cwc_toplevel_set_tag(struct cwc_toplevel *toplevel,
+                                        tag_bitfield_t tag)
+{
+    cwc_container_set_tag(toplevel->container, tag);
+}
+
 static inline void cwc_toplevel_to_center(struct cwc_toplevel *toplevel)
 {
     cwc_container_to_center(toplevel->container);

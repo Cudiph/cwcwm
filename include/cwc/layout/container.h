@@ -162,6 +162,7 @@ bool cwc_container_is_visible_in_workspace(struct cwc_container *container,
 bool cwc_container_is_currently_tiled(struct cwc_container *container);
 
 void cwc_container_move_to_tag(struct cwc_container *container, int workspace);
+void cwc_container_set_tag(struct cwc_container *container, tag_bitfield_t tag);
 void cwc_container_to_center(struct cwc_container *container);
 
 void cwc_container_restore_floating_box(struct cwc_container *container);

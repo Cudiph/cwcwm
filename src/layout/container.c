@@ -1527,16 +1527,45 @@ void cwc_container_move_to_tag(struct cwc_container *container, int workspace)
     if (container->bsp_node)
         bsp_remove_container(container, true);
 
-    container->tag       = 1 << (workspace - 1);
-    container->workspace = workspace;
+    tag_bitfield_t newtag = 1 << (workspace - 1);
+    bool tag_changed      = container->tag != newtag;
+    container->tag        = newtag;
+    container->workspace  = workspace;
 
     struct cwc_tag_info *tag_info =
         &container->output->state->tag_info[workspace];
     if (tag_info->layout_mode == CWC_LAYOUT_BSP)
         bsp_insert_container(container, workspace);
 
-    cwc_output_tiling_layout_update_container(container, true);
     transaction_schedule_output(container->output);
+    transaction_schedule_tag(tag_info);
+    transaction_schedule_tag(
+        cwc_output_get_current_tag_info(container->output));
+
+    lua_State *L = g_config_get_lua_State();
+    cwc_object_emit_signal_simple("client::property::workspace", L,
+                                  cwc_container_get_front_toplevel(container));
+
+    if (tag_changed)
+        cwc_object_emit_signal_simple(
+            "client::property::tag", L,
+            cwc_container_get_front_toplevel(container));
+}
+
+void cwc_container_set_tag(struct cwc_container *container, tag_bitfield_t tag)
+{
+    if (tag == 0)
+        return;
+
+    bool changed   = container->tag != tag;
+    container->tag = tag;
+    transaction_schedule_output(container->output);
+
+    lua_State *L = g_config_get_lua_State();
+    if (changed)
+        cwc_object_emit_signal_simple(
+            "client::property::tag", L,
+            cwc_container_get_front_toplevel(container));
 }
 
 void cwc_container_to_center(struct cwc_container *container)

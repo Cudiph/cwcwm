@@ -22,6 +22,8 @@ local signal_list = {
     "client::property::minimized",
     "client::property::floating",
     "client::property::urgent",
+    "client::property::tag",
+    "client::property::workspace",
 }
 
 local triggered_list = {}
