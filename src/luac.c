@@ -273,6 +273,21 @@ static int luaC_get_datadir(lua_State *L)
     return 1;
 }
 
+/** Get cwc version.
+ * @staticfct get_version
+ * @treturn string
+ */
+static int luaC_get_version(lua_State *L)
+{
+#ifdef CWC_GITHASH
+    lua_pushstring(L, CWC_VERSION "-" CWC_GITHASH);
+#else
+    lua_pushstring(L, CWC_VERSION);
+#endif /* ifdef CWC_GITHASH */
+
+    return 1;
+}
+
 /** Wrapper of C setenv.
  * @staticfct setenv
  * @tparam string key Variable name.
@@ -507,6 +522,7 @@ int luaC_init()
         {"is_nested",         luaC_is_nested        },
         {"is_startup",        luaC_is_startup       },
         {"get_datadir",       luaC_get_datadir      },
+        {"get_version",       luaC_get_version      },
 
         // intended for dev use only
         {"create_output",     luaC_create_output    },

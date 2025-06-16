@@ -45,6 +45,7 @@ static char *help_txt =
     "  screen    Get all screen information\n"
     "  binds     Get all active keybinds information\n"
     "  help      Help about any command/subcommand\n"
+    "  version   Print cwc version\n"
     "\n"
     "Example:\n"
     "  cwc -s /tmp/cwc.sock -c 'return cwc.client.focused().title'\n"
@@ -124,6 +125,8 @@ static int object_command(int argc, char **argv)
         repl((char *)_cwctl_script_client_lua);
     } else if (strcmp(command, "binds") == 0) {
         repl((char *)_cwctl_script_binds_lua);
+    } else if (strcmp(command, "version") == 0) {
+        repl("return cwc.get_version()");
     } else {
         fprintf(
             stderr,

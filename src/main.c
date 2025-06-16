@@ -89,7 +89,11 @@ int main(int argc, char **argv)
                 log_level = 3;
             break;
         case 'v':
-            printf("cwc v%s-%s\n", CWC_VERSION, CWC_GITHASH);
+#ifdef CWC_GITHASH
+            printf("cwc %s-%s\n", CWC_VERSION, CWC_GITHASH);
+#else
+            printf("cwc %s\n", CWC_VERSION);
+#endif /* ifdef CWC_GITHASH */
             return 0;
         case 'c':
             config_path = optarg;

@@ -1,14 +1,18 @@
 project('cwcwm', 'c', 'cpp', default_options: ['c_std=gnu23,gnu17,gnu11','b_ndebug=if-release'])
 
-add_project_arguments(['-DWLR_USE_UNSTABLE'], language: 'c')
-add_project_arguments(['-DHHMAP_AUTOMATIC_REHASH'], language: 'c')
-
-# versioning
-git_version_hash = run_command(['git', 'rev-parse', '--short', 'HEAD'], capture: true)
-add_project_arguments(['-DCWC_VERSION="0.0.1"', '-DCWC_GITHASH="'+git_version_hash.stdout().strip()+'"'], language: 'c')
-
 cwc_datadir = '/usr/share/cwc'
-add_project_arguments(['-DCWC_DATADIR="' + cwc_datadir + '"'], language: 'c')
+add_project_arguments([
+  '-DWLR_USE_UNSTABLE',
+  '-DHHMAP_AUTOMATIC_REHASH',
+
+  '-DCWC_VERSION="v0.1.0"',
+  '-DCWC_DATADIR="' + cwc_datadir + '"',
+], language: 'c')
+
+git_version_hash = run_command(['git', 'rev-parse', '--short', 'HEAD'], capture: true).stdout().strip()
+if git_version_hash != ''
+  add_project_arguments(['-DCWC_GITHASH="' + git_version_hash + '"'], language: 'c')
+endif
 
 cc = meson.get_compiler('c')
 proj_dir = meson.current_source_dir()
