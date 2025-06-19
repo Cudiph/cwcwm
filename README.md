@@ -77,10 +77,10 @@ $ make clean
 
 ### AUR
 
-AUR package is available under the package name [cwc-git][cwc-git].
+AUR package is available under the package name [cwc][cwc].
 
 ```console
-$ yay -S cwc-git
+$ yay -S cwc
 ```
 
 <div align="center">
