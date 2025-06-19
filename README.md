@@ -106,4 +106,4 @@ See [LICENSE.md](LICENSE.md) for license details.
 [getting_started]: https://cudiph.github.io/cwc/apidoc/documentation/00-getting-started.md.html
 [github-issue]: https://github.com/Cudiph/cwcwm/issues
 [conventional-commits]: https://www.conventionalcommits.org/en/v1.0.0/#commit-message-with--to-draw-attention-to-breaking-change
-[cwc-git]: https://aur.archlinux.org/packages/cwc-git
+[cwc-git]: https://aur.archlinux.org/packages/cwc
