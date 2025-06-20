@@ -77,9 +77,10 @@ $ make clean
 
 ### AUR
 
-AUR package is available under the package name [cwc-git][cwc-git].
+AUR package is available under the package name [cwc][cwc] or [cwc-git][cwc-git ]for the git version.
 
 ```console
+$ yay -S cwc
 $ yay -S cwc-git
 ```
 
@@ -106,4 +107,5 @@ See [LICENSE.md](LICENSE.md) for license details.
 [getting_started]: https://cudiph.github.io/cwc/apidoc/documentation/00-getting-started.md.html
 [github-issue]: https://github.com/Cudiph/cwcwm/issues
 [conventional-commits]: https://www.conventionalcommits.org/en/v1.0.0/#commit-message-with--to-draw-attention-to-breaking-change
+[cwc]: https://aur.archlinux.org/packages/cwc
 [cwc-git]: https://aur.archlinux.org/packages/cwc-git
