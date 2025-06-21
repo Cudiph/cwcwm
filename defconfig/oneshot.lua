@@ -29,3 +29,4 @@ cwc.spawn_with_shell(
 local plugins_folder = cwc.is_nested() and "./build/plugins" or cwc.get_datadir() .. "/plugins"
 cwc.plugin.load(plugins_folder .. "/cwcle.so")
 cwc.plugin.load(plugins_folder .. "/flayout.so")
+cwc.plugin.load(plugins_folder .. "/dwl-ipc.so")

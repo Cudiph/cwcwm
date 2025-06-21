@@ -117,6 +117,9 @@ void cwc_dwl_ipc_output_v2_set_layout_symbol(
 void cwc_dwl_ipc_output_v2_set_fullscreen(struct cwc_dwl_ipc_output_v2 *output,
                                           bool fullscreen)
 {
+    if (wl_resource_get_version(output->resource)
+        < ZDWL_IPC_OUTPUT_V2_FULLSCREEN_SINCE_VERSION)
+        return;
     output->fullscreen = fullscreen;
     zdwl_ipc_output_v2_send_fullscreen(output->resource, fullscreen);
     output_update_idle_source(output);
@@ -125,6 +128,9 @@ void cwc_dwl_ipc_output_v2_set_fullscreen(struct cwc_dwl_ipc_output_v2 *output,
 void cwc_dwl_ipc_output_v2_set_floating(struct cwc_dwl_ipc_output_v2 *output,
                                         bool floating)
 {
+    if (wl_resource_get_version(output->resource)
+        < ZDWL_IPC_OUTPUT_V2_FLOATING_SINCE_VERSION)
+        return;
     output->floating = floating;
     zdwl_ipc_output_v2_send_floating(output->resource, floating);
     output_update_idle_source(output);

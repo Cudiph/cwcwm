@@ -19,3 +19,13 @@ shared_module(
   install: true,
   install_dir: plugdir 
 )
+
+shared_module(
+  'dwl-ipc', 'dwl-ipc.c',
+  protocols_server_header['dwl-ipc-unstable-v2'],
+  include_directories : cwc_inc,
+  dependencies: [wlr],
+  name_prefix: '',
+  install: true,
+  install_dir: plugdir
+)
