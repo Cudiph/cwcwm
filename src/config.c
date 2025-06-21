@@ -28,16 +28,16 @@
 void cwc_config_init()
 {
     cwc_config_set_default();
-    g_config.CWC_PRIVATE.old_config = malloc(sizeof(struct cwc_config));
-    memcpy(g_config.CWC_PRIVATE.old_config, &g_config, sizeof(g_config));
+    g_config.old_config = malloc(sizeof(struct cwc_config));
+    memcpy(g_config.old_config, &g_config, sizeof(g_config));
     wl_signal_init(&g_config.events.commit);
 }
 
 void cwc_config_commit()
 {
     cwc_log(CWC_INFO, "config committed");
-    wl_signal_emit(&g_config.events.commit, g_config.CWC_PRIVATE.old_config);
-    memcpy(g_config.CWC_PRIVATE.old_config, &g_config, sizeof(g_config));
+    wl_signal_emit(&g_config.events.commit, g_config.old_config);
+    memcpy(g_config.old_config, &g_config, sizeof(g_config));
 }
 
 void cwc_config_set_default()

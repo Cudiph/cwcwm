@@ -55,6 +55,7 @@ protocols = {
     # Other protocols
 	'wlr-layer-shell-unstable-v1': 'wlr-layer-shell-unstable-v1.xml',
 	'wlr-output-power-management-unstable-v1': 'wlr-output-power-management-unstable-v1.xml',
+	'dwl-ipc-unstable-v2': 'dwl-ipc-unstable-v2.xml',
 
 }
 

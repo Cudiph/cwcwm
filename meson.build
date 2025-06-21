@@ -4,6 +4,7 @@ cwc_datadir = '/usr/share/cwc'
 add_project_arguments([
   '-DWLR_USE_UNSTABLE',
   '-DHHMAP_AUTOMATIC_REHASH',
+  '-DCWC_PRIVATE=',
 
   '-DCWC_VERSION="v0.1.0"',
   '-DCWC_DATADIR="' + cwc_datadir + '"',

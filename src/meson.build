@@ -46,6 +46,8 @@ srcs = [
   'objects/layer_shell.c',
   'objects/timer.c',
 
+  'protocol/dwl_ipc_v2.c',
+
   # Stable upstream protocols
   protocols_server_header['xdg-shell'],
   protocols_server_header['tablet-v2'],
@@ -62,6 +64,8 @@ srcs = [
   # Other protocols
   protocols_server_header['wlr-layer-shell-unstable-v1'],
   protocols_server_header['wlr-output-power-management-unstable-v1'],
+  protocols_server_header['dwl-ipc-unstable-v2'],
+  protocols_code['dwl-ipc-unstable-v2'],
 ]
 
 executable(

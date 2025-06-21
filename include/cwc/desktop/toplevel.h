@@ -156,9 +156,6 @@ bool cwc_toplevel_is_urgent(struct cwc_toplevel *toplevel);
 /* check if toplevel is visible or rendered on the screen */
 bool cwc_toplevel_is_visible(struct cwc_toplevel *toplevel);
 
-/* check if toplevel is visible on specified view */
-bool cwc_toplevel_is_visible_in_view(struct cwc_toplevel *toplevel, int view);
-
 bool cwc_toplevel_should_float(struct cwc_toplevel *toplevel);
 
 /* surface_node is node from the toplevel */
