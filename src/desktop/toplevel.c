@@ -199,8 +199,11 @@ static void on_surface_map(struct wl_listener *listener, void *data)
 
     _init_mapped_managed_toplevel(toplevel);
 
-    cwc_object_emit_signal_simple("client::map", g_config_get_lua_State(),
-                                  toplevel);
+    lua_State *L = g_config_get_lua_State();
+    if (toplevel->urgent)
+        cwc_object_emit_signal_simple("client::property::urgent", L, toplevel);
+
+    cwc_object_emit_signal_simple("client::map", L, toplevel);
 }
 
 static void on_surface_unmap(struct wl_listener *listener, void *data)
@@ -1275,6 +1278,9 @@ bool cwc_toplevel_is_urgent(struct cwc_toplevel *toplevel)
 
 void cwc_toplevel_set_urgent(struct cwc_toplevel *toplevel, bool set)
 {
+    if (toplevel->urgent == set)
+        return;
+
     toplevel->urgent = set;
     cwc_object_emit_signal_simple("client::property::urgent",
                                   g_config_get_lua_State(), toplevel);

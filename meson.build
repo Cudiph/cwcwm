@@ -6,7 +6,7 @@ add_project_arguments([
   '-DHHMAP_AUTOMATIC_REHASH',
   '-DCWC_PRIVATE=',
 
-  '-DCWC_VERSION="v0.1.0"',
+  '-DCWC_VERSION="v0.2.0-dev"',
   '-DCWC_DATADIR="' + cwc_datadir + '"',
 ], language: 'c')
 

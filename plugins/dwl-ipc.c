@@ -112,6 +112,9 @@ get_ipc_output_tag_state(struct cwc_output *cwc_o,
 
             if (toplevel == cwc_toplevel_get_focused())
                 state->focused = true;
+
+            if (cwc_toplevel_is_urgent(toplevel))
+                state->state |= ZDWL_IPC_OUTPUT_V2_TAG_STATE_URGENT;
         }
     }
 }
@@ -230,7 +233,7 @@ static void update_tag_idle_source(struct cwc_output *output)
         server.wl_event_loop, update_all_tag_state_idle, output_addon);
 }
 
-static void on_client_prop_tag(void *data)
+static void on_client_prop_change_and_update_tag(void *data)
 {
     struct cwc_toplevel *toplevel = data;
     update_tag_idle_source(toplevel->container->output);
@@ -343,7 +346,8 @@ static int dwl_ipc_setup()
 
     cwc_signal_connect("client::focus", on_client_prop_change);
     cwc_signal_connect("client::unfocus", on_client_unfocus);
-    cwc_signal_connect("client::property::tag", on_client_prop_tag);
+    cwc_signal_connect("client::property::urgent", on_client_prop_change_and_update_tag);
+    cwc_signal_connect("client::property::tag", on_client_prop_change_and_update_tag);
     cwc_signal_connect("client::property::fullscreen", on_client_prop_change);
     cwc_signal_connect("client::property::floating", on_client_prop_change);
     cwc_signal_connect("client::prop::title", on_client_prop_change);
@@ -386,7 +390,8 @@ static void dwl_ipc_cleanup()
 
     cwc_signal_disconnect("client::focus", on_client_prop_change);
     cwc_signal_disconnect("client::unfocus", on_client_unfocus);
-    cwc_signal_disconnect("client::property::tag", on_client_prop_tag);
+    cwc_signal_disconnect("client::property::urgent", on_client_prop_change_and_update_tag);
+    cwc_signal_disconnect("client::property::tag", on_client_prop_change_and_update_tag);
     cwc_signal_disconnect("client::property::fullscreen",
                           on_client_prop_change);
     cwc_signal_disconnect("client::property::floating", on_client_prop_change);

@@ -32,7 +32,6 @@
 #include <cairo.h>
 #include <lauxlib.h>
 #include <lua.h>
-#include <string.h>
 #include <wayland-util.h>
 
 #include "cwc/config.h"
@@ -165,6 +164,18 @@
 /** Property signal.
  *
  * @signal client::property::workspace
+ * @tparam cwc_client c The client object.
+ */
+
+/** Property signal.
+ *
+ * @signal client::prop::title
+ * @tparam cwc_client c The client object.
+ */
+
+/** Property signal.
+ *
+ * @signal client::prop::appid
  * @tparam cwc_client c The client object.
  */
 
