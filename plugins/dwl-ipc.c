@@ -26,6 +26,10 @@ struct cwc_ipc_output {
 
 struct cwc_output_addon {
     struct wlr_addon addon;
+    struct cwc_output *output;
+    struct cwc_toplevel *toplevel;
+    struct wl_event_source *tag_update_idle_source;
+    struct wl_event_source *prop_change_idle_source;
     struct wl_list ipc_outputs; // struct cwc_ipc_output.link
 };
 
@@ -157,34 +161,12 @@ static void on_new_dwl_ipc_output(struct wl_listener *listener, void *data)
     wl_list_insert(&o_addon->ipc_outputs, &ipc_output->link);
 }
 
-static void on_client_focus(void *data)
-{
-    struct cwc_toplevel *toplevel = data;
-    struct cwc_output_addon *output_addon =
-        cwc_output_get_output_addon(toplevel->container->output);
-    if (!output_addon)
-        return;
-
-    char *title = cwc_toplevel_get_title(toplevel);
-    char *appid = cwc_toplevel_get_app_id(toplevel);
-    title       = title ? title : "";
-    appid       = appid ? appid : "";
-
-    struct cwc_ipc_output *ipc_output;
-    wl_list_for_each(ipc_output, &output_addon->ipc_outputs, link)
-    {
-        cwc_dwl_ipc_output_v2_set_title(ipc_output->output_handle, title);
-        cwc_dwl_ipc_output_v2_set_appid(ipc_output->output_handle, appid);
-    }
-}
-
 static void on_client_unfocus(void *data)
 {
-    puts("hello");
-    struct cwc_toplevel *toplevel = data;
-    struct cwc_output_addon *output_addon =
-        cwc_output_get_output_addon(toplevel->container->output);
-    if (!output_addon)
+    struct cwc_toplevel *toplevel         = data;
+    struct cwc_output *output             = toplevel->container->output;
+    struct cwc_output_addon *output_addon = cwc_output_get_output_addon(output);
+    if (!output_addon || output != cwc_output_get_focused())
         return;
 
     struct cwc_ipc_output *ipc_output;
@@ -197,19 +179,25 @@ static void on_client_unfocus(void *data)
 
 static void on_screen_new(void *data)
 {
-    struct cwc_output *output             = data;
+    struct cwc_output *output      = data;
+    struct cwc_output_addon *exist = cwc_output_get_output_addon(output);
+    if (exist)
+        return;
+
     struct cwc_output_addon *output_addon = calloc(1, sizeof(*output_addon));
+    output_addon->output                  = output;
     wl_list_init(&output_addon->ipc_outputs);
 
     wlr_addon_init(&output_addon->addon, &output->wlr_output->addons, output,
                    &ipc_output_addon_impl);
 }
 
-static void update_all_tag_state(struct cwc_output *output)
+static void update_all_tag_state_idle(void *data)
 {
-    struct cwc_output_addon *output_addon = cwc_output_get_output_addon(output);
-    if (!output_addon)
-        return;
+    struct cwc_output_addon *output_addon = data;
+    struct cwc_output *output             = output_addon->output;
+
+    output_addon->tag_update_idle_source = NULL;
 
     struct cwc_dwl_ipc_output_v2_tag_state
         states[output->state->max_general_workspace + 2];
@@ -228,48 +216,73 @@ static void update_all_tag_state(struct cwc_output *output)
     }
 }
 
+static void update_tag_idle_source(struct cwc_output *output)
+{
+    struct cwc_output_addon *output_addon = cwc_output_get_output_addon(output);
+    if (!output_addon)
+        return;
+
+    if (output_addon->tag_update_idle_source)
+        return;
+
+    output_addon->output                 = output;
+    output_addon->tag_update_idle_source = wl_event_loop_add_idle(
+        server.wl_event_loop, update_all_tag_state_idle, output_addon);
+}
+
 static void on_client_prop_tag(void *data)
 {
     struct cwc_toplevel *toplevel = data;
-    update_all_tag_state(toplevel->container->output);
+    update_tag_idle_source(toplevel->container->output);
 }
 
-static void on_client_prop_fscreen(void *data)
+static void update_prop_idle(void *data)
 {
-    struct cwc_toplevel *toplevel = data;
-    struct cwc_output_addon *output_addon =
-        cwc_output_get_output_addon(toplevel->container->output);
-    if (!output_addon || toplevel != cwc_toplevel_get_focused())
+    struct cwc_output_addon *output_addon = data;
+    struct cwc_toplevel *toplevel         = output_addon->toplevel;
+
+    output_addon->prop_change_idle_source = NULL;
+    if (toplevel != cwc_toplevel_get_focused())
         return;
 
     struct cwc_ipc_output *ipc_output;
     wl_list_for_each(ipc_output, &output_addon->ipc_outputs, link)
     {
+        char *title = cwc_toplevel_get_title(toplevel);
+        char *appid = cwc_toplevel_get_app_id(toplevel);
+        title       = title ? title : "";
+        appid       = appid ? appid : "";
         cwc_dwl_ipc_output_v2_set_fullscreen(
             ipc_output->output_handle, cwc_toplevel_is_fullscreen(toplevel));
+        cwc_dwl_ipc_output_v2_set_floating(ipc_output->output_handle,
+                                           cwc_toplevel_is_floating(toplevel));
+        cwc_dwl_ipc_output_v2_set_title(ipc_output->output_handle, title);
+        cwc_dwl_ipc_output_v2_set_appid(ipc_output->output_handle, appid);
     }
 }
 
-static void on_client_prop_floating(void *data)
+static void on_client_prop_change(void *data)
 {
     struct cwc_toplevel *toplevel = data;
+    if (toplevel != cwc_toplevel_get_focused() || !toplevel->container)
+        return;
     struct cwc_output_addon *output_addon =
         cwc_output_get_output_addon(toplevel->container->output);
-    if (!output_addon || toplevel != cwc_toplevel_get_focused())
+    if (!output_addon)
         return;
 
-    struct cwc_ipc_output *ipc_output;
-    wl_list_for_each(ipc_output, &output_addon->ipc_outputs, link)
-    {
-        cwc_dwl_ipc_output_v2_set_floating(ipc_output->output_handle,
-                                           cwc_toplevel_is_floating(toplevel));
-    }
+    if (output_addon->prop_change_idle_source)
+        return;
+
+    output_addon->toplevel                = toplevel;
+    output_addon->prop_change_idle_source = wl_event_loop_add_idle(
+        server.wl_event_loop, update_prop_idle, output_addon);
 }
 
 static void on_screen_prop_active_tag(void *data)
 {
     struct cwc_output *output = data;
-    update_all_tag_state(output);
+    update_tag_idle_source(output);
 }
 
 static void on_screen_focus(void *data)
@@ -310,6 +323,7 @@ static void register_addon()
             continue;
 
         struct cwc_output_addon *o_addon = calloc(1, sizeof(*o_addon));
+        o_addon->output                  = o;
         wl_list_init(&o_addon->ipc_outputs);
 
         wlr_addon_init(&o_addon->addon, &o->wlr_output->addons, o,
@@ -327,11 +341,14 @@ static int dwl_ipc_setup()
     on_new_dwl_ipc_output_l.notify = on_new_dwl_ipc_output;
     wl_signal_add(&manager->events.new_output, &on_new_dwl_ipc_output_l);
 
-    cwc_signal_connect("client::focus", on_client_focus);
+    cwc_signal_connect("client::focus", on_client_prop_change);
     cwc_signal_connect("client::unfocus", on_client_unfocus);
     cwc_signal_connect("client::property::tag", on_client_prop_tag);
-    cwc_signal_connect("client::property::fullscreen", on_client_prop_fscreen);
-    cwc_signal_connect("client::property::floating", on_client_prop_floating);
+    cwc_signal_connect("client::property::fullscreen", on_client_prop_change);
+    cwc_signal_connect("client::property::floating", on_client_prop_change);
+    cwc_signal_connect("client::prop::title", on_client_prop_change);
+    cwc_signal_connect("client::prop::appid", on_client_prop_change);
+
     cwc_signal_connect("screen::new", on_screen_new);
     cwc_signal_connect("screen::focus", on_screen_focus);
     cwc_signal_connect("screen::unfocus", on_screen_unfocus);
@@ -367,13 +384,15 @@ static void dwl_ipc_cleanup()
     wl_list_remove(&on_new_dwl_ipc_output_l.link);
     cwc_dwl_ipc_manager_v2_destroy(manager);
 
-    cwc_signal_disconnect("client::focus", on_client_focus);
+    cwc_signal_disconnect("client::focus", on_client_prop_change);
     cwc_signal_disconnect("client::unfocus", on_client_unfocus);
     cwc_signal_disconnect("client::property::tag", on_client_prop_tag);
     cwc_signal_disconnect("client::property::fullscreen",
-                          on_client_prop_fscreen);
-    cwc_signal_disconnect("client::property::floating",
-                          on_client_prop_floating);
+                          on_client_prop_change);
+    cwc_signal_disconnect("client::property::floating", on_client_prop_change);
+    cwc_signal_disconnect("client::prop::title", on_client_prop_change);
+    cwc_signal_disconnect("client::prop::appid", on_client_prop_change);
+
     cwc_signal_disconnect("screen::new", on_screen_new);
     cwc_signal_disconnect("screen::focus", on_screen_focus);
     cwc_signal_disconnect("screen::unfocus", on_screen_unfocus);

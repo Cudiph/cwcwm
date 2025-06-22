@@ -450,6 +450,9 @@ end, { description = "snipping tool", group = "launcher" })
 kbd.bind(MODKEY, "v", function()
     cwc.spawn_with_shell("copyq toggle")
 end, { description = "clipboard history", group = "launcher" })
+kbd.bind({ MODKEY }, "b", function()
+    cwc.spawn_with_shell("kill -s USR1 `pgrep waybar`")
+end, { description = "toggle waybar", group = "launcher " })
 
 ------------------ MEDIA KEY -----------------------
 

@@ -24,6 +24,8 @@ local signal_list = {
     "client::property::urgent",
     "client::property::tag",
     "client::property::workspace",
+    "client::prop::title",
+    "client::prop::appid",
 }
 
 local triggered_list = {}

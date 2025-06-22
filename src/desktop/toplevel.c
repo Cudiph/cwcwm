@@ -392,6 +392,9 @@ static void on_set_title(struct wl_listener *listener, void *data)
     if (toplevel->wlr_foreign_handle && title)
         wlr_foreign_toplevel_handle_v1_set_title(toplevel->wlr_foreign_handle,
                                                  title);
+
+    cwc_object_emit_signal_simple("client::prop::title",
+                                  g_config_get_lua_State(), toplevel);
 }
 
 static void on_set_app_id(struct wl_listener *listener, void *data)
@@ -405,6 +408,9 @@ static void on_set_app_id(struct wl_listener *listener, void *data)
     if (toplevel->wlr_foreign_handle && app_id)
         wlr_foreign_toplevel_handle_v1_set_app_id(toplevel->wlr_foreign_handle,
                                                   app_id);
+
+    cwc_object_emit_signal_simple("client::prop::appid",
+                                  g_config_get_lua_State(), toplevel);
 }
 
 /* shared stuff between toplevel for xwayland and xdg_toplevel */
