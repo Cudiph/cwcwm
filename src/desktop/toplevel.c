@@ -41,7 +41,9 @@
 #include "cwc/input/cursor.h"
 #include "cwc/input/keyboard.h"
 #include "cwc/input/seat.h"
+#include "cwc/layout/bsp.h"
 #include "cwc/layout/container.h"
+#include "cwc/layout/master.h"
 #include "cwc/luaclass.h"
 #include "cwc/luaobject.h"
 #include "cwc/server.h"
@@ -181,6 +183,29 @@ static inline void _fini_unmap_managed_toplevel(struct cwc_toplevel *toplevel)
     }
 }
 
+static void _decide_should_tiled_part2(struct cwc_toplevel *toplevel)
+{
+
+    struct cwc_container *cont = toplevel->container;
+    if (cwc_toplevel_is_unmanaged(toplevel) || !cont
+        || cwc_toplevel_is_floating(toplevel))
+        return;
+
+    switch (cont->output->state->tag_info[cont->workspace].layout_mode) {
+    case CWC_LAYOUT_FLOATING:
+        return;
+    case CWC_LAYOUT_MASTER:
+        master_arrange_update(cont->output);
+        break;
+    case CWC_LAYOUT_BSP:
+        if (!cont->bsp_node)
+            bsp_insert_container(cont, cont->workspace);
+        break;
+    default:
+        unreachable_();
+    }
+}
+
 static void on_surface_map(struct wl_listener *listener, void *data)
 {
     struct cwc_toplevel *toplevel = wl_container_of(listener, toplevel, map_l);
@@ -204,6 +229,8 @@ static void on_surface_map(struct wl_listener *listener, void *data)
         cwc_object_emit_signal_simple("client::property::urgent", L, toplevel);
 
     cwc_object_emit_signal_simple("client::map", L, toplevel);
+
+    _decide_should_tiled_part2(toplevel);
 }
 
 static void on_surface_unmap(struct wl_listener *listener, void *data)

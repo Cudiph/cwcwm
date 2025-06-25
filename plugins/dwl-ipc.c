@@ -346,8 +346,10 @@ static int dwl_ipc_setup()
 
     cwc_signal_connect("client::focus", on_client_prop_change);
     cwc_signal_connect("client::unfocus", on_client_unfocus);
-    cwc_signal_connect("client::property::urgent", on_client_prop_change_and_update_tag);
-    cwc_signal_connect("client::property::tag", on_client_prop_change_and_update_tag);
+    cwc_signal_connect("client::property::urgent",
+                       on_client_prop_change_and_update_tag);
+    cwc_signal_connect("client::property::tag",
+                       on_client_prop_change_and_update_tag);
     cwc_signal_connect("client::property::fullscreen", on_client_prop_change);
     cwc_signal_connect("client::property::floating", on_client_prop_change);
     cwc_signal_connect("client::prop::title", on_client_prop_change);
@@ -390,8 +392,10 @@ static void dwl_ipc_cleanup()
 
     cwc_signal_disconnect("client::focus", on_client_prop_change);
     cwc_signal_disconnect("client::unfocus", on_client_unfocus);
-    cwc_signal_disconnect("client::property::urgent", on_client_prop_change_and_update_tag);
-    cwc_signal_disconnect("client::property::tag", on_client_prop_change_and_update_tag);
+    cwc_signal_disconnect("client::property::urgent",
+                          on_client_prop_change_and_update_tag);
+    cwc_signal_disconnect("client::property::tag",
+                          on_client_prop_change_and_update_tag);
     cwc_signal_disconnect("client::property::fullscreen",
                           on_client_prop_change);
     cwc_signal_disconnect("client::property::floating", on_client_prop_change);

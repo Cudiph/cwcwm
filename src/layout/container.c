@@ -488,8 +488,8 @@ assign_common:
                                &container->popup_tree->node);
 }
 
-static void decide_should_tiled(struct cwc_toplevel *toplevel,
-                                struct cwc_container *cont)
+static void _decide_should_tiled_part1(struct cwc_toplevel *toplevel,
+                                       struct cwc_container *cont)
 {
     if (cwc_toplevel_wants_fullscreen(toplevel)) {
         cwc_toplevel_set_fullscreen(toplevel, true);
@@ -513,20 +513,6 @@ static void decide_should_tiled(struct cwc_toplevel *toplevel,
             cwc_toplevel_to_center(toplevel);
 
         return;
-    }
-
-    // setup tiled toplevel
-    switch (cont->output->state->tag_info[cont->workspace].layout_mode) {
-    case CWC_LAYOUT_FLOATING:
-        return;
-    case CWC_LAYOUT_MASTER:
-        master_arrange_update(cont->output);
-        break;
-    case CWC_LAYOUT_BSP:
-        bsp_insert_container(cont, cont->workspace);
-        break;
-    default:
-        unreachable_();
     }
 
     cont->state &= ~CONTAINER_STATE_FLOATING;
@@ -609,7 +595,7 @@ void cwc_container_init(struct cwc_output *output,
     wl_list_insert(&cont->output->state->focus_stack,
                    &cont->link_output_fstack);
 
-    decide_should_tiled(toplevel, cont);
+    _decide_should_tiled_part1(toplevel, cont);
 
 emit_signal:
     // just to make sure the border is fit to the surface correctly,
@@ -1534,7 +1520,8 @@ void cwc_container_move_to_tag(struct cwc_container *container, int workspace)
 
     struct cwc_tag_info *tag_info =
         &container->output->state->tag_info[workspace];
-    if (tag_info->layout_mode == CWC_LAYOUT_BSP)
+    if (tag_info->layout_mode == CWC_LAYOUT_BSP
+        && !(container->state & CONTAINER_STATE_FLOATING))
         bsp_insert_container(container, workspace);
 
     transaction_schedule_output(container->output);

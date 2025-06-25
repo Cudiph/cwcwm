@@ -383,7 +383,12 @@ static void _bsp_insert_container(struct bsp_root_entry *root_entry,
     }
 
     sibling_node->parent = parent_node;
-    bsp_node_enable(new->bsp_node);
+
+    if (cwc_container_is_fullscreen(new) || cwc_container_is_maximized(new)
+        || cwc_container_is_minimized(new) || cwc_container_is_floating(new))
+        bsp_node_disable(new->bsp_node);
+    else
+        bsp_node_enable(new->bsp_node);
 }
 
 void _bsp_insert_container_entry(struct cwc_container *new,

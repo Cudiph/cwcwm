@@ -132,7 +132,6 @@ cwc.connect_signal("client::map", function(client)
     -- It'll move any firefox app to the workspace 2 and maximize it also we moving to tag 2.
     if client.appid == "firefox" then
         client:move_to_tag(2)
-        client.maximize = true
         client.screen.active_workspace = 2
     end
 
