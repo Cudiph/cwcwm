@@ -517,7 +517,7 @@ static int luaC_kbd_clear(lua_State *L)
 
 /** Create a new keybind map.
  *
- * @configfct create_bindmap
+ * @staticfct create_bindmap
  * @treturn cwc_kbindmap
  */
 static int luaC_kbd_create_bindmap(lua_State *L)
@@ -531,7 +531,7 @@ static int luaC_kbd_create_bindmap(lua_State *L)
 
 /** Get all cwc_kbindmap object in the server.
  *
- * @configfct get_bindmap
+ * @staticfct get_bindmap
  * @treturn cwc_kbindmap[]
  * @see get_default_member
  */
@@ -552,7 +552,7 @@ static int luaC_kbd_get_bindmap(lua_State *L)
 
 /** Get keybind object in the default map.
  *
- * @configfct get_default_member
+ * @staticfct get_default_member
  * @treturn cwc_kbind[]
  * @see cwc_kbindmap:member
  */

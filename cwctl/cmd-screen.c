@@ -46,7 +46,11 @@ static char *screen_help =
     "Options:\n"
     "  -h, --help   get the property of a screen\n"
     "  -f, --filter specify which output name for get,set,toggle to apply. "
-    "default is 'focused' output, use '*' for every output";
+    "default is 'focused' output, use '*' for every output\n"
+    "\n"
+    "Example:\n"
+    "  cwctl screen -f 'eDP-1' set enabled false\n";
+;
 
 static struct option screen_long_opt[] = {
     {"help",   NO_ARG, NULL, 'h'},

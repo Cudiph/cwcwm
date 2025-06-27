@@ -344,7 +344,7 @@ kbd.bind(MODKEY, "0", function()
     for _, s in pairs(scrs) do
         cful.tag.viewnone(s)
     end
-end, { description = "view desktop on all screen", group = "tag" })
+end, { description = "deactivate all tag on all screen", group = "tag" })
 
 kbd.bind(MODKEY, "comma", function()
     cful.tag.viewprev()
@@ -361,11 +361,19 @@ kbd.bind(MODKEY, "grave", cful.tag.history.restore,
 -------------------- tag config
 kbd.bind(MODKEY, "equal", function()
     cful.tag.incgap(1)
-end, { description = "increase gaps", group = "tag", repeated = true })
+end, { description = "increase gaps", group = "layout", repeated = true })
 
 kbd.bind(MODKEY, "minus", function()
     cful.tag.incgap(-1)
-end, { description = "decrease gaps", group = "tag", repeated = true })
+end, { description = "decrease gaps", group = "layout", repeated = true })
+
+----------------------- bsp hotkey
+kbd.bind(MODKEY, "e", function()
+    local c = cwc.client.focused()
+    if not c then return end
+
+    c:toggle_split()
+end, { description = "toggle bsp split", group = "layout" })
 
 kbd.bind({ mod.LOGO, mod.ALT }, "l", function()
     local s = cwc.screen.focused()
@@ -375,7 +383,7 @@ kbd.bind({ mod.LOGO, mod.ALT }, "l", function()
     else
         cful.tag.incmwfact(0.05)
     end
-end, { description = "increase master/bsp width factor", group = "tag", repeated = true })
+end, { description = "increase master/bsp width factor", group = "layout", repeated = true })
 
 kbd.bind({ mod.LOGO, mod.ALT }, "h", function()
     local s = cwc.screen.focused()
@@ -385,15 +393,7 @@ kbd.bind({ mod.LOGO, mod.ALT }, "h", function()
     else
         cful.tag.incmwfact(-0.05)
     end
-end, { description = "decrease master/bsp width factor", group = "tag", repeated = true })
-
------------------------ bsp hotkey
-kbd.bind(MODKEY, "e", function()
-    local c = cwc.client.focused()
-    if not c then return end
-
-    c:toggle_split()
-end, { description = "toggle bsp split", group = "layout" })
+end, { description = "decrease master/bsp width factor", group = "layout", repeated = true })
 
 --------------- layout commands
 kbd.bind(MODKEY, "space", function()
@@ -452,7 +452,7 @@ kbd.bind(MODKEY, "v", function()
 end, { description = "clipboard history", group = "launcher" })
 kbd.bind({ MODKEY }, "b", function()
     cwc.spawn_with_shell("kill -s USR1 `pgrep waybar`")
-end, { description = "toggle waybar", group = "launcher " })
+end, { description = "toggle waybar", group = "launcher" })
 
 ------------------ MEDIA KEY -----------------------
 
@@ -568,7 +568,7 @@ client_map.active = false
 -- enter this submap by pressing MOD + W in the default map
 kbd.bind({ MODKEY }, "w", function()
     client_map:active_only()
-end)
+end, { description = "activate client vim movement keymap", group = "keymap" })
 
 -- exit this submap by pressing Esc
 client_map:bind({}, "Escape", function()

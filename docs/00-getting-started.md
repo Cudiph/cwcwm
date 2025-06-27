@@ -120,69 +120,88 @@ end
 
 ### cwc
 
-- `Super + Control + Delete` exit cwc
-- `Super + Control + r` reload configuration
+- `Super + CTRL + Delete` exit cwc
+- `Super + CTRL + r` reload configuration
 - `Super + Delete` trigger lua garbage collection
 - `Super + Escape` reset leftover server state
 
+### layout
+
+- `Super + ALT + h` decrease master/bsp width factor
+- `Super + ALT + l` increase master/bsp width factor
+- `Super + CTRL + SHIFT + space` cycle to previous strategy in focused screen
+- `Super + CTRL + h` increase the number of columns
+- `Super + CTRL + l` decrease the number of columns
+- `Super + CTRL + space` cycle to next strategy in focused screen
+- `Super + SHIFT + h` increase the number of master clients
+- `Super + SHIFT + l` decrease the number of master clients
+- `Super + e` toggle bsp split
+- `Super + equal` increase gaps
+- `Super + minus` decrease gaps
+- `Super + space` cycle to next layout mode in focused screen
+
+### screen
+
+- `Super + ALT + j` focus the next screen
+- `Super + ALT + k` focus the previous screen
+
+### keymap
+
+- `Super + w` activate client vim movement keymap
+
 ### client
 
-- `Alt + Shift + Tab` cycle previous client
-- `Alt + Tab` cycle next client
-- `Super + Control + 0` toggle client always visible
-- `Super + Control + j` focus next client relative by index
-- `Super + Control + k` focus previous client by index
-- `Super + Control + m` maximize horizontally
-- `Super + Control + n` restore minimized client
-- `Super + Control + q` close client forcefully
-- `Super + Control + Return` promote focused client to master
+- `ALT + SHIFT + Tab` cycle previous client
+- `ALT + Tab` cycle next client
+- `Super + CTRL + 0` toggle client always visible
+- `Super + CTRL + Return` promote focused client to master
+- `Super + CTRL + j` focus next client relative by index
+- `Super + CTRL + k` focus previous client by index
+- `Super + CTRL + m` maximize horizontally
+- `Super + CTRL + n` restore minimized client
+- `Super + CTRL + q` close client forcefully
 - `Super + Down` move client downward
+- `Super + Left` move client to the left
+- `Super + Right` move client to the right
+- `Super + SHIFT + Down` increase client height
+- `Super + SHIFT + Left` reduce client width
+- `Super + SHIFT + Right` increase client width
+- `Super + SHIFT + Tab` cycle prev to toplevel inside container
+- `Super + SHIFT + Up` reduce client height
+- `Super + SHIFT + equal` increase opacity
+- `Super + SHIFT + j` swap with next client by index
+- `Super + SHIFT + k` swap with previous client by index
+- `Super + SHIFT + m` maximize vertically
+- `Super + SHIFT + minus` decrease opacity
+- `Super + SHIFT + q` close client respectfully
+- `Super + SHIFT + space` toggle floating
+- `Super + Tab` cycle next to toplevel inside container
+- `Super + Up` move client upward
+- `Super + bracketleft` cycle move focused client to previous screen
+- `Super + bracketright` cycle move focused client to next screen
 - `Super + f` toggle fullscreen
 - `Super + h` focus left
 - `Super + i` toggle client above normal toplevel
 - `Super + j` focus down
 - `Super + k` focus up
-- `Super + Left` move client to the left
 - `Super + l` focus right
 - `Super + m` toggle maximize
 - `Super + n` minimize client
 - `Super + o` toggle client always on top
-- `Super + Right` move client to the right
-- `Super + Shift + Down` increase client height
-- `Super + Shift + j` swap with next client by index
-- `Super + Shift + k` swap with previous client by index
-- `Super + Shift + Left` reduce client width
-- `Super + Shift + m` maximize vertically
-- `Super + Shift + q` close client respectfully
-- `Super + Shift + Right` increase client width
-- `Super + Shift + space` toggle floating
-- `Super + Shift + Tab` cycle prev to toplevel inside container
-- `Super + Shift + Up` reduce client height
-- `Super + Tab` cycle next to toplevel inside container
 - `Super + t` mark insert container from the focused client
-- `Super + Up` move client upward
 - `Super + u` toggle client under normal toplevel
 
 ### launcher
 
 - `Super + F1` open a web browser
-- `Super + p` application launcher
 - `Super + Print` screenshot entire screen
-- `Super + Return` open a terminal
-- `Super + Shift + s` snipping tool
+- `Super + b` toggle waybar
+- `Super + p` application launcher
 - `Super + v` clipboard history
-
-### layout
-
-- `Super + Control + Shift + space` cycle to previous strategy in focused screen
-- `Super + Control + space` cycle to next strategy in focused screen
-- `Super + equal` increase gaps
-- `Super + e` toggle bsp split
-- `Super + minus` decrease gaps
-- `Super + space` cycle to next layout mode in focused screen
 
 ### tag
 
+- `Super + 0` deactivate all tag on all screen
 - `Super + 1` view tag #1
 - `Super + 2` view tag #2
 - `Super + 3` view tag #3
@@ -192,32 +211,33 @@ end
 - `Super + 7` view tag #7
 - `Super + 8` view tag #8
 - `Super + 9` view tag #9
+- `Super + CTRL + 1` toggle tag #1
+- `Super + CTRL + 2` toggle tag #2
+- `Super + CTRL + 3` toggle tag #3
+- `Super + CTRL + 4` toggle tag #4
+- `Super + CTRL + 5` toggle tag #5
+- `Super + CTRL + 6` toggle tag #6
+- `Super + CTRL + 7` toggle tag #7
+- `Super + CTRL + 8` toggle tag #8
+- `Super + CTRL + 9` toggle tag #9
+- `Super + CTRL + SHIFT + 1` toggle focused client on tag #1
+- `Super + CTRL + SHIFT + 2` toggle focused client on tag #2
+- `Super + CTRL + SHIFT + 3` toggle focused client on tag #3
+- `Super + CTRL + SHIFT + 4` toggle focused client on tag #4
+- `Super + CTRL + SHIFT + 5` toggle focused client on tag #5
+- `Super + CTRL + SHIFT + 6` toggle focused client on tag #6
+- `Super + CTRL + SHIFT + 7` toggle focused client on tag #7
+- `Super + CTRL + SHIFT + 8` toggle focused client on tag #8
+- `Super + CTRL + SHIFT + 9` toggle focused client on tag #9
+- `Super + SHIFT + 1` move focused client to tag #1
+- `Super + SHIFT + 2` move focused client to tag #2
+- `Super + SHIFT + 3` move focused client to tag #3
+- `Super + SHIFT + 4` move focused client to tag #4
+- `Super + SHIFT + 5` move focused client to tag #5
+- `Super + SHIFT + 6` move focused client to tag #6
+- `Super + SHIFT + 7` move focused client to tag #7
+- `Super + SHIFT + 8` move focused client to tag #8
+- `Super + SHIFT + 9` move focused client to tag #9
 - `Super + comma` view next workspace/tag
+- `Super + grave` activate last activated tags
 - `Super + period` view prev workspace/tag
-- `Super + Control + 1` toggle tag #1
-- `Super + Control + 2` toggle tag #2
-- `Super + Control + 3` toggle tag #3
-- `Super + Control + 4` toggle tag #4
-- `Super + Control + 5` toggle tag #5
-- `Super + Control + 6` toggle tag #6
-- `Super + Control + 7` toggle tag #7
-- `Super + Control + 8` toggle tag #8
-- `Super + Control + 9` toggle tag #9
-- `Super + Control + Shift + 1` toggle focused client on tag #1
-- `Super + Control + Shift + 2` toggle focused client on tag #2
-- `Super + Control + Shift + 3` toggle focused client on tag #3
-- `Super + Control + Shift + 4` toggle focused client on tag #4
-- `Super + Control + Shift + 5` toggle focused client on tag #5
-- `Super + Control + Shift + 6` toggle focused client on tag #6
-- `Super + Control + Shift + 7` toggle focused client on tag #7
-- `Super + Control + Shift + 8` toggle focused client on tag #8
-- `Super + Control + Shift + 9` toggle focused client on tag #9
-- `Super + Shift + 1` move focused client to tag #1
-- `Super + Shift + 2` move focused client to tag #2
-- `Super + Shift + 3` move focused client to tag #3
-- `Super + Shift + 4` move focused client to tag #4
-- `Super + Shift + 5` move focused client to tag #5
-- `Super + Shift + 6` move focused client to tag #6
-- `Super + Shift + 7` move focused client to tag #7
-- `Super + Shift + 8` move focused client to tag #8
-- `Super + Shift + 9` move focused client to tag #9
