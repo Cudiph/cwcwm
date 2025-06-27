@@ -27,6 +27,7 @@ libinput = dependency('libinput')
 xxhash = dependency('libxxhash')
 lua = dependency('luajit')
 xcb = dependency('xcb')
+libdrm_header = dependency('libdrm').partial_dependency(compile_args: true, includes: true)
 libm = cc.find_library('m', required : true)
 libdl = cc.find_library('dl', required : true)
 
@@ -50,6 +51,7 @@ all_deps = [
   xxhash,
   lua,
   xcb,
+  libdrm_header,
   libm,
   libdl,
 ]
