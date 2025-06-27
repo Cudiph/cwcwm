@@ -164,7 +164,7 @@ static void on_new_dwl_ipc_output(struct wl_listener *listener, void *data)
     wl_list_insert(&o_addon->ipc_outputs, &ipc_output->link);
 }
 
-static void on_client_unfocus(void *data)
+static void on_client_should_title_reset(void *data)
 {
     struct cwc_toplevel *toplevel         = data;
     struct cwc_output *output             = toplevel->container->output;
@@ -345,7 +345,8 @@ static int dwl_ipc_setup()
     wl_signal_add(&manager->events.new_output, &on_new_dwl_ipc_output_l);
 
     cwc_signal_connect("client::focus", on_client_prop_change);
-    cwc_signal_connect("client::unfocus", on_client_unfocus);
+    cwc_signal_connect("client::unfocus", on_client_should_title_reset);
+    cwc_signal_connect("client::unmap", on_client_should_title_reset);
     cwc_signal_connect("client::property::urgent",
                        on_client_prop_change_and_update_tag);
     cwc_signal_connect("client::property::tag",
@@ -391,7 +392,8 @@ static void dwl_ipc_cleanup()
     cwc_dwl_ipc_manager_v2_destroy(manager);
 
     cwc_signal_disconnect("client::focus", on_client_prop_change);
-    cwc_signal_disconnect("client::unfocus", on_client_unfocus);
+    cwc_signal_disconnect("client::unfocus", on_client_should_title_reset);
+    cwc_signal_disconnect("client::unmap", on_client_should_title_reset);
     cwc_signal_disconnect("client::property::urgent",
                           on_client_prop_change_and_update_tag);
     cwc_signal_disconnect("client::property::tag",
