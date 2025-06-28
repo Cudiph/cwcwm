@@ -1,6 +1,6 @@
 project('cwcwm', 'c', 'cpp', default_options: ['c_std=gnu23,gnu17,gnu11','b_ndebug=if-release'])
 
-cwc_datadir = '/usr/share/cwc'
+cwc_datadir = get_option('datadir') / 'cwc'
 add_project_arguments([
   '-DWLR_USE_UNSTABLE',
   '-DHHMAP_AUTOMATIC_REHASH',
@@ -74,7 +74,7 @@ endif
 # install script
 install_subdir('lib', install_dir: cwc_datadir)
 install_subdir('defconfig', install_dir: cwc_datadir)
-install_subdir('doc', install_dir: '/usr/share/doc/cwc')
-install_subdir('include/cwc', install_dir: '/usr/include')
-install_data('cwc.desktop', install_dir: '/usr/share/wayland-sessions')
-install_data('cwc-portals.conf', install_dir: '/usr/share/xdg-desktop-portal')
+install_subdir('doc', install_dir: get_option('datadir') / 'doc/cwc')
+install_subdir('include/cwc', install_dir: get_option('includedir'))
+install_data('cwc.desktop', install_dir: get_option('datadir') / 'wayland-sessions')
+install_data('cwc-portals.conf', install_dir: get_option('datadir') / 'xdg-desktop-portal')

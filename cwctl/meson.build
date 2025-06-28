@@ -29,5 +29,5 @@ executable(
   srcs,
   include_directories : cwc_inc,
   install: true,
-  install_dir: '/usr/bin',
+  install_dir: get_option('bindir'),
 )
