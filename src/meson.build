@@ -72,7 +72,7 @@ executable(
   'cwc',
   srcs,
   install: true,
-  install_dir: '/usr/bin',
+  install_dir: get_option('bindir'),
   dependencies: all_deps,
   include_directories : cwc_inc,
   link_args : ['-Wl,--export-dynamic'],
