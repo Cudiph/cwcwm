@@ -20,6 +20,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <wlr/util/box.h>
 #include <wlr/util/edges.h>
 
@@ -157,4 +158,31 @@ get_snap_edges(struct wlr_box *output_box, int cx, int cy, int threshold)
     }
 
     return edges;
+}
+
+bool get_cwc_datadir(char *dst, int buff_size)
+{
+    char *xdg_data_dirs = getenv("XDG_DATA_DIRS");
+    if (!xdg_data_dirs || strlen(xdg_data_dirs) == 0) {
+        xdg_data_dirs = "/usr/local/share:/usr/share";
+        setenv("XDG_DATA_DIRS", xdg_data_dirs, true);
+    }
+
+    xdg_data_dirs  = strdup(xdg_data_dirs);
+    char *save_ptr = xdg_data_dirs;
+    char *data_dir;
+    while ((data_dir = strtok_r(save_ptr, ":", &save_ptr))) {
+        strncpy(dst, data_dir, buff_size - 1);
+        strncat(dst, "/cwc", buff_size - 1);
+        int ok = access(dst, R_OK) == 0;
+        if (!ok)
+            continue;
+
+        free(xdg_data_dirs);
+        return true;
+    }
+
+    free(xdg_data_dirs);
+    strncpy(dst, "/usr/share/cwc", buff_size);
+    return false;
 }

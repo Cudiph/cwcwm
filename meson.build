@@ -7,7 +7,6 @@ add_project_arguments([
   '-DCWC_PRIVATE=',
 
   '-DCWC_VERSION="v0.2.0-dev"',
-  '-DCWC_DATADIR="' + cwc_datadir + '"',
 ], language: 'c')
 
 git_version_hash = run_command(['git', 'rev-parse', '--short', 'HEAD'], capture: true).stdout().strip()

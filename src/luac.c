@@ -269,7 +269,9 @@ static int luaC_is_startup(lua_State *L)
  */
 static int luaC_get_datadir(lua_State *L)
 {
-    lua_pushstring(L, CWC_DATADIR);
+    char cwc_datadir[4000];
+    get_cwc_datadir(cwc_datadir, 4000);
+    lua_pushstring(L, cwc_datadir);
     return 1;
 }
 
@@ -496,7 +498,15 @@ int luaC_init()
     struct lua_State *L = g_config._L_but_better_to_use_function_than_directly =
         luaL_newstate();
     luaL_openlibs(L);
-    add_to_search_path(L, library_path ? library_path : CWC_DATADIR "/lib");
+
+    // get datadir path
+    char cwc_datadir[4096];
+    get_cwc_datadir(cwc_datadir, 4000);
+    int datadir_len = strlen(cwc_datadir);
+    strcat(cwc_datadir, "/lib");
+
+    add_to_search_path(L, library_path ? library_path : cwc_datadir);
+    cwc_datadir[datadir_len] = 0;
 
     // awesome compability for awesome module
     cwc_assert(
@@ -574,6 +584,7 @@ int luaC_init()
     /* cwc_timer */
     luaC_timer_setup(L);
 
+    strcat(cwc_datadir, "/defconfig/rc.lua");
     char *luarc_default_location = get_luarc_path();
     int has_error                = 0;
     if (config_path && access(config_path, R_OK) == 0) {
@@ -581,13 +592,13 @@ int luaC_init()
     } else if (access(luarc_default_location, R_OK) == 0) {
         if ((has_error = luaC_loadrc(L, luarc_default_location))) {
             cwc_log(CWC_ERROR, "falling back to default configuration");
-            has_error = luaC_loadrc(L, CWC_DATADIR "/defconfig/rc.lua");
+            has_error = luaC_loadrc(L, cwc_datadir);
         }
     } else {
         cwc_log(CWC_ERROR,
                 "lua configuration not found, try create one at \"%s\"",
                 luarc_default_location);
-        has_error = luaC_loadrc(L, CWC_DATADIR "/defconfig/rc.lua");
+        has_error = luaC_loadrc(L, cwc_datadir);
     }
 
     lua_initial_load = false;

@@ -13,9 +13,6 @@ all-debugrelease:
 	@if [ ! -d "$(BUILDDIR)" ]; then meson setup $(BUILDDIR) -Dplugins=true -Dtests=true --buildtype=debugoptimized; make docs; fi
 	@ninja -C $(BUILDDIR)/
 
-cwc:
-	@if [ ! -d "$(BUILDDIR)" ]; then meson setup $(BUILDDIR); fi
-
 clean:
 	rm -rf ./$(BUILDDIR) ./doc
 
@@ -34,4 +31,4 @@ docs:
 	rm -rf doc
 	cd docs && ldoc .
 
-.PHONY: cwc release clean install uninstall header format docs
+.PHONY: release clean install uninstall header format docs

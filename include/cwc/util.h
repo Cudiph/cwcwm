@@ -116,6 +116,12 @@ bool is_direction_match(enum wlr_direction dir, int x, int y);
 /* distance between 2 points */
 double distance(int lx, int ly, int lx2, int ly2);
 
+//=================== MISC =======================
+
+/* set dst and return true if found, otherwise dst default to "/usr/share/cwc"
+ */
+bool get_cwc_datadir(char *dst, int buff_size);
+
 //================== MACROS ========================
 
 enum cwc_log_importance {
