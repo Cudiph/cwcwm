@@ -31,6 +31,7 @@
 #include <stdlib.h>
 #include <wayland-util.h>
 
+#include "cwc/luaclass.h"
 #include "cwc/plugin.h"
 #include "cwc/server.h"
 #include "cwc/util.h"
@@ -205,7 +206,6 @@ void luaC_plugin_setup(lua_State *L)
         {NULL,            NULL                     },
     };
 
-    lua_newtable(L);
-    luaL_register(L, NULL, plugin_staticlibs);
+    luaC_register_table(L, "cwc.plugin", plugin_staticlibs, NULL);
     lua_setfield(L, -2, "plugin");
 }

@@ -531,9 +531,9 @@ static int luaC_kbd_create_bindmap(lua_State *L)
 
 /** Get all cwc_kbindmap object in the server.
  *
- * @staticfct get_bindmap
- * @treturn cwc_kbindmap[]
- * @see get_default_member
+ * @tfield cwc_kbindmap[] bindmap
+ * @readonly
+ * @see default_member
  */
 static int luaC_kbd_get_bindmap(lua_State *L)
 {
@@ -552,8 +552,8 @@ static int luaC_kbd_get_bindmap(lua_State *L)
 
 /** Get keybind object in the default map.
  *
- * @staticfct get_default_member
- * @treturn cwc_kbind[]
+ * @tfield cwc_kbind[] default_member
+ * @readonly
  * @see cwc_kbindmap:member
  */
 static int luaC_kbd_get_default_member(lua_State *L)
@@ -575,12 +575,16 @@ static int luaC_kbd_get_default_member(lua_State *L)
     return 1;
 }
 
-/** Set keyboard repeat rate.
+/** Keyboard repeat rate in hz.
  *
- * @configfct set_repeat_rate
- * @tparam number rate Rate in hertz
+ * @tfield integer repeat_rate
  * @noreturn
  */
+static int luaC_kbd_get_repeat_rate(lua_State *L)
+{
+    lua_pushnumber(L, g_config.repeat_rate);
+    return 1;
+}
 static int luaC_kbd_set_repeat_rate(lua_State *L)
 {
     int rate             = luaL_checkint(L, 1);
@@ -588,12 +592,16 @@ static int luaC_kbd_set_repeat_rate(lua_State *L)
     return 0;
 }
 
-/** Set keyboard repeat delay.
+/** Keyboard repeat delay in miliseconds.
  *
- * @configfct set_repeat_delay
- * @tparam number delay Delay in miliseconds
+ * @tfield integer repeat_delay
  * @noreturn
  */
+static int luaC_kbd_get_repeat_delay(lua_State *L)
+{
+    lua_pushnumber(L, g_config.repeat_delay);
+    return 1;
+}
 static int luaC_kbd_set_repeat_delay(lua_State *L)
 {
     int delay             = luaL_checkint(L, 1);
@@ -601,22 +609,26 @@ static int luaC_kbd_set_repeat_delay(lua_State *L)
     return 0;
 }
 
+#define FIELD_RO(name)     {"get_" #name, luaC_kbd_get_##name}
+#define FIELD_SETTER(name) {"set_" #name, luaC_kbd_set_##name}
+#define FIELD(name)        FIELD_RO(name), FIELD_SETTER(name)
+
 void luaC_kbd_setup(lua_State *L)
 {
     luaL_Reg keyboard_staticlibs[] = {
-        {"bind",               luaC_kbd_bind              },
-        {"clear",              luaC_kbd_clear             },
-        {"create_bindmap",     luaC_kbd_create_bindmap    },
+        {"bind",           luaC_kbd_bind          },
+        {"clear",          luaC_kbd_clear         },
+        {"create_bindmap", luaC_kbd_create_bindmap},
 
-        {"get_bindmap",        luaC_kbd_get_bindmap       },
-        {"get_default_member", luaC_kbd_get_default_member},
+        FIELD_RO(bindmap),
+        FIELD_RO(default_member),
 
-        {"set_repeat_rate",    luaC_kbd_set_repeat_rate   },
-        {"set_repeat_delay",   luaC_kbd_set_repeat_delay  },
-        {NULL,                 NULL                       },
+        FIELD(repeat_rate),
+        FIELD(repeat_delay),
+
+        {NULL,             NULL                   },
     };
 
-    lua_newtable(L);
-    luaL_register(L, NULL, keyboard_staticlibs);
+    luaC_register_table(L, "cwc.kbd", keyboard_staticlibs, NULL);
     lua_setfield(L, -2, "kbd");
 }

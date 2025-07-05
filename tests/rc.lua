@@ -38,7 +38,7 @@ for _ = 1, 20 do
 end
 
 -- spawn waybar for layer shell testing
-cwc.spawn({ "waybar" })
+cwc.spawn({ "waybar", "-c", "/etc/xdg/waybar/config.jsonc" })
 
 local kbd = cwc.kbd
 for i = 1, 9 do

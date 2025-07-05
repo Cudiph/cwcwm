@@ -333,8 +333,7 @@ void luaC_timer_setup(lua_State *L)
         {NULL,           NULL                   },
     };
 
-    lua_newtable(L);
-    luaL_register(L, NULL, timer_staticlibs);
+    luaC_register_table(L, "cwc.timer", timer_staticlibs, NULL);
     lua_setfield(L, -2, "timer");
 
     /* create a table for storing timer callback */

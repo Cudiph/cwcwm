@@ -347,7 +347,6 @@ void luaC_container_setup(lua_State *L)
         {NULL,         NULL                     },
     };
 
-    lua_newtable(L);
-    luaL_register(L, NULL, container_staticlibs);
+    luaC_register_table(L, "cwc.container", container_staticlibs, NULL);
     lua_setfield(L, -2, "container");
 }

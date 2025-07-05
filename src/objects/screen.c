@@ -156,10 +156,10 @@ static int luaC_screen_at(lua_State *L)
     return 1;
 }
 
-/** Get maximum workspace the compositor can handle.
+/** Maximum workspace the compositor can handle.
  *
- * @staticfct get_max_workspace
- * @treturn integer count
+ * @tfield number max_workspace
+ * @readonly
  */
 static int luaC_screen_get_max_workspace(lua_State *L)
 {
@@ -168,12 +168,16 @@ static int luaC_screen_get_max_workspace(lua_State *L)
     return 1;
 }
 
-/** Set useless gaps width.
+/** Default useless gaps width.
  *
- * @configfct set_useless_gaps
- * @noreturn
+ * @tfield integer useless_gaps
  */
-static int luaC_screen_set_default_useless_gaps(lua_State *L)
+static int luaC_screen_get_useless_gaps(lua_State *L)
+{
+    lua_pushnumber(L, g_config.useless_gaps);
+    return 1;
+}
+static int luaC_screen_set_useless_gaps(lua_State *L)
 {
     int gap_width = luaL_checkint(L, 1);
 
@@ -917,6 +921,10 @@ static int luaC_screen_destroy(lua_State *L)
 #define REG_SETTER(name)    {"set_" #name, luaC_screen_set_##name}
 #define REG_PROPERTY(name)  REG_READ_ONLY(name), REG_SETTER(name)
 
+#define FIELD_RO(name)     {"get_" #name, luaC_screen_get_##name}
+#define FIELD_SETTER(name) {"set_" #name, luaC_screen_set_##name}
+#define FIELD(name)        FIELD_RO(name), FIELD_SETTER(name)
+
 void luaC_screen_setup(lua_State *L)
 {
     luaL_Reg screen_metamethods[] = {
@@ -979,16 +987,16 @@ void luaC_screen_setup(lua_State *L)
                         screen_metamethods);
 
     luaL_Reg screen_staticlibs[] = {
-        {"get",               luaC_screen_get                     },
-        {"focused",           luaC_screen_focused                 },
-        {"at",                luaC_screen_at                      },
+        {"get",     luaC_screen_get    },
+        {"focused", luaC_screen_focused},
+        {"at",      luaC_screen_at     },
 
-        {"get_max_workspace", luaC_screen_get_max_workspace       },
-        {"set_useless_gaps",  luaC_screen_set_default_useless_gaps},
-        {NULL,                NULL                                },
+        FIELD_RO(max_workspace),
+        FIELD(useless_gaps),
+
+        {NULL,      NULL               },
     };
 
-    lua_newtable(L);
-    luaL_register(L, NULL, screen_staticlibs);
+    luaC_register_table(L, "cwc.screen", screen_staticlibs, NULL);
     lua_setfield(L, -2, "screen");
 }

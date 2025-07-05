@@ -154,7 +154,6 @@ void luaC_layer_shell_setup(lua_State *L)
         {NULL,  NULL                },
     };
 
-    lua_newtable(L);
-    luaL_register(L, NULL, layer_shell_staticlibs);
+    luaC_register_table(L, "cwc.layer_shell", layer_shell_staticlibs, NULL);
     lua_setfield(L, -2, "layer_shell");
 }

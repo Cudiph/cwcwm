@@ -77,7 +77,15 @@
 #     for item in items() do
 #       myitems[#myitems + 1] = item
 #     end
-#     all_module_kinds[#all_module_kinds + 1] = { kind = kind,  items = myitems }
+#     local data = { kind = kind, items = myitems }
+#     if kind == "Fields" then
+#         for i = #all_module_kinds + 1, 2, -1 do
+#            all_module_kinds[i] = all_module_kinds[i - 1]
+#         end
+#         all_module_kinds[1] = data
+#     else
+#         all_module_kinds[#all_module_kinds + 1] = data
+#     end
 # end
 # local filtered_kinds = { "Constructors", "Static module functions",
 #   "Functions", "Methods", "lib.gears.object.properties Functions" }

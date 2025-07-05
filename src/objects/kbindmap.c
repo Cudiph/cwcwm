@@ -65,7 +65,7 @@ static int luaC_kbindmap_set_active(lua_State *L)
  * @readonly
  * @tparam[opt={}] cwc_kbind[] member List of the bindings.
  * @see cwc_kbind
- * @see cwc.kbd.get_default_member
+ * @see cwc.kbd.default_member
  */
 static int luaC_kbindmap_get_member(lua_State *L)
 {

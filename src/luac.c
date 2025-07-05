@@ -418,7 +418,7 @@ static int luaC_create_output(lua_State *L)
  *
  * only affect widget or bar that implement wlr foreign toplevel management.
  *
- * @tfield boolean[true] tasklist_show_all
+ * @tfield[opt=true] boolean tasklist_show_all
  */
 static int luaC_get_tasklist_show_all(lua_State *L)
 {
@@ -607,6 +607,9 @@ int luaC_init()
     /* cwc.layer_shell */
     luaC_layer_shell_setup(L);
 
+    /* cwc_timer */
+    luaC_timer_setup(L);
+
     /* cwc_kbindmap */
     luaC_kbindmap_setup(L);
 
@@ -615,9 +618,6 @@ int luaC_init()
 
     /* cwc_tag */
     luaC_tag_setup(L);
-
-    /* cwc_timer */
-    luaC_timer_setup(L);
 
     strcat(cwc_datadir, "/defconfig/rc.lua");
     char *luarc_default_location = get_luarc_path();

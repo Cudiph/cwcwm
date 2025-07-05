@@ -62,6 +62,7 @@
 #include "cwc/layout/bsp.h"
 #include "cwc/layout/container.h"
 #include "cwc/layout/master.h"
+#include "cwc/luaclass.h"
 #include "cwc/server.h"
 #include "cwc/signal.h"
 #include "cwc/util.h"
@@ -1585,6 +1586,8 @@ static int luaC_pointer_get_position(lua_State *L)
 /** Set main seat pointer position.
  *
  * @staticfct set_position
+ * @tparam integer x
+ * @tparam integer y
  * @noreturn
  */
 static int luaC_pointer_set_position(lua_State *L)
@@ -1632,10 +1635,13 @@ static int luaC_pointer_stop_interactive(lua_State *L)
 
 /** Set cursor size.
  *
- * @configfct set_cursor_size
- * @tparam integer size Cursor size
- * @noreturn
+ * @tfield integer cursor_size
  */
+static int luaC_pointer_get_cursor_size(lua_State *L)
+{
+    lua_pushnumber(L, g_config.cursor_size);
+    return 1;
+}
 static int luaC_pointer_set_cursor_size(lua_State *L)
 {
     int size = luaL_checkint(L, 1);
@@ -1644,12 +1650,16 @@ static int luaC_pointer_set_cursor_size(lua_State *L)
     return 0;
 }
 
-/** Set a timeout to automatically hide cursor, set timeout to 0 to disable.
+/** Set a timeout in seconds to automatically hide cursor, set timeout to 0 to
+ * disable.
  *
- * @configfct set_inactive_timeout
- * @tparam integer seconds Timeout in seconds
- * @noreturn
+ * @tfield integer inactive_timeout
  */
+static int luaC_pointer_get_inactive_timeout(lua_State *L)
+{
+    lua_pushnumber(L, g_config.cursor_inactive_timeout_ms);
+    return 1;
+}
 static int luaC_pointer_set_inactive_timeout(lua_State *L)
 {
     int seconds = luaL_checkint(L, 1);
@@ -1658,12 +1668,15 @@ static int luaC_pointer_set_inactive_timeout(lua_State *L)
     return 0;
 }
 
-/** Set a threshold distance for applying common tile position.
+/** Set a threshold distance for applying common tile position in pixel unit.
  *
- * @configfct set_edge_threshold
- * @tparam integer threshold Threshold distance in pixel unit.
- * @noreturn
+ * @tfield integer edge_threshold
  */
+static int luaC_pointer_get_edge_threshold(lua_State *L)
+{
+    lua_pushnumber(L, g_config.cursor_edge_threshold);
+    return 1;
+}
 static int luaC_pointer_set_edge_threshold(lua_State *L)
 {
     int threshold = luaL_checkint(L, 1);
@@ -1697,29 +1710,32 @@ static int luaC_pointer_set_edge_snapping_overlay_color(lua_State *L)
     return 0;
 }
 
+#define FIELD_RO(name)     {"get_" #name, luaC_pointer_get_##name}
+#define FIELD_SETTER(name) {"set_" #name, luaC_pointer_set_##name}
+#define FIELD(name)        FIELD_RO(name), FIELD_SETTER(name)
+
 void luaC_pointer_setup(lua_State *L)
 {
     luaL_Reg pointer_staticlibs[] = {
-        {"bind",                            luaC_pointer_bind                },
-        {"clear",                           luaC_pointer_clear               },
+        {"bind",                            luaC_pointer_bind              },
+        {"clear",                           luaC_pointer_clear             },
 
-        {"get_position",                    luaC_pointer_get_position        },
-        {"set_position",                    luaC_pointer_set_position        },
+        {"get_position",                    luaC_pointer_get_position      },
+        {"set_position",                    luaC_pointer_set_position      },
 
-        {"move_interactive",                luaC_pointer_move_interactive    },
-        {"resize_interactive",              luaC_pointer_resize_interactive  },
-        {"stop_interactive",                luaC_pointer_stop_interactive    },
+        {"move_interactive",                luaC_pointer_move_interactive  },
+        {"resize_interactive",              luaC_pointer_resize_interactive},
+        {"stop_interactive",                luaC_pointer_stop_interactive  },
 
-        {"set_cursor_size",                 luaC_pointer_set_cursor_size     },
-        {"set_inactive_timeout",            luaC_pointer_set_inactive_timeout},
-        {"set_edge_threshold",              luaC_pointer_set_edge_threshold  },
+        FIELD(cursor_size),
+        FIELD(inactive_timeout),
+        FIELD(edge_threshold),
         {"set_edge_snapping_overlay_color",
-         luaC_pointer_set_edge_snapping_overlay_color                        },
+         luaC_pointer_set_edge_snapping_overlay_color                      },
 
-        {NULL,                              NULL                             },
+        {NULL,                              NULL                           },
     };
 
-    lua_newtable(L);
-    luaL_register(L, NULL, pointer_staticlibs);
+    luaC_register_table(L, "cwc.pointer", pointer_staticlibs, NULL);
     lua_setfield(L, -2, "pointer");
 }

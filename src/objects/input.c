@@ -377,7 +377,6 @@ void luaC_input_setup(lua_State *L)
         {NULL,  NULL          },
     };
 
-    lua_newtable(L);
-    luaL_register(L, NULL, input_staticlibs);
+    luaC_register_table(L, "cwc.input", input_staticlibs, NULL);
     lua_setfield(L, -2, "input");
 }

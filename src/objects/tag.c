@@ -50,7 +50,7 @@
  * @rangestart 0
  * @rangestop MAX_WORKSPACE
  * @propertydefault static
- * @see cwc.screen.get_max_workspace
+ * @see cwc.screen.max_workspace
  */
 static int luaC_tag_get_index(lua_State *L)
 {

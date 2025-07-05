@@ -1195,7 +1195,6 @@ void luaC_client_setup(lua_State *L)
         {NULL,                        NULL                                 },
     };
 
-    lua_newtable(L);
-    luaL_register(L, NULL, client_staticlibs);
+    luaC_register_table(L, "cwc.client", client_staticlibs, NULL);
     lua_setfield(L, -2, "client");
 }

@@ -967,24 +967,27 @@ table.function_list td.baseclass {
 dl.function {
     margin-right: 15px;
     margin-left: 15px;
-    border-bottom: solid 1px var(--function-dl-border-color);
-    border-left: solid 1px var(--function-dl-border-color);
-    border-right: solid 1px var(--function-dl-border-color);
-    background-color: var(--function-dl-background-color);
 }
 
 dl.function dt {
     color: var(--function-dt-color);
     font-family: monospace;
-    border-top: solid 1px var(--function-dt-border-color);
     padding: 15px;
+    background-color: var(--function-dl-background-color);
+    border-top: solid 1px var(--function-dl-border-color);
+    border-left: solid 1px var(--function-dl-border-color);
+    border-right: solid 1px var(--function-dl-border-color);
 }
 
 dl.function dd {
-    margin-left: 15px;
-    margin-right: 15px;
-    margin-top: 5px;
-    margin-bottom: 15px;
+    margin: 0;
+    padding: 5px 15px;
+    padding-bottom: 15px;
+    background-color: var(--function-dl-background-color);
+    border-bottom: solid 1px var(--function-dl-border-color);
+    border-left: solid 1px var(--function-dl-border-color);
+    border-right: solid 1px var(--function-dl-border-color);
+    margin-bottom: 20px;
 }
 
 #content dl.function dd h3,
