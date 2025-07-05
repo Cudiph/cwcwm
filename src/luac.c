@@ -231,7 +231,7 @@ static void _backend_multi_check_nested(struct wlr_backend *_backend,
 }
 
 /** Check if the session is nested.
- * @staticfct get_is_nested
+ * @staticfct is_nested
  * @treturn boolean
  */
 static int luaC_is_nested(lua_State *L)
@@ -263,9 +263,9 @@ static int luaC_is_startup(lua_State *L)
     return 1;
 }
 
-/** Get cwc datadir location probably in `/usr/share/cwc`.
- * @staticfct get_datadir
- * @treturn string
+/** Get cwc datadir location, it will search through `$XDG_DATA_DIRS/share/cwc`.
+ * @tfield string datadir
+ * @readonly
  */
 static int luaC_get_datadir(lua_State *L)
 {
@@ -276,8 +276,8 @@ static int luaC_get_datadir(lua_State *L)
 }
 
 /** Get cwc version.
- * @staticfct get_version
- * @treturn string
+ * @tfield string version
+ * @readonly
  */
 static int luaC_get_version(lua_State *L)
 {
@@ -320,7 +320,7 @@ static int luaC_unsetenv(lua_State *L)
 
 /** Change the vt (chvt).
  * @staticfct chvt
- * @tparan integer n Index of the vt.
+ * @tparam integer n Index of the vt.
  * @noreturn
  */
 static int luaC_chvt(lua_State *L)
@@ -413,6 +413,32 @@ static int luaC_create_output(lua_State *L)
     return 0;
 }
 
+/** Set to true to show all clients or false to show clients that on the current
+ * tag.
+ *
+ * only affect widget or bar that implement wlr foreign toplevel management.
+ *
+ * @tfield boolean[true] tasklist_show_all
+ */
+static int luaC_get_tasklist_show_all(lua_State *L)
+{
+    lua_pushboolean(L, g_config.tasklist_show_all);
+    return 1;
+}
+static int luaC_set_tasklist_show_all(lua_State *L)
+{
+    bool set                   = lua_toboolean(L, 1);
+    g_config.tasklist_show_all = set;
+
+    struct cwc_output *o;
+    wl_list_for_each(o, &server.outputs, link)
+    {
+        cwc_output_update_visible(o);
+    }
+
+    return 0;
+}
+
 /* free it after use */
 static char *get_xdg_config_home()
 {
@@ -492,6 +518,10 @@ static int luaC_loadrc(lua_State *L, char *path)
     return 0;
 }
 
+#define TABLE_RO(name)     {"get_" #name, luaC_get_##name}
+#define TABLE_SETTER(name) {"set_" #name, luaC_set_##name}
+#define TABLE_FIELD(name)  TABLE_RO(name), TABLE_SETTER(name)
+
 /* lua stuff start here */
 int luaC_init()
 {
@@ -531,8 +561,11 @@ int luaC_init()
 
         {"is_nested",         luaC_is_nested        },
         {"is_startup",        luaC_is_startup       },
-        {"get_datadir",       luaC_get_datadir      },
-        {"get_version",       luaC_get_version      },
+        TABLE_RO(datadir),
+        TABLE_RO(version),
+
+        // config functions
+        TABLE_FIELD(tasklist_show_all),
 
         // intended for dev use only
         {"create_output",     luaC_create_output    },
@@ -543,7 +576,9 @@ int luaC_init()
     /* all the setup function will use the cwc table on top of the stack and
      * keep the stack original.
      */
-    luaL_register(L, "cwc", cwc_lib);
+    luaC_register_table(L, "cwc", cwc_lib, NULL);
+    lua_setglobal(L, "cwc");
+    lua_getglobal(L, "cwc");
 
     /* setup lua object registry table */
     luaC_object_setup(L);

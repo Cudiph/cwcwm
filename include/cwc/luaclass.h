@@ -11,6 +11,11 @@ void luaC_register_class(lua_State *L,
                          luaL_Reg methods[],
                          luaL_Reg metamethods[]);
 
+void luaC_register_table(lua_State *L,
+                         const char *classname,
+                         luaL_Reg methods[],
+                         luaL_Reg metamethods[]);
+
 //==================== MACRO =====================
 
 /* using macro is either don't repeat yourself or read and repeat because large

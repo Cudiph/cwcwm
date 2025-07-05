@@ -8,8 +8,7 @@
 
 struct cwc_config {
     // cwc
-    bool warp_cursor_to_edge_on_resize; // TODO
-    bool move_cursor_on_focus;          // TODO
+    bool tasklist_show_all;
 
     // client
     int border_color_rotation_degree;

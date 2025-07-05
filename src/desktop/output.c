@@ -27,6 +27,7 @@
 #include <wlr/backend.h>
 #include <wlr/backend/headless.h>
 #include <wlr/types/wlr_alpha_modifier_v1.h>
+#include <wlr/types/wlr_foreign_toplevel_management_v1.h>
 #include <wlr/types/wlr_layer_shell_v1.h>
 #include <wlr/types/wlr_output_management_v1.h>
 #include <wlr/types/wlr_output_power_management_v1.h>
@@ -937,6 +938,29 @@ void cleanup_output(struct cwc_server *s)
     wl_list_remove(&s->new_tearing_object_l.link);
 }
 
+static void
+all_toplevel_wlr_foreign_update_output(struct cwc_toplevel *toplevel,
+                                       void *data)
+{
+    struct cwc_container *container = toplevel->container;
+    struct cwc_output *output       = toplevel->container->output;
+
+    if (container->tag & output->state->active_tag) {
+        wlr_foreign_toplevel_handle_v1_output_enter(
+            toplevel->wlr_foreign_handle, output->wlr_output);
+    } else {
+        wlr_foreign_toplevel_handle_v1_output_leave(
+            toplevel->wlr_foreign_handle, output->wlr_output);
+    }
+}
+
+static void update_foreign_toplevel_to_show_only_on_active_tags(
+    struct cwc_container *container)
+{
+    cwc_container_for_each_toplevel(
+        container, all_toplevel_wlr_foreign_update_output, NULL);
+}
+
 void cwc_output_update_visible(struct cwc_output *output)
 {
     if (output == server.fallback_output)
@@ -951,6 +975,9 @@ void cwc_output_update_visible(struct cwc_output *output)
         } else {
             cwc_container_set_enabled(container, false);
         }
+
+        if (!g_config.tasklist_show_all)
+            update_foreign_toplevel_to_show_only_on_active_tags(container);
     }
 
     update_idle_inhibitor(NULL);
