@@ -815,6 +815,12 @@ static void __cwc_container_move_to_output(struct cwc_container *container,
         && !cwc_container_is_moving(container) && !container->old_prop.output)
         bsp_insert_container(container, output_workspace);
 
+    /* reset max & full state so that it move to target screen */
+    if (cwc_container_is_fullscreen(container))
+        cwc_container_set_fullscreen(container, true);
+    else if (cwc_container_is_maximized(container))
+        cwc_container_set_maximized(container, true);
+
     /* don't translate position when move to fallback output or vice versa
      * because it'll ruin the layout since the fallback output is not attached
      * to scene output
