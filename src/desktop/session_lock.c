@@ -57,7 +57,6 @@ static void on_unlock(struct wl_listener *listener, void *data)
 
     // unset state
     mgr->locked = false;
-    mgr->locker = NULL;
     cwc_output_focus_newest_focus_visible_toplevel(server.focused_output);
 }
 
@@ -94,6 +93,9 @@ static void on_lock_destroy(struct wl_listener *listener, void *data)
     wl_list_remove(&locker->unlock_l.link);
     wl_list_remove(&locker->new_surface_l.link);
     wl_list_remove(&locker->destroy_l.link);
+
+    locker->manager->locker = NULL;
+
     free(locker);
 }
 
@@ -103,7 +105,7 @@ static void on_new_lock(struct wl_listener *listener, void *data)
         wl_container_of(listener, mgr, new_lock_l);
     struct wlr_session_lock_v1 *wlr_sesslock = data;
 
-    if (mgr->locked) {
+    if (mgr->locker) {
         wlr_session_lock_v1_destroy(wlr_sesslock);
         cwc_log(CWC_ERROR, "attempt to lock an already locked session");
         return;

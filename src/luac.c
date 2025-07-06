@@ -39,10 +39,12 @@
 #include <wlr/backend/multi.h>
 #include <wlr/backend/wayland.h>
 #include <wlr/backend/x11.h>
+#include <wlr/types/wlr_session_lock_v1.h>
 
 #include "cwc/config.h"
 #include "cwc/desktop/layer_shell.h"
 #include "cwc/desktop/output.h"
+#include "cwc/desktop/session_lock.h"
 #include "cwc/desktop/toplevel.h"
 #include "cwc/input/cursor.h"
 #include "cwc/input/keyboard.h"
@@ -331,6 +333,20 @@ static int luaC_chvt(lua_State *L)
     return 0;
 }
 
+/** Unlock the session in case the screen locker behaving weird/crashed.
+ * @staticfct unlock_session
+ * @noreturn
+ */
+static int luaC_unlock_session(lua_State *L)
+{
+    server.session_lock->locked = false;
+
+    if (server.session_lock->locker)
+        wl_resource_destroy(server.session_lock->locker->locker->resource);
+
+    return 0;
+}
+
 /** Add event listener.
  *
  * @staticfct connect_signal
@@ -554,6 +570,7 @@ int luaC_init()
         {"setenv",            luaC_setenv           },
         {"unsetenv",          luaC_unsetenv         },
         {"chvt",              luaC_chvt             },
+        {"unlock_session",    luaC_unlock_session   },
 
         {"connect_signal",    luaC_connect_signal   },
         {"disconnect_signal", luaC_disconnect_signal},
