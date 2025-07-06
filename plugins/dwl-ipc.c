@@ -166,7 +166,10 @@ static void on_new_dwl_ipc_output(struct wl_listener *listener, void *data)
 
 static void on_client_should_title_reset(void *data)
 {
-    struct cwc_toplevel *toplevel         = data;
+    struct cwc_toplevel *toplevel = data;
+    if (!toplevel->container)
+        return;
+
     struct cwc_output *output             = toplevel->container->output;
     struct cwc_output_addon *output_addon = cwc_output_get_output_addon(output);
     if (!output_addon || output != cwc_output_get_focused())
