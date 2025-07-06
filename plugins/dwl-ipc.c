@@ -38,6 +38,11 @@ static void ipc_output_addon_destroy(struct wlr_addon *addon)
     struct cwc_output_addon *output_addon =
         wl_container_of(addon, output_addon, addon);
 
+    if (output_addon->tag_update_idle_source)
+        wl_event_source_remove(output_addon->tag_update_idle_source);
+    if (output_addon->prop_change_idle_source)
+        wl_event_source_remove(output_addon->prop_change_idle_source);
+
     wlr_addon_finish(addon);
 
     free(output_addon);
