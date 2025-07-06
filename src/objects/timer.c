@@ -53,7 +53,8 @@ void cwc_timer_destroy(struct cwc_timer *timer)
     wl_event_source_remove(timer->timer);
     luaC_object_unregister(L, timer);
     luaC_timer_registry_push(L);
-    luaL_unref(L, -1, timer->luaref);
+    luaL_unref(L, -1, timer->cb_ref);
+    luaL_unref(L, -1, timer->data_ref);
     free(timer);
 }
 
@@ -63,9 +64,13 @@ static int timer_timed_out(void *data)
 
     lua_State *L = g_config_get_lua_State();
     luaC_timer_registry_push(L);
-    lua_rawgeti(L, -1, timer->luaref);
+    lua_rawgeti(L, -1, timer->cb_ref);
+    if (timer->data_ref)
+        lua_rawgeti(L, -2, timer->data_ref);
+    else
+        lua_pushnil(L);
 
-    if (lua_pcall(L, 0, 0, 0))
+    if (lua_pcall(L, 1, 0, 0))
         cwc_log(CWC_ERROR, "timer callback contains error : %s",
                 lua_tostring(L, -1));
 
@@ -92,12 +97,14 @@ static int timer_timed_out(void *data)
  * function
  * @tparam[opt=false] boolean options.single_shot Run only once then stop
  * @tparam[opt=false] boolean options.one_shot Run only once then destroy
+ * @tparam[opt=nil] any data Userdata callback argument.
  * @noreturn
  */
 static int luaC_timer_new(lua_State *L)
 {
     double timeout = luaL_checknumber(L, 1);
     luaL_checktype(L, 2, LUA_TFUNCTION);
+    bool has_userdata = !lua_isnoneornil(L, 4);
 
     struct cwc_timer *timer = calloc(1, sizeof(*timer));
     timer->timeout_ms       = timeout * 1000;
@@ -131,7 +138,11 @@ static int luaC_timer_new(lua_State *L)
 
     luaC_timer_registry_push(L);
     lua_pushvalue(L, 2);
-    timer->luaref = luaL_ref(L, -2);
+    timer->cb_ref = luaL_ref(L, -2);
+    if (has_userdata) {
+        lua_pushvalue(L, 4);
+        timer->data_ref = luaL_ref(L, -2);
+    }
     lua_pop(L, 1);
 
     luaC_object_timer_register(L, timer);
@@ -149,40 +160,62 @@ static int luaC_timer_new(lua_State *L)
     return 1;
 }
 
+struct delayed_call_data {
+    int cb_ref;
+    int data_ref;
+};
+
 /* keep in mind that it is not canceled and always executed upon config
  * reloading.
  */
 static void delayed_call(void *data)
 {
-    int luaref = (intptr_t)data;
+    struct delayed_call_data *call_data = data;
+    int cb_ref                          = call_data->cb_ref;
+    int data_ref                        = call_data->data_ref;
 
     lua_State *L = g_config_get_lua_State();
     luaC_timer_registry_push(L);
-    lua_rawgeti(L, -1, luaref);
+    lua_rawgeti(L, -1, cb_ref);
+    if (data_ref)
+        lua_rawgeti(L, -2, data_ref);
+    else
+        lua_pushnil(L);
 
-    if (lua_pcall(L, 0, 0, 0))
+    if (lua_pcall(L, 1, 0, 0))
         cwc_log(CWC_ERROR, "delayed_call callback contains error : %s",
                 lua_tostring(L, -1));
 
     luaC_timer_registry_push(L);
-    luaL_unref(L, -1, luaref);
+    luaL_unref(L, -1, cb_ref);
+    luaL_unref(L, -1, data_ref);
 
     lua_settop(L, 0);
+
+    free(call_data);
 }
 
 /** Call the given function at the end of wayland event loop.
  *
  * @staticfct delayed_call
  * @tparam function callback
+ * @tparam[opt=nil] any data Userdata callback argument
  * @noreturn
  */
 static int luaC_timer_delayed_call(lua_State *L)
 {
     luaL_checktype(L, 1, LUA_TFUNCTION);
+    bool has_userdata = !lua_isnoneornil(L, 2);
+
+    struct delayed_call_data *data = calloc(1, sizeof(*data));
     luaC_timer_registry_push(L);
     lua_pushvalue(L, 1);
-    intptr_t luaref = luaL_ref(L, -2);
-    wl_event_loop_add_idle(server.wl_event_loop, delayed_call, (void *)luaref);
+    data->cb_ref = luaL_ref(L, -2);
+    if (has_userdata) {
+        lua_pushvalue(L, 2);
+        data->data_ref = luaL_ref(L, -2);
+    }
+    wl_event_loop_add_idle(server.wl_event_loop, delayed_call, data);
 
     return 0;
 }

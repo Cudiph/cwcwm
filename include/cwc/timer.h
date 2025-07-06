@@ -10,7 +10,8 @@ struct cwc_timer {
     bool started;
     bool single_shot;
     bool one_shot;
-    int luaref; // callback ref in timer registry
+    int cb_ref;   // callback ref in timer registry
+    int data_ref; // userdata ref in timer registry
 };
 
 void cwc_timer_destroy(struct cwc_timer *timer);
