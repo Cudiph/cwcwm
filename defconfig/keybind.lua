@@ -134,14 +134,14 @@ kbd.bind({ MODKEY, mod.CTRL }, "Return", function()
     if c then cful.client.set_master(c, true) end
 end, { description = "promote focused client to master", group = "client" })
 
-kbd.bind({ MODKEY }, "bracketleft", function()
+kbd.bind({ MODKEY, mod.SHIFT }, "bracketleft", function()
     local c = cwc.client.focused()
     local new_screen = cful.screen.idx(-1, c.screen)
     c:move_to_screen(new_screen)
     new_screen:focus()
 end, { description = "cycle move focused client to previous screen", group = "client" })
 
-kbd.bind({ MODKEY }, "bracketright", function()
+kbd.bind({ MODKEY, mod.SHIFT }, "bracketright", function()
     local c = cwc.client.focused()
     local new_screen = cful.screen.idx(1, c.screen)
     c:move_to_screen(new_screen)
@@ -304,10 +304,10 @@ kbd.bind({ MODKEY, mod.SHIFT }, "Down", resize_down, resize_down_opt)
 
 --------------------- SCREEN LAYOUT ------------------------
 
-kbd.bind({ mod.LOGO, mod.ALT }, "j", function()
+kbd.bind({ MODKEY }, "bracketright", function()
     cful.screen.focus_relative(1)
 end, { description = "focus the next screen", group = "screen" })
-kbd.bind({ mod.LOGO, mod.ALT }, "k", function()
+kbd.bind({ MODKEY }, "bracketleft", function()
     cful.screen.focus_relative(-1)
 end, { description = "focus the previous screen", group = "screen" })
 
