@@ -1,6 +1,10 @@
 SHELL := /bin/sh
 BUILDDIR := build
 
+default:
+	@if [ ! -d "$(BUILDDIR)" ]; then meson setup $(BUILDDIR) --reconfigure; fi
+	@ninja -C $(BUILDDIR)/
+
 all:
 	@if [ ! -d "$(BUILDDIR)" ]; then meson setup $(BUILDDIR) -Dplugins=true -Dtests=true; fi
 	@ninja -C $(BUILDDIR)/
@@ -31,4 +35,4 @@ docs:
 	rm -rf doc
 	cd docs && ldoc .
 
-.PHONY: release clean install uninstall header format docs
+.PHONY: default all all-release all-debugrelease clean install uninstall format docs

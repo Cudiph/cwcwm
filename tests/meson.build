@@ -5,9 +5,11 @@ executable(
   include_directories : cwc_inc,
 )
 
+boost = dependency('boost')
 executable(
   'hashcpp',
   ['hash.cpp'],
+  dependencies: [boost],
 )
 
 shared_module(

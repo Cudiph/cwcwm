@@ -62,7 +62,7 @@ Dev dependencies:
 ### Manual
 
 ```console
-$ make all-release
+$ make
 $ sudo make install
 ```
 
