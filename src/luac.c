@@ -545,6 +545,16 @@ int luaC_init()
         luaL_newstate();
     luaL_openlibs(L);
 
+    // get path and cpath from env
+    cwc_assert(
+        !luaL_dostring(
+            L,
+            "local path = os.getenv('LUA_PATH') or package.path"
+            "local cpath = os.getenv('LUA_CPATH') or package.cpath"
+            "package.path = path:gsub(';;', ';' .. package.path)"
+            "package.cpath = cpath:gsub(';;', ';' .. package.cpath)"),
+        "failed dostring");
+
     // get datadir path
     char cwc_datadir[4096];
     get_cwc_datadir(cwc_datadir, 4000);
