@@ -41,7 +41,7 @@ local function test()
     tag.column_count = 3
     assert(tag.column_count == 3)
 
-    print("cwc_tag test PASSED")
+    print("cwc_tag test \27[1;32mPASSED\27[0m")
 end
 
 return test

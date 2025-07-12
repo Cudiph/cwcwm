@@ -60,6 +60,11 @@ void cwc_config_set_default()
 
     g_config.repeat_rate  = 30;
     g_config.repeat_delay = 400;
+    g_config.xkb_rules    = NULL;
+    g_config.xkb_model    = NULL;
+    g_config.xkb_layout   = NULL;
+    g_config.xkb_variant  = NULL;
+    g_config.xkb_options  = NULL;
 }
 
 void cwc_config_set_cairo_pattern(cairo_pattern_t **dst, cairo_pattern_t *src)
