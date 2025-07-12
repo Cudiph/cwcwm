@@ -33,6 +33,9 @@ cwc.pointer.set_edge_snapping_overlay_color(0.1, 0.2, 0.3, 0.05)
 -- keyboard config
 cwc.kbd.set_repeat_rate(30)
 cwc.kbd.set_repeat_delay(300)
+-- cwc.kbd.xkb_variant = "colemak"
+-- cwc.kbd.xkb_layout  = "us,de,fr"
+cwc.kbd.xkb_options = "grp:ctrl_shift_toggle"
 
 -- client config
 cwc.client.set_border_color_focus(gears.color(

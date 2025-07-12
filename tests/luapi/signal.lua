@@ -6,18 +6,18 @@ local function on_client_custom(c, testname, optarg)
     assert(testname == "sig1" or testname == "sig2")
     assert(100 or nil)
 
-    print(string.format("lua signal test %s PASSED with received value:", testname), c, testname,
+    print(string.format("lua signal test %s \27[1;32mPASSED\27[0m with received value:", testname), c, testname,
         optarg)
 end
 
 local function on_client_map(c)
     assert(gstring.startswith(tostring(c), "cwc_client"))
-    print("lua client map signal PASSED", c)
+    print("lua client map signal \27[1;32mPASSED\27[0m", c)
 end
 
 local function on_client_unmap(c)
     assert(gstring.startswith(tostring(c), "cwc_client"))
-    print("lua client unmap signal PASSED", c)
+    print("lua client unmap signal \27[1;32mPASSED\27[0m", c)
 end
 
 local function test()

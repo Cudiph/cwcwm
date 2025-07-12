@@ -27,9 +27,9 @@ local function signal_check()
     end
 
     if count > 0 then
-        print(string.format("%d of %d cwc_container signal test FAILED", count, #signal_list))
+        print(string.format("%d of %d cwc_container signal test \27[1;31mFAILED\27[0m", count, #signal_list))
     else
-        print("cwc_container signal test PASSED")
+        print("cwc_container signal test \27[1;32mPASSED\27[0m")
     end
 end
 
@@ -69,7 +69,7 @@ local function test()
     property_test(cont, c)
     method_test(cont)
 
-    print("cwc_container test PASSED")
+    print("cwc_container test \27[1;32mPASSED\27[0m")
 end
 
 return {

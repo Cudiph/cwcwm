@@ -24,9 +24,9 @@ local function signal_check()
     end
 
     if count > 0 then
-        print(string.format("%d of %d cwc_layer_shell signal test FAILED", count, #signal_list))
+        print(string.format("%d of %d cwc_layer_shell signal test \27[1;31mFAILED\27[0m", count, #signal_list))
     else
-        print("cwc_layer_shell signal test PASSED")
+        print("cwc_layer_shell signal test \27[1;32mPASSED\27[0m")
     end
 end
 
@@ -45,7 +45,7 @@ local function test()
     readonly_test(ls)
     method_test(ls)
 
-    print("cwc_layer_shell test PASSED")
+    print("cwc_layer_shell test \27[1;32mPASSED\27[0m")
 end
 
 

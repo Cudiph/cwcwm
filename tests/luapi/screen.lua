@@ -36,9 +36,9 @@ local function signal_check()
     end
 
     if count > 0 then
-        print(string.format("%d of %d cwc_screen signal test FAILED", count, #signal_list))
+        print(string.format("%d of %d cwc_screen signal test \27[1;31mFAILED\27[0m", count, #signal_list))
     else
-        print("cwc_screen signal test PASSED")
+        print("cwc_screen signal test \27[1;32mPASSED\27[0m")
     end
 end
 
@@ -114,7 +114,7 @@ local function test()
     prop_test(s)
     method_test(s)
 
-    print("cwc_screen test PASSED")
+    print("cwc_screen test \27[1;32mPASSED\27[0m")
 end
 
 return {

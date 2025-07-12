@@ -25,6 +25,7 @@
 #include <wlr/types/wlr_keyboard_shortcuts_inhibit_v1.h>
 #include <wlr/types/wlr_seat.h>
 #include <wlr/types/wlr_virtual_keyboard_v1.h>
+#include <xkbcommon/xkbcommon.h>
 
 #include "cwc/config.h"
 #include "cwc/desktop/idle.h"
@@ -276,11 +277,18 @@ static void on_config_commit(struct wl_listener *listener, void *data)
     apply_config(&kbd_group->wlr_kbd_group->keyboard);
 }
 
-static void init_keymap(struct wlr_keyboard *wlr_kbd)
+void cwc_keyboard_update_keymap(struct wlr_keyboard *wlr_kbd)
 {
-    struct xkb_context *ctx = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
+    struct xkb_context *ctx     = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
+    struct xkb_rule_names names = {
+        .rules   = g_config.xkb_rules,
+        .model   = g_config.xkb_model,
+        .layout  = g_config.xkb_layout,
+        .variant = g_config.xkb_variant,
+        .options = g_config.xkb_options,
+    };
     struct xkb_keymap *keymap =
-        xkb_keymap_new_from_names(ctx, NULL, XKB_KEYMAP_COMPILE_NO_FLAGS);
+        xkb_keymap_new_from_names(ctx, &names, XKB_KEYMAP_COMPILE_NO_FLAGS);
 
     wlr_keyboard_set_keymap(wlr_kbd, keymap);
 
@@ -301,7 +309,7 @@ struct cwc_keyboard *cwc_keyboard_create(struct cwc_seat *seat,
     kbd->seat = seat;
 
     wlr_seat_set_keyboard(seat->wlr_seat, kbd->wlr);
-    init_keymap(kbd->wlr);
+    cwc_keyboard_update_keymap(kbd->wlr);
     apply_config(kbd->wlr);
 
     kbd->key_l.notify       = on_kbd_key;
@@ -343,7 +351,7 @@ struct cwc_keyboard_group *cwc_keyboard_group_create(struct cwc_seat *seat,
     wl_signal_add(&g_config.events.commit, &kbd_group->config_commit_l);
 
     wlr_seat_set_keyboard(seat->wlr_seat, wlr_kbd);
-    init_keymap(wlr_kbd);
+    cwc_keyboard_update_keymap(wlr_kbd);
     apply_config(wlr_kbd);
 
     return kbd_group;
@@ -367,7 +375,7 @@ void cwc_keyboard_group_add_device(struct cwc_keyboard_group *kbd_group,
 {
     struct wlr_keyboard *wlr_kbd = wlr_keyboard_from_input_device(device);
 
-    init_keymap(wlr_kbd);
+    cwc_keyboard_update_keymap(wlr_kbd);
 
     wlr_keyboard_group_add_keyboard(kbd_group->wlr_kbd_group, wlr_kbd);
 }
