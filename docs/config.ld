@@ -2238,6 +2238,7 @@ local coreclassmap = {
     ["cwc.input"] = "cwc.input<span class='listplusign'> + cwc_input</span>",
     ["cwc.layer_shell"] = "cwc.layer_shell<span class='listplusign'> + cwc_layer_shell</span>",
     ["cwc.timer"] = "cwc.timer<span class='listplusign'> + cwc_timer</span>",
+    ["cwc.plugin"] = "cwc.plugin<span class='listplusign'> + cwc_plugin</span>",
 }
 
 -- Add the full module name in front.

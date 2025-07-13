@@ -29,6 +29,7 @@ const char *const layer_shell_classname = "cwc_layer_shell";
 const char *const kbindmap_classname    = "cwc_kbindmap";
 const char *const kbind_classname       = "cwc_kbind";
 const char *const timer_classname       = "cwc_timer";
+const char *const plugin_classname      = "cwc_plugin";
 
 /* equivalent lua code:
  * function(t, k)

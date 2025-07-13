@@ -29,12 +29,28 @@
 #include <lua.h>
 #include <stddef.h>
 #include <stdlib.h>
+#include <string.h>
 #include <wayland-util.h>
 
+#include "cwc/config.h"
 #include "cwc/luaclass.h"
+#include "cwc/luaobject.h"
 #include "cwc/plugin.h"
 #include "cwc/server.h"
+#include "cwc/signal.h"
 #include "cwc/util.h"
+
+/** Emitted when a plugin is loaded.
+ *
+ * @signal plugin::load
+ * @tparam cwc_plugin p The plugin object.
+ */
+
+/** Emitted when the plugin is about to be unloaded.
+ *
+ * @signal plugin::unload
+ * @tparam cwc_plugin p The plugin object.
+ */
 
 struct cwc_plugin *load_plugin(const char *pathname)
 {
@@ -88,6 +104,10 @@ struct cwc_plugin *__load_plugin(const char *pathname, int __mode)
     p->handle      = handle;
     p->init_fn     = init_fn;
 
+    lua_State *L = g_config_get_lua_State();
+    luaC_object_plugin_register(L, p);
+    cwc_object_emit_signal_simple("plugin::load", L, p);
+
     cwc_log(CWC_DEBUG, "loaded plugin: %s", p->name);
     return p;
 
@@ -113,10 +133,14 @@ void cwc_plugin_unload(struct cwc_plugin *plugin)
     if (exit_fn == NULL)
         return;
 
+    lua_State *L = g_config_get_lua_State();
+    cwc_object_emit_signal_simple("plugin::unload", L, plugin);
+
     cwc_log(CWC_DEBUG, "unloading plugin: %s", plugin->name);
     exit_fn();
     dlclose(plugin->handle);
 
+    luaC_object_unregister(L, plugin);
     wl_list_remove(&plugin->link);
     free(plugin->filename);
     free(plugin);
@@ -163,6 +187,26 @@ void cwc_plugin_stop_plugins(struct wl_list *head)
 
 //================ LUA ===================
 
+/** Get all loaded plugin into a table.
+ *
+ * @staticfct get
+ * @treturn cwc_plugin[]
+ */
+static int luaC_plugin_get(lua_State *L)
+{
+    lua_newtable(L);
+
+    struct cwc_plugin *plugin;
+    int i = 1;
+    wl_list_for_each(plugin, &server.plugins, link)
+    {
+        luaC_object_push(L, plugin);
+        lua_rawseti(L, -2, i++);
+    }
+
+    return 1;
+}
+
 /** load C plugin
  *
  * @staticfct load
@@ -198,9 +242,114 @@ static int luaC_plugin_unload_byname(lua_State *L)
     return 1;
 }
 
+/** Unload this plugin.
+ *
+ * @method unload
+ * @noreturn
+ */
+static int luaC_plugin_unload(lua_State *L)
+{
+    struct cwc_plugin *plugin = luaC_plugin_checkudata(L, 1);
+
+    cwc_plugin_unload(plugin);
+
+    return 0;
+}
+
+#define CWC_PLUGIN_RO_PROPERTY(fieldname)                         \
+    static int luaC_plugin_get_##fieldname(lua_State *L)          \
+    {                                                             \
+        struct cwc_plugin *plugin = luaC_plugin_checkudata(L, 1); \
+        if (!plugin->fieldname) {                                 \
+            lua_pushstring(L, "");                                \
+            return 1;                                             \
+        }                                                         \
+                                                                  \
+        char *value_start = strchr(plugin->fieldname, '=');       \
+        value_start       = value_start ? value_start + 1 : NULL; \
+        lua_pushstring(L, value_start);                           \
+        return 1;                                                 \
+    }
+
+/** The name of the plugin.
+ *
+ * @property name
+ * @tparam[opt=''] string name
+ * @readonly
+ */
+CWC_PLUGIN_RO_PROPERTY(name)
+
+/** The description of the plugin.
+ *
+ * @property description
+ * @tparam[opt=''] string description
+ * @readonly
+ */
+CWC_PLUGIN_RO_PROPERTY(description)
+
+/** The version of the plugin.
+ *
+ * @property version
+ * @tparam[opt=''] string version
+ * @readonly
+ */
+CWC_PLUGIN_RO_PROPERTY(version)
+
+/** The author of the plugin.
+ *
+ * @property author
+ * @tparam[opt=''] string author
+ * @readonly
+ */
+CWC_PLUGIN_RO_PROPERTY(author)
+
+/** The license of the plugin.
+ *
+ * @property license
+ * @tparam[opt=''] string license
+ * @readonly
+ */
+CWC_PLUGIN_RO_PROPERTY(license)
+
+/** The filename of the plugin.
+ *
+ * @property filename
+ * @tparam[opt=''] string filename
+ * @readonly
+ */
+static int luaC_plugin_get_filename(lua_State *L)
+{
+    struct cwc_plugin *plugin = luaC_plugin_checkudata(L, 1);
+    lua_pushstring(L, plugin->filename);
+    return 1;
+}
+
+#define REG_METHOD(name)    {#name, luaC_plugin_##name}
+#define REG_READ_ONLY(name) {"get_" #name, luaC_plugin_get_##name}
+
 void luaC_plugin_setup(lua_State *L)
 {
+    luaL_Reg plugin_metamethods[] = {
+        {"__eq",       luaC_plugin_eq      },
+        {"__tostring", luaC_plugin_tostring},
+        {NULL,         NULL                },
+    };
+
+    luaL_Reg plugin_methods[] = {
+        REG_METHOD(unload),
+
+        REG_READ_ONLY(name),    REG_READ_ONLY(description),
+        REG_READ_ONLY(version), REG_READ_ONLY(author),
+        REG_READ_ONLY(license), REG_READ_ONLY(filename),
+
+        {NULL, NULL},
+    };
+
+    luaC_register_class(L, plugin_classname, plugin_methods,
+                        plugin_metamethods);
+
     luaL_Reg plugin_staticlibs[] = {
+        {"get",           luaC_plugin_get          },
         {"load",          luaC_plugin_load         },
         {"unload_byname", luaC_plugin_unload_byname},
         {NULL,            NULL                     },
