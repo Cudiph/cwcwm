@@ -34,6 +34,7 @@
 #include <wayland-util.h>
 #include <wlr/backend/multi.h>
 #include <wlr/backend/session.h>
+#include <wlr/types/wlr_keyboard_group.h>
 #include <xkbcommon/xkbcommon-keysyms.h>
 #include <xkbcommon/xkbcommon.h>
 
@@ -578,7 +579,6 @@ static int luaC_kbd_get_default_member(lua_State *L)
 /** Keyboard repeat rate in hz.
  *
  * @tfield integer repeat_rate
- * @noreturn
  */
 static int luaC_kbd_get_repeat_rate(lua_State *L)
 {
@@ -595,7 +595,6 @@ static int luaC_kbd_set_repeat_rate(lua_State *L)
 /** Keyboard repeat delay in miliseconds.
  *
  * @tfield integer repeat_delay
- * @noreturn
  */
 static int luaC_kbd_get_repeat_delay(lua_State *L)
 {
@@ -608,6 +607,99 @@ static int luaC_kbd_set_repeat_delay(lua_State *L)
     g_config.repeat_delay = delay;
     return 0;
 }
+
+static bool xkb_idle_run = false;
+
+void update_xkb_rule(void *data)
+{
+    cwc_keyboard_update_keymap(
+        &server.seat->kbd_group->wlr_kbd_group->keyboard);
+
+    xkb_idle_run = false;
+}
+
+void update_xkb_idle()
+{
+    if (xkb_idle_run)
+        return;
+
+    xkb_idle_run = true;
+    wl_event_loop_add_idle(server.wl_event_loop, update_xkb_rule, NULL);
+}
+
+#define XKB_RULE_FIELD(name)                         \
+    static int luaC_kbd_get_xkb_##name(lua_State *L) \
+    {                                                \
+        lua_pushstring(L, g_config.xkb_##name);      \
+        return 1;                                    \
+    }                                                \
+    static int luaC_kbd_set_xkb_##name(lua_State *L) \
+    {                                                \
+        const char *set = luaL_checkstring(L, 1);    \
+                                                     \
+        free(g_config.xkb_##name);                   \
+        g_config.xkb_##name = strdup(set);           \
+        update_xkb_idle();                           \
+        return 0;                                    \
+    }
+
+/** The rules file to use.
+ *
+ * The rules file describes how to interpret the values of the model, layout,
+ * variant and options fields.
+ *
+ * ref: [xkbcommon
+ * reference](https://xkbcommon.org/doc/current/structxkb__rule__names.html#a0968f4602001f2306febd32c34bd2280)
+ *
+ * @tfield string xkb_rules
+ */
+XKB_RULE_FIELD(rules);
+
+/** The keyboard model by which to interpret keycodes and LEDs.
+ *
+ * ref: [xkbcommon
+ * reference](https://xkbcommon.org/doc/current/structxkb__rule__names.html#a1c897b49b49c7cd495db4a424bd27265)
+ *
+ * @tfield string xkb_model
+ */
+XKB_RULE_FIELD(model);
+
+/** A comma separated list of layouts (languages) to include in the keymap.
+ *
+ * ref: [xkbcommon
+ * reference](https://xkbcommon.org/doc/current/structxkb__rule__names.html#a243bb3aa36b4ea9ca402ed330a757746)
+ *
+ * @tfield string xkb_layout
+ */
+XKB_RULE_FIELD(layout);
+
+/** A comma separated list of variants.
+ *
+ * One per layout, which may modify or augment the respective layout in various
+ * ways.
+ *
+ * Generally, should either be empty or have the same number of values as the
+ * number of layouts. You may use empty values as in "intl,,neo".
+ *
+ * ref: [xkbcommon
+ * reference](https://xkbcommon.org/doc/current/structxkb__rule__names.html#a758e1865c002d8f4fb59b2e3dda83b66)
+ *
+ * @tfield string xkb_variant
+ */
+XKB_RULE_FIELD(variant);
+
+/** A comma separated list of options.
+ *
+ * Through which the user specifies non-layout related preferences, like which
+ * key combinations are used for switching layouts, or which key is the Compose
+ * key.
+ *
+ * ref: [xkbcommon
+ * reference](https://xkbcommon.org/doc/current/structxkb__rule__names.html#a556899eafb333c440be64ede408644df)
+ *
+ * @tfield string xkb_options
+ */
+XKB_RULE_FIELD(options);
 
 #define FIELD_RO(name)     {"get_" #name, luaC_kbd_get_##name}
 #define FIELD_SETTER(name) {"set_" #name, luaC_kbd_set_##name}
@@ -625,6 +717,12 @@ void luaC_kbd_setup(lua_State *L)
 
         FIELD(repeat_rate),
         FIELD(repeat_delay),
+
+        FIELD(xkb_rules),
+        FIELD(xkb_model),
+        FIELD(xkb_layout),
+        FIELD(xkb_variant),
+        FIELD(xkb_options),
 
         {NULL,             NULL                   },
     };

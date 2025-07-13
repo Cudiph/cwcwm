@@ -28,6 +28,11 @@ struct cwc_config {
     // kbd
     int repeat_rate;
     int repeat_delay;
+    char *xkb_rules;
+    char *xkb_model;
+    char *xkb_layout;
+    char *xkb_variant;
+    char *xkb_options;
 
     // the one and only lua_State
     struct lua_State *_L_but_better_to_use_function_than_directly;

@@ -142,8 +142,8 @@ end
 
 ### screen
 
-- `Super + ALT + j` focus the next screen
-- `Super + ALT + k` focus the previous screen
+- `Super + bracketleft` focus the previous screen
+- `Super + bracketright` focus the next screen
 
 ### keymap
 
@@ -168,6 +168,8 @@ end
 - `Super + SHIFT + Right` increase client width
 - `Super + SHIFT + Tab` cycle prev to toplevel inside container
 - `Super + SHIFT + Up` reduce client height
+- `Super + SHIFT + bracketleft` cycle move focused client to previous screen
+- `Super + SHIFT + bracketright` cycle move focused client to next screen
 - `Super + SHIFT + equal` increase opacity
 - `Super + SHIFT + j` swap with next client by index
 - `Super + SHIFT + k` swap with previous client by index
@@ -177,8 +179,6 @@ end
 - `Super + SHIFT + space` toggle floating
 - `Super + Tab` cycle next to toplevel inside container
 - `Super + Up` move client upward
-- `Super + bracketleft` cycle move focused client to previous screen
-- `Super + bracketright` cycle move focused client to next screen
 - `Super + f` toggle fullscreen
 - `Super + h` focus left
 - `Super + i` toggle client above normal toplevel

@@ -41,6 +41,8 @@ void cwc_keyboard_group_destroy(struct cwc_keyboard_group *kbd_group);
 void cwc_keyboard_group_add_device(struct cwc_keyboard_group *kbd_group,
                                    struct wlr_input_device *device);
 
+void cwc_keyboard_update_keymap(struct wlr_keyboard *wlr_kbd);
+
 struct wlr_surface;
 void keyboard_focus_surface(struct cwc_seat *seat, struct wlr_surface *surface);
 

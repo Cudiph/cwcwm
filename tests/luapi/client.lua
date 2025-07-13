@@ -47,9 +47,9 @@ local function signal_check()
     end
 
     if count > 0 then
-        print(string.format("%d of %d cwc_client signal test FAILED", count, #signal_list))
+        print(string.format("%d of %d cwc_client signal test \27[1;31mFAILED\27[0m", count, #signal_list))
     else
-        print("cwc_client signal test PASSED")
+        print("cwc_client signal test \27[1;32mPASSED\27[0m")
     end
 end
 
@@ -164,7 +164,7 @@ local function test()
     property_test(c)
     method_test(c)
 
-    print("cwc_client test PASSED")
+    print("cwc_client test \27[1;32mPASSED\27[0m")
 end
 
 
