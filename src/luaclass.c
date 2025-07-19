@@ -31,6 +31,14 @@ const char *const kbind_classname       = "cwc_kbind";
 const char *const timer_classname       = "cwc_timer";
 const char *const plugin_classname      = "cwc_plugin";
 
+/** Steps when adding new object
+ * 1. create needed function using LUAC_CREATE_CLASS macro in luaclass.h
+ * 2. create classname above with `cwc_<objectname>` format
+ * 3. don't forget to unregister when the object is freed
+ * 4. Don't forget to reregister on reload if needed
+ * 5. Create tests (optional)
+ */
+
 /* equivalent lua code:
  * function(t, k)
  *

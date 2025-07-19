@@ -115,6 +115,13 @@ static void reregister_lua_object()
         luaC_object_layer_shell_register(L, lsurf);
         cwc_object_emit_signal_simple("layer_shell::new", L, lsurf);
     }
+
+    struct cwc_plugin *plugin;
+    wl_list_for_each(plugin, &server.plugins, link)
+    {
+        luaC_object_plugin_register(L, plugin);
+        cwc_object_emit_signal_simple("plugin::load", L, plugin);
+    }
 }
 
 /* Reloading the lua configuration is kinda unfun because we safe some lua value
