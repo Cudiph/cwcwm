@@ -206,6 +206,7 @@ server_init(struct cwc_server *s, char *config_path, char *library_path)
     s->main_mouse_kmap    = cwc_keybind_map_create(NULL);
     s->output_state_cache = cwc_hhmap_create(8);
     s->signal_map         = cwc_hhmap_create(50);
+    s->input = cwc_input_manager_get();
 
     server_subscribe_signal();
     int lua_status = luaC_init();
@@ -272,7 +273,6 @@ server_init(struct cwc_server *s, char *config_path, char *library_path)
     setup_transaction(s);
 
     // inputs
-    s->input = cwc_input_manager_get();
     setup_pointer(s->input);
     setup_keyboard(s->input);
     setup_seat(s->input);
