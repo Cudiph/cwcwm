@@ -44,6 +44,7 @@ static char *help_txt =
     "  client    Get all client information\n"
     "  screen    Get all screen information\n"
     "  binds     Get all active keybinds information\n"
+    "  plugin    Get all loaded plugin information\n"
     "  help      Help about any command/subcommand\n"
     "  version   Print cwc version\n"
     "\n"
@@ -123,6 +124,8 @@ static int object_command(int argc, char **argv)
         return screen_cmd(argc, argv);
     } else if (strcmp(command, "client") == 0) {
         repl((char *)_cwctl_script_client_lua);
+    } else if (strcmp(command, "plugin") == 0) {
+        repl((char *)_cwctl_script_plugin_lua);
     } else if (strcmp(command, "binds") == 0) {
         repl((char *)_cwctl_script_binds_lua);
     } else if (strcmp(command, "version") == 0) {
