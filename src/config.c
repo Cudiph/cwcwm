@@ -23,6 +23,7 @@
 #include <string.h>
 
 #include "cwc/config.h"
+#include "cwc/desktop/toplevel.h"
 #include "cwc/util.h"
 
 void cwc_config_init()
@@ -47,8 +48,9 @@ void cwc_config_set_default()
     g_config.border_color_focus           = NULL;
     g_config.border_color_normal =
         cairo_pattern_create_rgba(127 / 255.0, 127 / 255.0, 127 / 255.0, 1);
-    g_config.useless_gaps = 0;
-    g_config.border_width = 1;
+    g_config.useless_gaps    = 0;
+    g_config.border_width    = 1;
+    g_config.decoration_mode = CWC_TOPLEVEL_DECORATION_SERVER_SIDE;
 
     g_config.cursor_size                           = 24;
     g_config.cursor_inactive_timeout_ms            = 5000;

@@ -58,6 +58,9 @@ end
 local function static_test()
     local cls = cwc.client.get()
     assert(#cls == 20)
+    assert(cwc.client.default_decoration_mode == enum.decoration_mode.SERVER_SIDE)
+    cwc.client.default_decoration_mode = enum.decoration_mode.CLIENT_SIDE
+    assert(cwc.client.default_decoration_mode == enum.decoration_mode.CLIENT_SIDE)
 end
 
 local function readonly_test(c)
@@ -135,6 +138,12 @@ local function property_test(c)
     assert(type(c.border_rotation) == "number")
     c.border_rotation = 90
     assert(c.border_rotation == 90)
+
+    assert(c.decoration_mode == enum.decoration_mode.SERVER_SIDE)
+    c.decoration_mode = enum.decoration_mode.CLIENT_SIDE
+    cwc.timer.new(1, function() -- change is not applied immediately so use timer
+        assert(c.decoration_mode == enum.decoration_mode.CLIENT_SIDE)
+    end, { one_shot = true })
 end
 
 local function method_test(c)

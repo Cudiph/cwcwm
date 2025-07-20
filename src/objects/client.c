@@ -45,6 +45,7 @@
 #include "cwc/luaobject.h"
 #include "cwc/server.h"
 #include "cwc/util.h"
+#include "wlr/types/wlr_xdg_decoration_v1.h"
 
 /** Emitted when a client is created.
  *
@@ -213,7 +214,7 @@ static int luaC_client_resize_to(lua_State *L)
     int w                         = luaL_checkint(L, 2);
     int h                         = luaL_checkint(L, 3);
 
-    cwc_toplevel_set_size(toplevel, w, h);
+    cwc_toplevel_set_size_surface(toplevel, w, h);
 
     return 0;
 }
@@ -334,6 +335,33 @@ static int luaC_client_focused(lua_State *L)
         lua_pushnil(L);
 
     return 1;
+}
+
+/** Set the default decoration mode.
+ *
+ * @tfield number default_decoration_mode
+ * @see cuteful.enum.decoration_mode
+ */
+static int luaC_client_get_default_decoration_mode(lua_State *L)
+{
+    lua_pushnumber(L, g_config.decoration_mode);
+    return 1;
+}
+static int luaC_client_set_default_decoration_mode(lua_State *L)
+{
+    int deco_mode = luaL_checkinteger(L, 1);
+    switch (deco_mode) {
+    case CWC_TOPLEVEL_DECORATION_NONE:
+    case CWC_TOPLEVEL_DECORATION_CLIENT_SIDE:
+    case CWC_TOPLEVEL_DECORATION_SERVER_SIDE:
+    case CWC_TOPLEVEL_DECORATION_CLIENT_PREFERRED:
+    case CWC_TOPLEVEL_DECORATION_CLIENT_SIDE_ON_FLOATING:
+        break;
+    default:
+        luaL_error(L, "Invalid decoration mode value: %d", deco_mode);
+    }
+    g_config.decoration_mode = deco_mode;
+    return 0;
 }
 
 /** Set the default border thickness.
@@ -702,7 +730,7 @@ static int luaC_client_set_geometry(lua_State *L)
     lua_pop(L, 1);
 
     cwc_toplevel_set_position_global(toplevel, box.x, box.y);
-    cwc_toplevel_set_size(toplevel, box.width, box.height);
+    cwc_toplevel_set_size_surface(toplevel, box.width, box.height);
 
     return 0;
 }
@@ -903,6 +931,32 @@ static int luaC_client_set_bspfact(lua_State *L)
 
     transaction_schedule_tag(
         cwc_output_get_current_tag_info(toplevel->container->output));
+
+    return 0;
+}
+
+/** The decoration mode of this client.
+ *
+ * @property decoration_mode
+ * @negativeallowed false
+ * @tparam[opt=2] number decoration_mode
+ * @see cuteful.enum.decoration_mode
+ */
+static int luaC_client_get_decoration_mode(lua_State *L)
+{
+    struct cwc_toplevel *toplevel = luaC_client_checkudata(L, 1);
+    if (!toplevel->decoration)
+        return 0;
+
+    lua_pushnumber(L, toplevel->decoration->base->current.mode);
+    return 1;
+}
+static int luaC_client_set_decoration_mode(lua_State *L)
+{
+    struct cwc_toplevel *toplevel = luaC_client_checkudata(L, 1);
+    int mode                      = luaL_checkinteger(L, 2);
+
+    cwc_toplevel_set_decoration_mode(toplevel, mode);
 
     return 0;
 }
@@ -1113,6 +1167,10 @@ static int luaC_client_set_border_color(lua_State *L)
 #define REG_SETTER(name)    {"set_" #name, luaC_client_set_##name}
 #define REG_PROPERTY(name)  REG_READ_ONLY(name), REG_SETTER(name)
 
+#define FIELD_RO(name)     REG_READ_ONLY(name)
+#define FIELD_SETTER(name) REG_SETTER(name)
+#define FIELD(name)        FIELD_RO(name), FIELD_SETTER(name)
+
 void luaC_client_setup(lua_State *L)
 {
     luaL_Reg client_metamethods[] = {
@@ -1174,6 +1232,7 @@ void luaC_client_setup(lua_State *L)
         REG_PROPERTY(border_enabled),
         REG_PROPERTY(border_rotation),
         REG_PROPERTY(border_width),
+        REG_PROPERTY(decoration_mode),
 
         REG_PROPERTY(bspfact),
 
@@ -1187,6 +1246,8 @@ void luaC_client_setup(lua_State *L)
         {"get",                       luaC_client_get                      },
         {"at",                        luaC_client_at                       },
         {"focused",                   luaC_client_focused                  },
+
+        FIELD(default_decoration_mode),
 
         {"set_border_width",          luaC_client_set_border_width_cfg     },
         {"set_border_color_focus",    luaC_client_set_border_color_focus   },

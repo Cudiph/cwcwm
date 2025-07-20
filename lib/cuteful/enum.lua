@@ -117,6 +117,17 @@ local enum = {
         LENGTH   = 3,
     },
 
+    --- toplevel decoration mode enum extracted from cwc `toplevel.h`.
+    --
+    -- @table decoration_mode
+    decoration_mode = {
+        NONE                    = 0,
+        CLIENT_SIDE             = 1,
+        SERVER_SIDE             = 2,
+        CLIENT_PREFERRED        = 100,
+        CLIENT_SIDE_ON_FLOATING = 101,
+    },
+
 }
 
 return enum

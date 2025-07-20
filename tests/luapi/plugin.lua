@@ -54,10 +54,11 @@ local function test()
     assert(cwc.plugin.load(plugins_folder .. "/cwcle.so"))
     assert(cwc.plugin.load(plugins_folder .. "/dwl-ipc.so"))
 
-    local plugin = cwc.plugin.get()[1]
+    local plugins = cwc.plugin.get()
+    local dwl_plug = plugins[#plugins]
 
-    ro_test(plugin)
-    method_test(plugin)
+    ro_test(dwl_plug)
+    method_test(dwl_plug)
 
     assert(cwc.plugin.unload_byname("cwcle"))
 

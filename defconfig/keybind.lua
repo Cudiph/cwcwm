@@ -595,6 +595,12 @@ kbd.bind({ MODKEY, mod.CTRL }, "slash", function()
     local s = cwc.screen.focused()
     local c = cwc.client.focused()
     local pos = pointer.get_position()
+    if c.decoration_mode == enum.decoration_mode.CLIENT_SIDE then
+        c.decoration_mode = enum.decoration_mode.SERVER_SIDE
+    else
+        c.decoration_mode = enum.decoration_mode.CLIENT_SIDE
+    end
+    print(c.decoration_mode)
     print(c, s, c.tag, c.workspace)
     print(pos.x, pos.y)
     print(cwc.client.at(pos.x, pos.y))

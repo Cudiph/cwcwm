@@ -256,24 +256,25 @@ static void on_surface_unmap(struct wl_listener *listener, void *data)
     cwc_container_remove_toplevel(toplevel);
 }
 
+static void _surface_initial_commit(struct cwc_toplevel *toplevel)
+{
+    wlr_xdg_toplevel_set_size(toplevel->xdg_toplevel, 0, 0);
+    wlr_xdg_toplevel_set_wm_capabilities(
+        toplevel->xdg_toplevel,
+        WLR_XDG_TOPLEVEL_WM_CAPABILITIES_MAXIMIZE
+            // | WLR_XDG_TOPLEVEL_WM_CAPABILITIES_MINIMIZE
+            | WLR_XDG_TOPLEVEL_WM_CAPABILITIES_FULLSCREEN);
+
+    cwc_toplevel_set_decoration_mode(toplevel, g_config.decoration_mode);
+}
+
 static void on_surface_commit(struct wl_listener *listener, void *data)
 {
     struct cwc_toplevel *toplevel =
         wl_container_of(listener, toplevel, commit_l);
 
     if (toplevel->xdg_toplevel->base->initial_commit) {
-        wlr_xdg_toplevel_set_size(toplevel->xdg_toplevel, 0, 0);
-        wlr_xdg_toplevel_set_wm_capabilities(
-            toplevel->xdg_toplevel,
-            WLR_XDG_TOPLEVEL_WM_CAPABILITIES_MAXIMIZE
-                // | WLR_XDG_TOPLEVEL_WM_CAPABILITIES_MINIMIZE
-                | WLR_XDG_TOPLEVEL_WM_CAPABILITIES_FULLSCREEN);
-
-        if (toplevel->decoration)
-            wlr_xdg_toplevel_decoration_v1_set_mode(
-                toplevel->decoration->base,
-                WLR_XDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE);
-
+        _surface_initial_commit(toplevel);
         return;
     }
 
@@ -290,13 +291,21 @@ static void on_surface_commit(struct wl_listener *listener, void *data)
         || !cwc_toplevel_is_mapped(toplevel))
         return;
 
-    // tiled toplevel already clipped
-    if (!cwc_toplevel_is_floating(toplevel))
-        return;
-
     struct wlr_box geom = cwc_toplevel_get_geometry(toplevel);
-    wlr_scene_subsurface_tree_set_clip(&toplevel->surf_tree->node, &geom);
     int thickness = cwc_border_get_thickness(&toplevel->container->border);
+
+    // adjust clipping to follow the tiled size
+    if (!cwc_toplevel_is_floating(toplevel)) {
+        int gaps = cwc_output_get_current_tag_info(toplevel->container->output)
+                       ->useless_gaps;
+        int outside_width = (thickness + gaps) * 2;
+        geom.width        = toplevel->container->width - outside_width;
+        geom.height       = toplevel->container->height - outside_width;
+        wlr_scene_subsurface_tree_set_clip(&toplevel->surf_tree->node, &geom);
+        return;
+    }
+
+    wlr_scene_subsurface_tree_set_clip(&toplevel->surf_tree->node, &geom);
     cwc_border_resize(&toplevel->container->border, geom.width + thickness * 2,
                       geom.height + thickness * 2);
 }
@@ -819,9 +828,7 @@ static void on_set_decoration_mode(struct wl_listener *listener, void *data)
     struct cwc_toplevel *toplevel =
         cwc_toplevel_try_from_wlr_surface(deco->base->toplevel->base->surface);
 
-    if (toplevel->xdg_toplevel->base->initialized)
-        wlr_xdg_toplevel_decoration_v1_set_mode(
-            deco->base, WLR_XDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE);
+    cwc_toplevel_set_decoration_mode(toplevel, deco->mode);
 }
 
 static void on_decoration_destroy(struct wl_listener *listener, void *data)
@@ -842,6 +849,7 @@ static void on_new_toplevel_decoration(struct wl_listener *listener, void *data)
     toplevel->decoration = cwc_deco;
 
     cwc_deco->base                         = deco;
+    cwc_deco->mode                         = g_config.decoration_mode;
     cwc_deco->set_decoration_mode_l.notify = on_set_decoration_mode;
     cwc_deco->destroy_l.notify             = on_decoration_destroy;
     wl_signal_add(&deco->events.request_mode, &cwc_deco->set_decoration_mode_l);
@@ -1101,6 +1109,47 @@ void cwc_toplevel_set_position_global(struct cwc_toplevel *toplevel,
 {
     int bw = cwc_border_get_thickness(&toplevel->container->border);
     cwc_container_set_position_global(toplevel->container, x - bw, y - bw);
+}
+
+void cwc_toplevel_set_decoration_mode(struct cwc_toplevel *toplevel,
+                                      enum cwc_toplevel_decoration_mode mode)
+{
+    if (cwc_toplevel_is_x11(toplevel) || !toplevel->decoration
+        || !toplevel->xdg_toplevel->base->initialized)
+        return;
+
+    struct cwc_output *output;
+    int xdg_mode;
+    switch (mode) {
+    case CWC_TOPLEVEL_DECORATION_CLIENT_PREFERRED:
+        xdg_mode = toplevel->decoration->base->requested_mode;
+        xdg_mode = xdg_mode ? xdg_mode
+                            : WLR_XDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE;
+        break;
+    case CWC_TOPLEVEL_DECORATION_CLIENT_SIDE_ON_FLOATING:
+        if (toplevel->container)
+            output = toplevel->container->output;
+        else
+            output = cwc_output_get_focused();
+        if (cwc_output_get_current_tag_info(output)->layout_mode
+            == CWC_LAYOUT_FLOATING) {
+            xdg_mode = CWC_TOPLEVEL_DECORATION_CLIENT_SIDE;
+        } else {
+            xdg_mode = CWC_TOPLEVEL_DECORATION_SERVER_SIDE;
+        }
+        break;
+    case CWC_TOPLEVEL_DECORATION_SERVER_SIDE:
+    case CWC_TOPLEVEL_DECORATION_CLIENT_SIDE:
+        xdg_mode = mode;
+        break;
+    case CWC_TOPLEVEL_DECORATION_NONE:
+    default:
+        xdg_mode = CWC_TOPLEVEL_DECORATION_SERVER_SIDE;
+        break;
+    }
+    wlr_xdg_toplevel_decoration_v1_set_mode(toplevel->decoration->base,
+                                            xdg_mode);
+    toplevel->decoration->mode = mode;
 }
 
 struct cwc_toplevel *

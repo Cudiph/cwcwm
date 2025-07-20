@@ -13,6 +13,7 @@ struct cwc_config {
     // client
     int border_color_rotation_degree;
     int border_width;
+    int decoration_mode; // enum cwc_toplevel_decoration_mode
     struct _cairo_pattern *border_color_focus;  // USE SETTER
     struct _cairo_pattern *border_color_normal; // USE SETTER
 

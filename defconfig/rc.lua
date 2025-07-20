@@ -35,9 +35,10 @@ cwc.kbd.set_repeat_rate(30)
 cwc.kbd.set_repeat_delay(300)
 -- cwc.kbd.xkb_variant = "colemak"
 -- cwc.kbd.xkb_layout  = "us,de,fr"
-cwc.kbd.xkb_options = "grp:ctrl_shift_toggle"
+-- cwc.kbd.xkb_options = "grp:ctrl_shift_toggle"
 
 -- client config
+cwc.client.default_decoration_mode = enum.decoration_mode.SERVER_SIDE;
 cwc.client.set_border_color_focus(gears.color(
     "linear:0,0:0,0:0,#f08e97:0.1,#a7e1a4:0.2,#ffffa7:0.3,#a5c0e1:0.4,#c8a6e1:0.5,#a1d0d4:0.6,#f9b486:0.7,#e1a5d7:0.8,#b4b8e6:0.9,#b4b8e6:1.0,#f8e0b4"))
 cwc.client.set_border_color_normal(gears.color("#423e44"))

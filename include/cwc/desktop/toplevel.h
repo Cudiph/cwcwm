@@ -23,8 +23,18 @@ struct xwayland_props;
 
 //================ XDG SHELL ================
 
+enum cwc_toplevel_decoration_mode {
+    CWC_TOPLEVEL_DECORATION_NONE                    = 0,
+    CWC_TOPLEVEL_DECORATION_CLIENT_SIDE             = 1,
+    CWC_TOPLEVEL_DECORATION_SERVER_SIDE             = 2,
+    CWC_TOPLEVEL_DECORATION_CLIENT_PREFERRED        = 100,
+    CWC_TOPLEVEL_DECORATION_CLIENT_SIDE_ON_FLOATING = 101,
+};
+
 struct cwc_toplevel_decoration {
     struct wlr_xdg_toplevel_decoration_v1 *base;
+    enum cwc_toplevel_decoration_mode mode;
+
     struct wl_listener set_decoration_mode_l;
     struct wl_listener destroy_l;
 };
@@ -147,6 +157,9 @@ void cwc_toplevel_set_position(struct cwc_toplevel *toplevel, int x, int y);
 void cwc_toplevel_set_position_global(struct cwc_toplevel *toplevel,
                                       int x,
                                       int y);
+
+void cwc_toplevel_set_decoration_mode(struct cwc_toplevel *toplevel,
+                                      enum cwc_toplevel_decoration_mode mode);
 
 bool cwc_toplevel_is_ontop(struct cwc_toplevel *toplevel);
 bool cwc_toplevel_is_above(struct cwc_toplevel *toplevel);
