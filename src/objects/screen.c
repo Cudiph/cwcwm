@@ -838,7 +838,7 @@ static int luaC_screen_get_modes(lua_State *L)
  * @tparam integer width
  * @tparam integer height
  * @tparam integer refresh
- * @treturn boolean success If change was successful
+ * @noreturn
  */
 static int luaC_screen_set_custom_mode(lua_State *L)
 {
@@ -854,8 +854,7 @@ static int luaC_screen_set_custom_mode(lua_State *L)
 
     wlr_output_state_set_custom_mode(&output->pending, width,height,refresh);
     transaction_schedule_output(output);
-    lua_pushboolean(L,true);
-    return 1;
+    return 0;
 }
 /** Set the screen mode from ID.
  *
