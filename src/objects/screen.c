@@ -832,6 +832,37 @@ static int luaC_screen_get_modes(lua_State *L)
     return 1;
 }
 
+/** Set the screen mode from ID.
+ *
+ * @method set_mode_from_id
+ * @tparam integer id
+ * @treturn boolean success If change was successful
+ */
+static int luaC_screen_set_mode_from_id(lua_State *L)
+{
+    struct cwc_output *output = luaC_screen_checkudata(L, 1);
+    int32_t index             = luaL_checkint(L, 2);
+    
+    struct wlr_output_mode *mode;
+    bool found = false;
+    int i = 1;
+    wl_list_for_each(mode, &output->wlr_output->modes, link)
+    {
+        if (i++ == index) {
+            found = true;
+            break;
+        }
+    }
+    if (!found){
+        lua_pushboolean(L,false);
+        return 1;
+    }
+
+    wlr_output_state_set_mode(&output->pending, mode);
+    transaction_schedule_output(output);
+    lua_pushboolean(L,true);
+    return 1;
+}
 /** Set the screen mode.
  *
  * @method set_mode
@@ -846,13 +877,15 @@ static int luaC_screen_set_mode(lua_State *L)
     int32_t width             = luaL_checkint(L, 2);
     int32_t height            = luaL_checkint(L, 3);
     int32_t refresh           = lua_tonumber(L, 4);
+    
+    if(refresh < 1000) refresh *= 1000;
 
     bool found = false;
     struct wlr_output_mode *mode;
     wl_list_for_each(mode, &output->wlr_output->modes, link)
     {
         if (mode->width == width && mode->height == height) {
-            int diff = abs(refresh - mode->refresh / 1000);
+            int diff = abs(refresh - mode->refresh);
             if (!refresh || diff <= 2) {
                 found = true;
                 break;
@@ -989,6 +1022,7 @@ void luaC_screen_setup(lua_State *L)
 
         // screen state
         REG_METHOD(set_mode),
+        REG_METHOD(set_mode_from_id),
         REG_METHOD(set_adaptive_sync),
         REG_METHOD(set_scale),
         REG_METHOD(set_transform),
