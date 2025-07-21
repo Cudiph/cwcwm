@@ -832,10 +832,35 @@ static int luaC_screen_get_modes(lua_State *L)
     return 1;
 }
 
+/** Set the screen mode to a custom mode.
+ *
+ * @method set_mode_from_id
+ * @tparam integer width
+ * @tparam integer height
+ * @tparam integer refresh
+ * @treturn boolean success If change was successful
+ */
+static int luaC_screen_set_custom_mode(lua_State *L)
+{
+    struct cwc_output *output = luaC_screen_checkudata(L, 1);
+
+    int32_t width             = luaL_checkint(L, 2);
+    int32_t height            = luaL_checkint(L, 3);
+    int32_t refresh           = lua_tonumber(L, 4);
+
+    if(refresh < 1000){
+        refresh *= 1000;
+    }
+
+    wlr_output_state_set_custom_mode(&output->pending, width,height,refresh);
+    transaction_schedule_output(output);
+    lua_pushboolean(L,true);
+    return 1;
+}
 /** Set the screen mode from ID.
  *
  * @method set_mode_from_id
- * @tparam integer id
+ * @tparam integer index
  * @treturn boolean success If change was successful
  */
 static int luaC_screen_set_mode_from_id(lua_State *L)
@@ -1022,6 +1047,7 @@ void luaC_screen_setup(lua_State *L)
 
         // screen state
         REG_METHOD(set_mode),
+        REG_METHOD(set_custom_mode),
         REG_METHOD(set_mode_from_id),
         REG_METHOD(set_adaptive_sync),
         REG_METHOD(set_scale),
