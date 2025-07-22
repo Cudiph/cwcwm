@@ -820,7 +820,7 @@ static int luaC_screen_get_modes(lua_State *L)
     int i = 1;
     wl_list_for_each(mode, &output->wlr_output->modes, link)
     {
-        lua_newtable(L);
+        lua_createtable(L, 3, 0);
         lua_pushnumber(L,mode->width);
         lua_rawseti(L,-2,1);
         lua_pushnumber(L,mode->height);
