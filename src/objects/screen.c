@@ -834,7 +834,7 @@ static int luaC_screen_get_modes(lua_State *L)
 
 /** Set the screen mode to a custom mode.
  *
- * @method set_mode_from_id
+ * @method set_custom_mode
  * @tparam integer width
  * @tparam integer height
  * @tparam integer refresh
