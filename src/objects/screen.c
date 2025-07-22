@@ -336,10 +336,10 @@ SCREEN_PROPERTY_FORWARD_WLR_OUTPUT_PROP(non_desktop, boolean)
  */
 SCREEN_PROPERTY_FORWARD_WLR_OUTPUT_PROP(adaptive_sync_supported, boolean)
 
-/** The screen is adaptive sync or not.
+/** The screen has adaptive sync enabled or not.
  *
  * @property adaptive_sync_status
- * @tparam integer adaptive_sync_status
+ * @tparam boolean adaptive_sync_status
  * @readonly
  * @propertydefault Extracted from wlr_output.
  */
@@ -806,10 +806,10 @@ static int luaC_screen_set_position(lua_State *L)
     return 0;
 }
 
-/** Set the screen mode.
+/** Get the screen's provided modes
  *
  * @method get_modes
- * @treturn int[][] modes Array or arrays containing width, height and refresh rate
+ * @treturn int[][] modes Array of arrays containing width, height and refresh rate
  */
 static int luaC_screen_get_modes(lua_State *L)
 {
@@ -887,7 +887,7 @@ static int luaC_screen_set_mode_from_id(lua_State *L)
     lua_pushboolean(L,true);
     return 1;
 }
-/** Set the screen mode.
+/** Set the screen mode using a provided mode by the screen.
  *
  * @method set_mode
  * @tparam integer width
