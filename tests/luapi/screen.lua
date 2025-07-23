@@ -128,7 +128,7 @@ local function screen_mode_test(s)
 		assert(s.height == height)
 		assert(s.refresh == refresh)
 		-- set_mode_from_id
-		assert(s:set_mode_from_id(#modes-1))
+		assert(s:set_mode_from_idx(#modes-1))
 		local width,height,refresh = unpack(modes[#modes-1])
 		assert(s.width == width)
 		assert(s.height == height)

@@ -46,8 +46,8 @@ local function scr_list()
             "\tSelected tag: %d\n" ..
             "\tActive tags: %s\n" ..
             "\tTearing allowed: %s\n" ..
-            "\tSupports Adaptive Sync: %s\n" ..
-            "\tUsing Adaptive Sync: %s\n" ..
+            "\tAdaptive Sync Supported: %s\n" ..
+            "\tAdaptive Sync Enabled: %s\n" ..
             "\tHas focus: %s\n" ..
             ""
         local mode_list_string = ""
