@@ -40,15 +40,26 @@ local function scr_list()
             "\t\ty: %d\n" ..
             "\t\tw: %d\n" ..
             "\t\th: %d\n" ..
+            "\tScreen Modes: %s\n" ..
             "\tNon desktop: %s\n" ..
             "\tRestored: %s\n" ..
             "\tSelected tag: %d\n" ..
             "\tActive tags: %s\n" ..
             "\tTearing allowed: %s\n" ..
+            "\tAdaptive Sync Supported: %s\n" ..
+            "\tAdaptive Sync Enabled: %s\n" ..
             "\tHas focus: %s\n" ..
             ""
+        local mode_list_string = ""
+        do
+            local mode_list_tbl = {""}
+            for i,v in ipairs(s:get_modes()) do
+                mode_list_tbl[#mode_list_tbl+1] = ("\n\t\t%ix%i@%i"):format(v[1],v[2],v[3] / 1000)
+            end
+            mode_list_string = table.concat( mode_list_tbl, "")
 
-        out = out .. string.format(template,
+        end
+        out = out .. template:format(
             s_idx, s.name, s,
             s.description,
             s.enabled,
@@ -62,11 +73,14 @@ local function scr_list()
             s.scale,
             s.geometry.x, s.geometry.y, s.geometry.width, s.geometry.height,
             s.workarea.x, s.workarea.y, s.workarea.width, s.workarea.height,
+            mode_list_string,
             s.non_desktop,
             s.restored,
             s.selected_tag.index,
             active_tags,
             s.allow_tearing,
+            s.adaptive_sync_supported,
+            s.adaptive_sync_status,
             cwc.screen.focused() == s
         )
     end

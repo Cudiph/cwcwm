@@ -327,6 +327,24 @@ SCREEN_PROPERTY_FORWARD_WLR_OUTPUT_PROP(serial, string)
  */
 SCREEN_PROPERTY_FORWARD_WLR_OUTPUT_PROP(non_desktop, boolean)
 
+/** The screen supports adaptive sync or not.
+ *
+ * @property adaptive_sync_supported
+ * @tparam boolean adaptive_sync_supported
+ * @readonly
+ * @propertydefault Extracted from wlr_output.
+ */
+SCREEN_PROPERTY_FORWARD_WLR_OUTPUT_PROP(adaptive_sync_supported, boolean)
+
+/** The screen has adaptive sync enabled or not.
+ *
+ * @property adaptive_sync_status
+ * @tparam boolean adaptive_sync_status
+ * @readonly
+ * @propertydefault Extracted from wlr_output.
+ */
+SCREEN_PROPERTY_FORWARD_WLR_OUTPUT_PROP(adaptive_sync_status, boolean)
+
 /** The screen is restored or not.
  *
  * @property restored
@@ -402,6 +420,13 @@ static int luaC_screen_get_enabled(lua_State *L)
 
     return 1;
 }
+
+/** Set output enabled state.
+ *
+ * @method set_enabled
+ * @tparam boolean enable True to enable
+ * @noreturn
+ */
 static int luaC_screen_set_enabled(lua_State *L)
 {
     luaL_checktype(L, 2, LUA_TBOOLEAN);
@@ -781,13 +806,96 @@ static int luaC_screen_set_position(lua_State *L)
     return 0;
 }
 
-/** Set the screen mode.
+/** Get the screen's provided modes
+ *
+ * @method get_modes
+ * @treturn int[][] modes Array of arrays containing width, height and refresh
+ * rate
+ */
+static int luaC_screen_get_modes(lua_State *L)
+{
+    struct cwc_output *output = luaC_screen_checkudata(L, 1);
+
+    struct wlr_output_mode *mode;
+    lua_newtable(L);
+    int i = 1;
+    wl_list_for_each(mode, &output->wlr_output->modes, link)
+    {
+        lua_createtable(L, 3, 0);
+        lua_pushnumber(L, mode->width);
+        lua_rawseti(L, -2, 1);
+        lua_pushnumber(L, mode->height);
+        lua_rawseti(L, -2, 2);
+        lua_pushnumber(L, mode->refresh);
+        lua_rawseti(L, -2, 3);
+
+        lua_rawseti(L, -2, i++);
+    }
+    return 1;
+}
+
+/** Set the screen mode to a custom mode.
+ *
+ * @method set_custom_mode
+ * @tparam integer width
+ * @tparam integer height
+ * @tparam integer refresh
+ * @noreturn
+ */
+static int luaC_screen_set_custom_mode(lua_State *L)
+{
+    struct cwc_output *output = luaC_screen_checkudata(L, 1);
+
+    int32_t width   = luaL_checkint(L, 2);
+    int32_t height  = luaL_checkint(L, 3);
+    int32_t refresh = lua_tonumber(L, 4);
+
+    if (refresh < 1000) {
+        refresh *= 1000;
+    }
+
+    wlr_output_state_set_custom_mode(&output->pending, width, height, refresh);
+    transaction_schedule_output(output);
+    return 0;
+}
+/** Set the screen mode from ID.
+ *
+ * @method set_mode_from_idx
+ * @tparam integer index
+ * @treturn boolean `true` If change was successful
+ */
+static int luaC_screen_set_mode_from_idx(lua_State *L)
+{
+    struct cwc_output *output = luaC_screen_checkudata(L, 1);
+    int32_t index             = luaL_checkint(L, 2);
+
+    struct wlr_output_mode *mode;
+    bool found = false;
+    int i      = 1;
+    wl_list_for_each(mode, &output->wlr_output->modes, link)
+    {
+        if (i++ == index) {
+            found = true;
+            break;
+        }
+    }
+    if (!found) {
+        lua_pushboolean(L, false);
+        return 1;
+    }
+
+    wlr_output_state_set_mode(&output->pending, mode);
+    transaction_schedule_output(output);
+    lua_pushboolean(L, true);
+    return 1;
+}
+/** Set the screen mode using a provided mode by the screen.
  *
  * @method set_mode
  * @tparam integer width
  * @tparam integer height
  * @tparam[opt=0] integer refresh Monitor refresh rate in hz
- * @noreturn
+ * @treturn boolean `true` If change was successful
  */
 static int luaC_screen_set_mode(lua_State *L)
 {
@@ -796,36 +904,38 @@ static int luaC_screen_set_mode(lua_State *L)
     int32_t height            = luaL_checkint(L, 3);
     int32_t refresh           = lua_tonumber(L, 4);
 
+    if (refresh < 1000)
+        refresh *= 1000;
+
     bool found = false;
     struct wlr_output_mode *mode;
     wl_list_for_each(mode, &output->wlr_output->modes, link)
     {
         if (mode->width == width && mode->height == height) {
-            int diff = abs(refresh - mode->refresh / 1000);
-            if (!refresh) {
-                found = true;
-                break;
-            } else if (diff >= 0 && diff <= 2) {
+            int diff = abs(refresh - mode->refresh);
+            if (!refresh || diff <= 2) {
                 found = true;
                 break;
             }
         }
     }
 
-    if (!found)
-        return 0;
+    if (!found) {
+        lua_pushboolean(L, found);
+        return 1;
+    }
 
     wlr_output_state_set_mode(&output->pending, mode);
     transaction_schedule_output(output);
-
-    return 0;
+    lua_pushboolean(L, found);
+    return 1;
 }
 
 /** Set adaptive sync.
  *
  * @method set_adaptive_sync
  * @tparam boolean enable True to enable
- * @noreturn
+ * @treturn boolean success If change was successful
  */
 static int luaC_screen_set_adaptive_sync(lua_State *L)
 {
@@ -838,16 +948,10 @@ static int luaC_screen_set_adaptive_sync(lua_State *L)
 
     wlr_output_state_set_adaptive_sync_enabled(&output->pending, set);
     transaction_schedule_output(output);
+    lua_pushboolean(L, true);
 
     return 0;
 }
-
-/** Set output enabled state.
- *
- * @method set_enabled
- * @tparam boolean enable True to enable
- * @noreturn
- */
 
 /** Set output scale.
  *
@@ -941,9 +1045,12 @@ void luaC_screen_setup(lua_State *L)
 
         // screen state
         REG_METHOD(set_mode),
+        REG_METHOD(set_custom_mode),
+        REG_METHOD(set_mode_from_idx),
         REG_METHOD(set_adaptive_sync),
         REG_METHOD(set_scale),
         REG_METHOD(set_transform),
+        REG_METHOD(get_modes),
 
         // ro prop but have optional arguments
         REG_METHOD(get_containers),
@@ -971,6 +1078,8 @@ void luaC_screen_setup(lua_State *L)
         REG_READ_ONLY(scale),
         REG_READ_ONLY(restored),
         REG_READ_ONLY(selected_tag),
+        REG_READ_ONLY(adaptive_sync_supported),
+        REG_READ_ONLY(adaptive_sync_status),
 
         // rw properties
         REG_PROPERTY(enabled),
