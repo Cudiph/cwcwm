@@ -52,12 +52,11 @@ local function scr_list()
             ""
         local mode_list_string = ""
         do
-            local mode_list_tbl = {""}
-            for i,v in ipairs(s:get_modes()) do
-                mode_list_tbl[#mode_list_tbl+1] = ("\n\t\t%ix%i@%i"):format(v[1],v[2],v[3] / 1000)
+            local mode_list_tbl = { "" }
+            for i, v in ipairs(s:get_modes()) do
+                mode_list_tbl[#mode_list_tbl + 1] = ("\n\t\t%ix%i@%s"):format(v[1], v[2], v[3] / 1000)
             end
-            mode_list_string = table.concat( mode_list_tbl, "")
-
+            mode_list_string = table.concat(mode_list_tbl, "")
         end
         out = out .. template:format(
             s_idx, s.name, s,

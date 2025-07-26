@@ -105,36 +105,34 @@ local function method_test(s)
     assert(#s.minimized == #s:get_minimized())
     s:get_nearest(enum.direction.LEFT)
     s:focus()
-
 end
 local function screen_mode_test(s)
-	-- set_custom_mode and set_mode don't work when nested.
-	-- get_modes always returns an empty array when nested.
-	if(cwc.is_nested()) then 
-		assert(#s:get_modes() == 0)
-	else
-		local modes = s:get_modes()
-		assert(#modes > 0)
-		-- set_mode
-		local width,height,refresh = unpack(modes[#modes])
-		assert(s:set_mode(width,height,refresh))
-		assert(s.width == width)
-		assert(s.height == height)
-		assert(s.refresh == refresh)
-		-- set_custom_mode
-		local width,height,refresh = 1280, 720, 60
-		s:set_custom_mode(width,height,refresh)
-		assert(s.width == width)
-		assert(s.height == height)
-		assert(s.refresh == refresh)
-		-- set_mode_from_id
-		assert(s:set_mode_from_idx(#modes-1))
-		local width,height,refresh = unpack(modes[#modes-1])
-		assert(s.width == width)
-		assert(s.height == height)
-		assert(s.refresh == refresh)
-
-	end
+    -- set_custom_mode and set_mode don't work when nested.
+    -- get_modes always returns an empty array when nested.
+    if (cwc.is_nested()) then
+        assert(#s:get_modes() == 0)
+    else
+        local modes = s:get_modes()
+        assert(#modes > 0)
+        -- set_mode
+        local width, height, refresh = unpack(modes[#modes])
+        assert(s:set_mode(width, height, refresh))
+        assert(s.width == width)
+        assert(s.height == height)
+        assert(s.refresh == refresh)
+        -- set_custom_mode
+        local width, height, refresh = 1280, 720, 60
+        s:set_custom_mode(width, height, refresh)
+        assert(s.width == width)
+        assert(s.height == height)
+        assert(s.refresh == refresh)
+        -- set_mode_from_id
+        assert(s:set_mode_from_idx(#modes - 1))
+        local width, height, refresh = unpack(modes[#modes - 1])
+        assert(s.width == width)
+        assert(s.height == height)
+        assert(s.refresh == refresh)
+    end
 end
 
 local function test()

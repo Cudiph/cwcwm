@@ -891,10 +891,12 @@ static int luaC_screen_set_mode_from_idx(lua_State *L)
 }
 /** Set the screen mode using a provided mode by the screen.
  *
+ * if the refresh is not specified or 0, it will find the highest refresh rate.
+ *
  * @method set_mode
  * @tparam integer width
  * @tparam integer height
- * @tparam[opt=0] integer refresh Monitor refresh rate in hz
+ * @tparam[opt=0] integer refresh Monitor refresh rate in Hz or in exact mHz
  * @treturn boolean `true` If change was successful
  */
 static int luaC_screen_set_mode(lua_State *L)
@@ -904,30 +906,50 @@ static int luaC_screen_set_mode(lua_State *L)
     int32_t height            = luaL_checkint(L, 3);
     int32_t refresh           = lua_tonumber(L, 4);
 
-    if (refresh < 1000)
+    bool exact = true;
+    if (refresh < 1000) {
         refresh *= 1000;
+        exact = false;
+    }
 
-    bool found = false;
-    struct wlr_output_mode *mode;
+    int highest_rr  = 0;
+    int lowest_diff = 1e9;
+    struct wlr_output_mode *mode, *chosen_mode = NULL;
     wl_list_for_each(mode, &output->wlr_output->modes, link)
     {
-        if (mode->width == width && mode->height == height) {
-            int diff = abs(refresh - mode->refresh);
-            if (!refresh || diff <= 2) {
-                found = true;
+        if (mode->width != width || mode->height != height)
+            continue;
+
+        if (!refresh && highest_rr < mode->refresh) {
+            highest_rr  = mode->refresh;
+            chosen_mode = mode;
+            continue;
+        }
+
+        if (exact) {
+            if (refresh == mode->refresh) {
+                chosen_mode = mode;
                 break;
             }
+
+            continue;
+        }
+
+        int diff = abs(refresh - mode->refresh);
+        if (diff <= 2000 && lowest_diff > diff) {
+            lowest_diff = diff;
+            chosen_mode = mode;
         }
     }
 
-    if (!found) {
-        lua_pushboolean(L, found);
-        return 1;
-    }
+    if (!chosen_mode)
+        goto ret;
 
-    wlr_output_state_set_mode(&output->pending, mode);
+    wlr_output_state_set_mode(&output->pending, chosen_mode);
     transaction_schedule_output(output);
-    lua_pushboolean(L, found);
+
+ret:
+    lua_pushboolean(L, chosen_mode != NULL);
     return 1;
 }
 
@@ -935,7 +957,7 @@ static int luaC_screen_set_mode(lua_State *L)
  *
  * @method set_adaptive_sync
  * @tparam boolean enable True to enable
- * @treturn boolean success If change was successful
+ * @noreturn
  */
 static int luaC_screen_set_adaptive_sync(lua_State *L)
 {
@@ -948,7 +970,6 @@ static int luaC_screen_set_adaptive_sync(lua_State *L)
 
     wlr_output_state_set_adaptive_sync_enabled(&output->pending, set);
     transaction_schedule_output(output);
-    lua_pushboolean(L, true);
 
     return 0;
 }
