@@ -128,6 +128,17 @@ local enum = {
         CLIENT_SIDE_ON_FLOATING = 101,
     },
 
+    --- content type enum extracted from `content-type-v1.xml` protocol.
+    --
+    -- @table content_type
+    content_type = {
+        NONE  = 0,
+        PHOTO = 1,
+        VIDEO = 2,
+        GAME  = 3,
+    },
+
+
 }
 
 return enum

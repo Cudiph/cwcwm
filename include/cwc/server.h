@@ -24,6 +24,7 @@ struct cwc_server {
     struct wlr_scene_output_layout *scene_layout;
     struct wlr_session *session;
 
+    struct wlr_content_type_manager_v1 *content_type_manager;
     struct wlr_security_context_manager_v1 *security_context_manager;
     struct wlr_export_dmabuf_manager_v1 *export_dmabuf_manager;
     struct wlr_screencopy_manager_v1 *screencopy_manager;

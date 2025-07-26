@@ -144,6 +144,8 @@ local function property_test(c)
     cwc.timer.new(1, function() -- change is not applied immediately so use timer
         assert(c.decoration_mode == enum.decoration_mode.CLIENT_SIDE)
     end, { one_shot = true })
+
+    assert(type(c.content_type) == "number")
 end
 
 local function method_test(c)

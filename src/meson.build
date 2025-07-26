@@ -53,6 +53,7 @@ srcs = [
   protocols_server_header['tablet-v2'],
 
   # Staging upstream protocols
+  protocols_server_header['content-type-v1'],
   protocols_server_header['cursor-shape-v1'],
   protocols_server_header['ext-image-capture-source-v1'],
   protocols_server_header['ext-image-copy-capture-v1'],

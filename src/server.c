@@ -28,6 +28,7 @@
 #include <wlr/backend/session.h>
 #include <wlr/render/allocator.h>
 #include <wlr/types/wlr_alpha_modifier_v1.h>
+#include <wlr/types/wlr_content_type_v1.h>
 #include <wlr/types/wlr_data_control_v1.h>
 #include <wlr/types/wlr_data_device.h>
 #include <wlr/types/wlr_drm.h>
@@ -222,6 +223,7 @@ server_init(struct cwc_server *s, char *config_path, char *library_path)
     wlr_presentation_create(dpy, s->backend, 2);
     wlr_alpha_modifier_v1_create(dpy);
 
+    s->content_type_manager     = wlr_content_type_manager_v1_create(dpy, 1);
     s->security_context_manager = wlr_security_context_manager_v1_create(dpy);
     s->export_dmabuf_manager    = wlr_export_dmabuf_manager_v1_create(dpy);
     s->screencopy_manager       = wlr_screencopy_manager_v1_create(dpy);

@@ -33,7 +33,9 @@
 #include <lauxlib.h>
 #include <lua.h>
 #include <wayland-util.h>
+#include <wlr/types/wlr_content_type_v1.h>
 
+#include "content-type-v1-protocol.h"
 #include "cwc/config.h"
 #include "cwc/desktop/output.h"
 #include "cwc/desktop/toplevel.h"
@@ -1060,6 +1062,27 @@ static int luaC_client_get_container(lua_State *L)
     return luaC_object_push(L, toplevel->container);
 }
 
+/** The content type hint of the client.
+ *
+ * @property content_type
+ * @tparam[opt=0] integer content_type
+ * @negativeallowed false
+ * @readonly
+ * @see cuteful.enum.content_type
+ */
+static int luaC_client_get_content_type(lua_State *L)
+{
+    struct cwc_toplevel *toplevel             = luaC_client_checkudata(L, 1);
+    enum wp_content_type_v1_type content_type = WP_CONTENT_TYPE_V1_TYPE_NONE;
+
+    if (!cwc_toplevel_is_x11(toplevel))
+        content_type = wlr_surface_get_content_type_v1(
+            server.content_type_manager, toplevel->xdg_toplevel->base->surface);
+
+    lua_pushnumber(L, content_type);
+    return 1;
+}
+
 /** Toggle vsplit to hsplit or otherwise for bsp layout.
  *
  * @method toggle_split
@@ -1212,6 +1235,7 @@ void luaC_client_setup(lua_State *L)
         REG_READ_ONLY(x11),
         REG_READ_ONLY(unmanaged),
         REG_READ_ONLY(container),
+        REG_READ_ONLY(content_type),
 
         // properties
         REG_PROPERTY(geometry),
