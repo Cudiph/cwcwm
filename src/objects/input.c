@@ -286,7 +286,7 @@ LIBINPUT_DEVICE_CREATE_PROPERTY(tap, boolean, int, tap, _enabled);
  */
 LIBINPUT_DEVICE_CREATE_PROPERTY(tap_drag, boolean, int, tap, _drag_enabled);
 
-/** Tap-and-drag property of this device.
+/** Drag-lock during tapping property on this device.
  *
  * @property tap_drag_lock
  * @tparam integer tap_drag_lock

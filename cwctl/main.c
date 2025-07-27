@@ -45,6 +45,7 @@ static char *help_txt =
     "  screen    Get all screen information\n"
     "  binds     Get all active keybinds information\n"
     "  plugin    Get all loaded plugin information\n"
+    "  input     Get all input information\n"
     "  reload    Reload currently running cwc session\n"
     "  help      Help about any command/subcommand\n"
     "  version   Print cwc version\n"
@@ -129,6 +130,8 @@ static int object_command(int argc, char **argv)
         repl((char *)_cwctl_script_plugin_lua);
     } else if (strcmp(command, "binds") == 0) {
         repl((char *)_cwctl_script_binds_lua);
+    } else if (strcmp(command, "input") == 0) {
+        repl((char *)_cwctl_script_input_lua);
     } else if (strcmp(command, "reload") == 0) {
         repl("return cwc.reload()");
     } else if (strcmp(command, "version") == 0) {

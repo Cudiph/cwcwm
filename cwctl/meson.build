@@ -3,6 +3,7 @@ assets = {
   'screen': 'script/screen.lua',
   'binds': 'script/binds.lua',
   'plugin': 'script/plugin.lua',
+  'input': 'script/input.lua',
 }
 
 script_assets = []

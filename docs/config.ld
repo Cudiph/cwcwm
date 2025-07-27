@@ -2235,10 +2235,13 @@ local coreclassmap = {
     ["cwc.client"] = "cwc.client<span class='listplusign'> + cwc_client</span>",
     ["cwc.screen"] = "cwc.screen<span class='listplusign'> + cwc_screen</span>",
     ["cwc.container"] = "cwc.container<span class='listplusign'> + cwc_container</span>",
-    ["cwc.input"] = "cwc.input<span class='listplusign'> + cwc_input</span>",
     ["cwc.layer_shell"] = "cwc.layer_shell<span class='listplusign'> + cwc_layer_shell</span>",
     ["cwc.timer"] = "cwc.timer<span class='listplusign'> + cwc_timer</span>",
     ["cwc.plugin"] = "cwc.plugin<span class='listplusign'> + cwc_plugin</span>",
+}
+
+local inputmodulemap = {
+    ["cwc.input"] = "cwc.input<span class='listplusign'> + cwc_input</span>",
 }
 
 -- Add the full module name in front.
@@ -2354,6 +2357,9 @@ custom_display_name_handler = function(item, default_handler)
     -- Handle the left sidebar modules.
     if item.type == "coreclassmod" and coreclassmap[item.name] then
         return coreclassmap[item.name]
+    end
+    if item.type == "inputmodule" and inputmodulemap[item.name] then
+        return inputmodulemap[item.name]
     end
 
     -- Undocumented API to make the libraries and classmod "function" section
