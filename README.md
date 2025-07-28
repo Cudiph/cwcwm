@@ -2,16 +2,16 @@
 
 ## About CwC
 
-CwC is an extensible Wayland compositor with dynamic window management based
-on wlroots. Highly influenced by Awesome window manager, cwc use Lua for its
-configuration and C plugin for extension.
+CwC is an extensible Wayland compositor with dynamic window management based on wlroots. 
+Highly influenced by [awesome window manager](https://awesomewm.org), CwC uses Lua for its
+configuration and C plugins for extensions.
 
-For new users, you may want to check out [getting started][getting_started] page.
+For new users, you may want to check out the [getting started][getting_started] page.
 
 ## Stability state
 
-Crash may happen so daily driving isn't recommended unless you're okay with it
-and if you encounter one please report by [creating issue][github-issue] with steps to
+Crashes may happen so daily driving isn't recommended unless you're okay with them.
+If you encounter any crashes, please report them by [creating an issue][github-issue] with steps to
 reproduce. I will fix it as quickly as possible because I also daily drive it and
 I want my setup to be super stable.
 
@@ -62,13 +62,15 @@ Dev dependencies:
 ### Manual
 
 ```console
+$ git clone https://github.com/Cudiph/cwcwm/
+$ cd cwcwm
 $ make
 $ sudo make install
 ```
 
-CwC now should be available in the display manager or execute `cwc` in the tty.
+CwC now should be available in your display manager or execute `cwc` in a tty.
 
-To clear the installation and build artifacts, you can execute this command:
+To clear the installation and build artifacts, you can execute:
 
 ```console
 $ sudo make uninstall
@@ -93,7 +95,7 @@ $ yay -S cwc-git
 
 CwC contains verbatim or modified works from these awesome projects:
 
-- [Awesome](https://github.com/awesomeWM/awesome)
+- [awesome](https://github.com/awesomeWM/awesome)
 - [dwl](https://codeberg.org/dwl/dwl)
 - [Hikari](https://hub.darcs.net/raichoo/hikari)
 - [Hyprland](https://github.com/hyprwm/Hyprland)
