@@ -72,7 +72,7 @@ static void on_new_input(struct wl_listener *listener, void *data)
         // cwc_seat_add_switch_device(server.seat, device);
         break;
     case WLR_INPUT_DEVICE_TABLET:
-        // cwc_seat_add_tablet_device(server.seat, device);
+        cwc_seat_add_tablet_device(server.seat, device);
         break;
     case WLR_INPUT_DEVICE_TABLET_PAD:
         // cwc_seat_add_tablet_pad_device(server.seat, device);
@@ -108,7 +108,7 @@ struct cwc_input_manager *cwc_input_manager_get()
     if (!input_manager)
         exit(EXIT_FAILURE);
 
-    // input_manager->tablet_manager = wlr_tablet_v2_create(server.wl_display);
+    input_manager->tablet_manager = wlr_tablet_v2_create(server.wl_display);
 
     wl_list_init(&input_manager->devices);
     wl_list_init(&input_manager->seats);

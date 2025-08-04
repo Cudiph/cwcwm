@@ -29,6 +29,7 @@
 #include <wlr/types/wlr_primary_selection.h>
 #include <wlr/types/wlr_seat.h>
 #include <wlr/types/wlr_touch.h>
+#include <wlr/types/wlr_tablet_tool.h>
 #include <wlr/types/wlr_transient_seat_v1.h>
 
 #include "cwc/desktop/output.h"
@@ -264,7 +265,10 @@ void cwc_seat_add_switch_device(struct cwc_seat *seat,
 void cwc_seat_add_tablet_device(struct cwc_seat *seat,
                                 struct wlr_input_device *dev)
 {
+    wlr_cursor_attach_input_device(seat->cursor->wlr_cursor, dev);
+    map_input_device_to_output(seat, dev);
     cwc_tablet_create(seat, dev);
+    cwc_seat_update_capabilities(seat);
 }
 
 void cwc_seat_add_tablet_pad_device(struct cwc_seat *seat,
