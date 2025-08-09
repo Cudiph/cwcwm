@@ -24,6 +24,7 @@ started.
 
 topics                                        = {
     "00-getting-started.md",
+    "10-changelog.md",
     "30-custom-layout.md",
     "80-c-plugin.md",
 }
