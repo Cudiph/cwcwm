@@ -30,6 +30,8 @@ const char *const kbindmap_classname    = "cwc_kbindmap";
 const char *const kbind_classname       = "cwc_kbind";
 const char *const timer_classname       = "cwc_timer";
 const char *const plugin_classname      = "cwc_plugin";
+const char *const kbd_classname         = "cwc_kbd";
+const char *const pointer_classname     = "cwc_pointer";
 
 /** Steps when adding new object
  * 1. create needed function using LUAC_CREATE_CLASS macro in luaclass.h

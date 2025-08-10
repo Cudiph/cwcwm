@@ -39,6 +39,8 @@
 #include "cwc/input/seat.h"
 #include "cwc/input/text_input.h"
 #include "cwc/layout/bsp.h"
+#include "cwc/luaclass.h"
+#include "cwc/luaobject.h"
 #include "cwc/server.h"
 #include "cwc/signal.h"
 #include "cwc/util.h"
@@ -354,12 +356,18 @@ struct cwc_keyboard_group *cwc_keyboard_group_create(struct cwc_seat *seat,
     cwc_keyboard_update_keymap(wlr_kbd);
     apply_config(wlr_kbd);
 
+    lua_State *L = g_config_get_lua_State();
+    luaC_object_kbd_register(L, kbd_group);
+
     return kbd_group;
 }
 
 void cwc_keyboard_group_destroy(struct cwc_keyboard_group *kbd_group)
 {
     cwc_log(CWC_DEBUG, "destroying keyboard group: %p", kbd_group);
+
+    lua_State *L = g_config_get_lua_State();
+    luaC_object_unregister(L, kbd_group);
 
     wl_list_remove(&kbd_group->modifiers_l.link);
     wl_list_remove(&kbd_group->key_l.link);

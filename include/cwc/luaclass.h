@@ -128,5 +128,7 @@ LUAC_CLASS_CREATE(cwc_keybind_map, kbindmap)
 LUAC_CLASS_CREATE(cwc_keybind_info, kbind)
 LUAC_CLASS_CREATE(cwc_timer, timer)
 LUAC_CLASS_CREATE(cwc_plugin, plugin)
+LUAC_CLASS_CREATE(cwc_keyboard_group, kbd)
+LUAC_CLASS_CREATE(cwc_cursor, pointer)
 
 #endif // !_CWC_LUACLASS_H

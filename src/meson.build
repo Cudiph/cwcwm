@@ -45,6 +45,8 @@ srcs = [
   'objects/input.c',
   'objects/layer_shell.c',
   'objects/timer.c',
+  'objects/kbd.c',
+  'objects/pointer.c',
 
   'protocol/dwl_ipc_v2.c',
 

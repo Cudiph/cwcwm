@@ -1,5 +1,4 @@
 -- Keybinding
-
 -- for keyname see https://github.com/xkbcommon/libxkbcommon/blob/master/include/xkbcommon/xkbcommon-keysyms.h
 
 local cful = require("cuteful")
@@ -595,6 +594,8 @@ kbd.bind({ MODKEY, mod.CTRL }, "slash", function()
     local s = cwc.screen.focused()
     local c = cwc.client.focused()
     local pos = pointer.get_position()
+    local kbd = cwc.kbd.get()[1]
+    print(kbd.seat)
     if c.decoration_mode == enum.decoration_mode.CLIENT_SIDE then
         c.decoration_mode = enum.decoration_mode.SERVER_SIDE
     else
