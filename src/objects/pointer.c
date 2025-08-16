@@ -28,6 +28,7 @@
 #include <lauxlib.h>
 #include <linux/input-event-codes.h>
 #include <lua.h>
+#include <string.h>
 #include <wlr/types/wlr_cursor.h>
 #include <wlr/types/wlr_cursor_shape_v1.h>
 
@@ -137,7 +138,7 @@ static int luaC_pointer_clear(lua_State *L)
  * @staticfct get_position
  * @treturn table Pointer coords with structure {x,y}
  */
-static int luaC_pointer_get_position(lua_State *L)
+static int luaC_pointer_static_get_position(lua_State *L)
 {
     double x = server.seat->cursor->wlr_cursor->x;
     double y = server.seat->cursor->wlr_cursor->y;
@@ -158,7 +159,7 @@ static int luaC_pointer_get_position(lua_State *L)
  * @tparam integer y
  * @noreturn
  */
-static int luaC_pointer_set_position(lua_State *L)
+static int luaC_pointer_static_set_position(lua_State *L)
 {
     int x = luaL_checkint(L, 1);
     int y = luaL_checkint(L, 2);
@@ -286,8 +287,87 @@ static int luaC_pointer_set_edge_snapping_overlay_color(lua_State *L)
  */
 static int luaC_pointer_get_seat(lua_State *L)
 {
-    struct cwc_keyboard_group *kbdg = luaC_kbd_checkudata(L, 1);
-    lua_pushstring(L, kbdg->seat->wlr_seat->name);
+    struct cwc_cursor *cursor = luaC_pointer_checkudata(L, 1);
+    lua_pushstring(L, cursor->seat->name);
+    return 1;
+}
+
+/** The seat names which the keyboard belong.
+ *
+ * @property position
+ * @readonly
+ * @tparam table coord
+ * @tparam table coord.x the x coordinate of the pointer
+ * @tparam table coord.y the y coordinate of the pointer
+ */
+static int luaC_pointer_get_position(lua_State *L)
+{
+    struct cwc_cursor *cursor = luaC_pointer_checkudata(L, 1);
+
+    lua_createtable(L, 0, 2);
+    lua_pushnumber(L, cursor->wlr_cursor->x);
+    lua_setfield(L, -2, "x");
+    lua_pushnumber(L, cursor->wlr_cursor->y);
+    lua_setfield(L, -2, "y");
+
+    return 1;
+}
+static int luaC_pointer_set_position(lua_State *L)
+{
+    struct cwc_cursor *cursor = luaC_pointer_checkudata(L, 1);
+    luaL_checktype(L, 2, LUA_TTABLE);
+
+    lua_getfield(L, 2, "x");
+    luaL_checktype(L, -1, LUA_TNUMBER);
+    lua_getfield(L, 2, "y");
+    luaL_checktype(L, -1, LUA_TNUMBER);
+
+    wlr_cursor_warp(server.seat->cursor->wlr_cursor, NULL, lua_tonumber(L, -2),
+                    lua_tonumber(L, -1));
+
+    return 1;
+}
+
+/** Move pointer relative the current position.
+ *
+ * @method move
+ * @tparam integer x the x vector.
+ * @tparam integer y the y vector.
+ */
+static int luaC_pointer_move(lua_State *L)
+{
+    struct cwc_cursor *cursor = luaC_pointer_checkudata(L, 1);
+    double x                  = luaL_checknumber(L, 2);
+    double y                  = luaL_checknumber(L, 3);
+
+    struct timespec now;
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    uint64_t now_msec = timespec_to_msec(&now);
+    process_cursor_motion(cursor, now_msec, NULL, x, y, x, y);
+
+    return 1;
+}
+
+/** Move pointer to the specified coordinate.
+ *
+ * @method move_to
+ * @tparam integer x the new x position.
+ * @tparam integer y the new y position.
+ */
+static int luaC_pointer_move_to(lua_State *L)
+{
+    struct cwc_cursor *cursor = luaC_pointer_checkudata(L, 1);
+    double x                  = luaL_checknumber(L, 2);
+    double y                  = luaL_checknumber(L, 3);
+
+    double dx = x - cursor->wlr_cursor->x;
+    double dy = y - cursor->wlr_cursor->y;
+
+    struct timespec now;
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    uint64_t now_msec = timespec_to_msec(&now);
+    process_cursor_motion(cursor, now_msec, NULL, dx, dy, dx, dy);
+
     return 1;
 }
 
@@ -309,7 +389,11 @@ void luaC_pointer_setup(lua_State *L)
     };
 
     luaL_Reg pointer_methods[] = {
+        REG_METHOD(move),       REG_METHOD(move_to),
+
         REG_READ_ONLY(seat),
+
+        REG_PROPERTY(position),
 
         {NULL, NULL},
     };
@@ -318,25 +402,25 @@ void luaC_pointer_setup(lua_State *L)
                         pointer_metamethods);
 
     luaL_Reg pointer_staticlibs[] = {
-        {"get",                             luaC_pointer_get               },
+        {"get",                             luaC_pointer_get                },
 
-        {"bind",                            luaC_pointer_bind              },
-        {"clear",                           luaC_pointer_clear             },
+        {"bind",                            luaC_pointer_bind               },
+        {"clear",                           luaC_pointer_clear              },
 
-        {"get_position",                    luaC_pointer_get_position      },
-        {"set_position",                    luaC_pointer_set_position      },
+        {"get_position",                    luaC_pointer_static_get_position},
+        {"set_position",                    luaC_pointer_static_set_position},
 
-        {"move_interactive",                luaC_pointer_move_interactive  },
-        {"resize_interactive",              luaC_pointer_resize_interactive},
-        {"stop_interactive",                luaC_pointer_stop_interactive  },
+        {"move_interactive",                luaC_pointer_move_interactive   },
+        {"resize_interactive",              luaC_pointer_resize_interactive },
+        {"stop_interactive",                luaC_pointer_stop_interactive   },
 
         FIELD(cursor_size),
         FIELD(inactive_timeout),
         FIELD(edge_threshold),
         {"set_edge_snapping_overlay_color",
-         luaC_pointer_set_edge_snapping_overlay_color                      },
+         luaC_pointer_set_edge_snapping_overlay_color                       },
 
-        {NULL,                              NULL                           },
+        {NULL,                              NULL                            },
     };
 
     luaC_register_table(L, "cwc.pointer", pointer_staticlibs, NULL);
