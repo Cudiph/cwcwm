@@ -265,6 +265,32 @@ static void cwc_cursor_unhide(struct cwc_cursor *cursor)
     cursor->hidden = false;
 }
 
+static void _process_cursor_motion_grab(struct cwc_cursor *cursor,
+                                        uint32_t time_msec,
+                                        struct wlr_input_device *device,
+                                        double dx,
+                                        double dy,
+                                        double dx_unaccel,
+                                        double dy_unaccel)
+{
+    struct cwc_pointer_pointer_move_event event = {
+        .cursor     = cursor,
+        .dx         = dx,
+        .dy         = dy,
+        .dx_unaccel = dx_unaccel,
+        .dy_unaccel = dy_unaccel,
+    };
+    lua_State *L = g_config_get_lua_State();
+    lua_settop(L, 0);
+    luaC_object_push(L, cursor);
+    lua_pushnumber(L, time_msec);
+    lua_pushnumber(L, dx);
+    lua_pushnumber(L, dy);
+    lua_pushnumber(L, dx_unaccel);
+    lua_pushnumber(L, dy_unaccel);
+    cwc_signal_emit("pointer::move", &event, L, 5);
+}
+
 void process_cursor_motion(struct cwc_cursor *cursor,
                            uint32_t time_msec,
                            struct wlr_input_device *device,
@@ -282,6 +308,12 @@ void process_cursor_motion(struct cwc_cursor *cursor,
     wl_event_source_timer_update(cursor->inactive_timer,
                                  g_config.cursor_inactive_timeout_ms);
     wlr_idle_notifier_v1_notify_activity(server.idle->idle_notifier, wlr_seat);
+
+    if (cursor->grab) {
+        _process_cursor_motion_grab(cursor, time_msec, device, dx, dy,
+                                    dx_unaccel, dy_unaccel);
+        return;
+    }
 
     switch (cursor->state) {
     case CWC_CURSOR_STATE_MOVE:

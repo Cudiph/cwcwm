@@ -40,6 +40,15 @@
 #include "cwc/luaclass.h"
 #include "cwc/server.h"
 
+/** Emitted when a pointer is moved or input device motion event is triggered..
+ *
+ * @signal pointer::move
+ * @tparam cwc_pointer pointer The pointer object.
+ */
+
+
+//============================ CODE =================================
+
 /** Get all pointer in the server.
  *
  * @staticfct get
@@ -325,7 +334,29 @@ static int luaC_pointer_set_position(lua_State *L)
     wlr_cursor_warp(server.seat->cursor->wlr_cursor, NULL, lua_tonumber(L, -2),
                     lua_tonumber(L, -1));
 
+    return 0;
+    ;
+}
+
+/** The seat names which the keyboard belong.
+ *
+ * @property position
+ * @readonly
+ * @tparam table coord
+ * @tparam table coord.x the x coordinate of the pointer
+ * @tparam table coord.y the y coordinate of the pointer
+ */
+static int luaC_pointer_get_grab(lua_State *L)
+{
+    struct cwc_cursor *cursor = luaC_pointer_checkudata(L, 1);
+
     return 1;
+}
+static int luaC_pointer_set_grab(lua_State *L)
+{
+    struct cwc_cursor *cursor = luaC_pointer_checkudata(L, 1);
+
+    return 0;
 }
 
 /** Move pointer relative the current position.
@@ -393,7 +424,7 @@ void luaC_pointer_setup(lua_State *L)
 
         REG_READ_ONLY(seat),
 
-        REG_PROPERTY(position),
+        REG_PROPERTY(position), REG_PROPERTY(grab),
 
         {NULL, NULL},
     };
