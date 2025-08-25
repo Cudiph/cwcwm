@@ -1,9 +1,10 @@
 local cwc = cwc
 local objname = "cwc_pointer"
 
+-- commented signal need interaction
 local signal_list = {
-    "pointer::move",
-    "pointer::key",
+    -- "pointer::move",
+    -- "pointer::key",
 }
 
 local triggered_list = {}

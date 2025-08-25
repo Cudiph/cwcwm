@@ -44,8 +44,12 @@
  *
  * @signal pointer::move
  * @tparam cwc_pointer pointer The pointer object.
+ * @tparam integer time_msec The event time in milliseconds.
+ * @tparam number dx The x vector.
+ * @tparam number dy The y vectork.
+ * @tparam number dx_unaccel The x vector unaccelerated.
+ * @tparam number dy_unaccel The y vector unaccelerated.
  */
-
 
 //============================ CODE =================================
 
@@ -305,9 +309,9 @@ static int luaC_pointer_get_seat(lua_State *L)
  *
  * @property position
  * @readonly
- * @tparam table coord
- * @tparam table coord.x the x coordinate of the pointer
- * @tparam table coord.y the y coordinate of the pointer
+ * @tparam table position
+ * @tparam table position.x The x coordinate of the pointer
+ * @tparam table position.y The y coordinate of the pointer
  */
 static int luaC_pointer_get_position(lua_State *L)
 {
@@ -331,30 +335,30 @@ static int luaC_pointer_set_position(lua_State *L)
     lua_getfield(L, 2, "y");
     luaL_checktype(L, -1, LUA_TNUMBER);
 
-    wlr_cursor_warp(server.seat->cursor->wlr_cursor, NULL, lua_tonumber(L, -2),
+    wlr_cursor_warp(cursor->wlr_cursor, NULL, lua_tonumber(L, -2),
                     lua_tonumber(L, -1));
 
     return 0;
-    ;
 }
 
-/** The seat names which the keyboard belong.
+/** Grab the mouse event and redirect it to signal.
  *
- * @property position
+ * @property grab
  * @readonly
- * @tparam table coord
- * @tparam table coord.x the x coordinate of the pointer
- * @tparam table coord.y the y coordinate of the pointer
+ * @tparam[opt=false] boolean grab
  */
 static int luaC_pointer_get_grab(lua_State *L)
 {
     struct cwc_cursor *cursor = luaC_pointer_checkudata(L, 1);
+    lua_pushboolean(L, cursor->grab);
 
     return 1;
 }
 static int luaC_pointer_set_grab(lua_State *L)
 {
     struct cwc_cursor *cursor = luaC_pointer_checkudata(L, 1);
+    bool grab                 = lua_toboolean(L, 2);
+    cursor->grab              = grab;
 
     return 0;
 }
@@ -362,8 +366,9 @@ static int luaC_pointer_set_grab(lua_State *L)
 /** Move pointer relative the current position.
  *
  * @method move
- * @tparam integer x the x vector.
- * @tparam integer y the y vector.
+ * @tparam integer x The x vector.
+ * @tparam integer y The y vector.
+ * @noreturn
  */
 static int luaC_pointer_move(lua_State *L)
 {
@@ -376,14 +381,15 @@ static int luaC_pointer_move(lua_State *L)
     uint64_t now_msec = timespec_to_msec(&now);
     process_cursor_motion(cursor, now_msec, NULL, x, y, x, y);
 
-    return 1;
+    return 0;
 }
 
 /** Move pointer to the specified coordinate.
  *
  * @method move_to
- * @tparam integer x the new x position.
- * @tparam integer y the new y position.
+ * @tparam integer x The new x position.
+ * @tparam integer y The new y position.
+ * @noreturn
  */
 static int luaC_pointer_move_to(lua_State *L)
 {
@@ -399,7 +405,7 @@ static int luaC_pointer_move_to(lua_State *L)
     uint64_t now_msec = timespec_to_msec(&now);
     process_cursor_motion(cursor, now_msec, NULL, dx, dy, dx, dy);
 
-    return 1;
+    return 0;
 }
 
 #define REG_METHOD(name)    {#name, luaC_pointer_##name}

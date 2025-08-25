@@ -288,7 +288,7 @@ static void _process_cursor_motion_grab(struct cwc_cursor *cursor,
     lua_pushnumber(L, dy);
     lua_pushnumber(L, dx_unaccel);
     lua_pushnumber(L, dy_unaccel);
-    cwc_signal_emit("pointer::move", &event, L, 5);
+    cwc_signal_emit("pointer::move", &event, L, 6);
 }
 
 void process_cursor_motion(struct cwc_cursor *cursor,
