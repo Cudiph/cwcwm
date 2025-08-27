@@ -1,10 +1,9 @@
 local cwc = cwc
 local objname = "cwc_pointer"
 
--- commented signal need interaction
 local signal_list = {
-    -- "pointer::move",
-    -- "pointer::key",
+    "pointer::move",
+    -- "pointer::button",
 }
 
 local triggered_list = {}
@@ -42,11 +41,24 @@ local function prop_test(pointer)
     assert(type(pointer.position.y) == "number")
 
     pointer.position = { x = 50, y = 100 }
-    assert(type(pointer.position.x) == 50)
-    assert(type(pointer.position.y) == 100)
+    assert(pointer.position.x == 50)
+    assert(pointer.position.y == 100)
+
+    assert(pointer.grab == false)
+    pointer.grab = not pointer.grab
+    assert(pointer.grab)
+
+    assert(pointer.send_events)
+    pointer.send_events = not pointer.send_events
+    assert(pointer.send_events == false)
 end
 
 local function method_test(pointer)
+    pointer:move(100, 100)
+    pointer:move(-10, -10, true)
+
+    pointer:move_to(300, 300)
+    pointer:move_to(1e9, 1e9, true)
 end
 
 local function test()

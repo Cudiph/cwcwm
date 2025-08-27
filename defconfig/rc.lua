@@ -196,5 +196,4 @@ end)
 
 cwc.connect_signal("pointer::move", function(pointer, msec, dx, dy, dx_u, dy_u)
     print(pointer, msec, dx, dy, dx_u, dy_u)
-    pointer.position = { x = pointer.position.x + dx, y = pointer.position.y + dy}
 end)
