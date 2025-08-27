@@ -28,7 +28,6 @@
 #include <lauxlib.h>
 #include <linux/input-event-codes.h>
 #include <lua.h>
-#include <string.h>
 #include <wlr/types/wlr_cursor.h>
 #include <wlr/types/wlr_cursor_shape_v1.h>
 
@@ -308,10 +307,10 @@ static int luaC_pointer_get_seat(lua_State *L)
 /** The seat names which the keyboard belong.
  *
  * @property position
- * @readonly
  * @tparam table position
  * @tparam table position.x The x coordinate of the pointer
  * @tparam table position.y The y coordinate of the pointer
+ * @readonly
  */
 static int luaC_pointer_get_position(lua_State *L)
 {
@@ -344,8 +343,8 @@ static int luaC_pointer_set_position(lua_State *L)
 /** Grab the mouse event and redirect it to signal.
  *
  * @property grab
- * @readonly
  * @tparam[opt=false] boolean grab
+ * @readonly
  */
 static int luaC_pointer_get_grab(lua_State *L)
 {
@@ -363,11 +362,34 @@ static int luaC_pointer_set_grab(lua_State *L)
     return 0;
 }
 
+/** Send pointer events to the client.
+ *
+ * @property send_events
+ * @tparam[opt=true] boolean send_events
+ * @readonly
+ */
+static int luaC_pointer_get_send_events(lua_State *L)
+{
+    struct cwc_cursor *cursor = luaC_pointer_checkudata(L, 1);
+    lua_pushboolean(L, cursor->send_events);
+
+    return 1;
+}
+static int luaC_pointer_set_send_events(lua_State *L)
+{
+    struct cwc_cursor *cursor = luaC_pointer_checkudata(L, 1);
+    bool send_events          = lua_toboolean(L, 2);
+    cursor->send_events       = send_events;
+
+    return 0;
+}
+
 /** Move pointer relative the current position.
  *
  * @method move
  * @tparam integer x The x vector.
  * @tparam integer y The y vector.
+ * @tparam[opt=false] boolean skip_events The motion won't be sent to client.
  * @noreturn
  */
 static int luaC_pointer_move(lua_State *L)
@@ -375,6 +397,12 @@ static int luaC_pointer_move(lua_State *L)
     struct cwc_cursor *cursor = luaC_pointer_checkudata(L, 1);
     double x                  = luaL_checknumber(L, 2);
     double y                  = luaL_checknumber(L, 3);
+    bool skip_events          = lua_toboolean(L, 4);
+
+    if (skip_events) {
+        wlr_cursor_move(cursor->wlr_cursor, NULL, x, y);
+        return 0;
+    }
 
     struct timespec now;
     clock_gettime(CLOCK_MONOTONIC, &now);
@@ -389,6 +417,8 @@ static int luaC_pointer_move(lua_State *L)
  * @method move_to
  * @tparam integer x The new x position.
  * @tparam integer y The new y position.
+ * @tparam[opt=false] boolean skip_events The motion won't be sent to client.
+ * @noreturn
  * @noreturn
  */
 static int luaC_pointer_move_to(lua_State *L)
@@ -396,9 +426,15 @@ static int luaC_pointer_move_to(lua_State *L)
     struct cwc_cursor *cursor = luaC_pointer_checkudata(L, 1);
     double x                  = luaL_checknumber(L, 2);
     double y                  = luaL_checknumber(L, 3);
+    bool skip_events          = lua_toboolean(L, 4);
 
     double dx = x - cursor->wlr_cursor->x;
     double dy = y - cursor->wlr_cursor->y;
+
+    if (skip_events) {
+        wlr_cursor_move(cursor->wlr_cursor, NULL, x, y);
+        return 0;
+    }
 
     struct timespec now;
     clock_gettime(CLOCK_MONOTONIC, &now);
@@ -430,7 +466,7 @@ void luaC_pointer_setup(lua_State *L)
 
         REG_READ_ONLY(seat),
 
-        REG_PROPERTY(position), REG_PROPERTY(grab),
+        REG_PROPERTY(position), REG_PROPERTY(grab),  REG_PROPERTY(send_events),
 
         {NULL, NULL},
     };

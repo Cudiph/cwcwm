@@ -26,6 +26,7 @@
 #include <string.h>
 #include <time.h>
 #include <wayland-server-core.h>
+#include <wayland-server-protocol.h>
 #include <wayland-util.h>
 #include <wlr/types/wlr_buffer.h>
 #include <wlr/types/wlr_cursor.h>
@@ -265,15 +266,15 @@ static void cwc_cursor_unhide(struct cwc_cursor *cursor)
     cursor->hidden = false;
 }
 
-static void _process_cursor_motion_grab(struct cwc_cursor *cursor,
-                                        uint32_t time_msec,
-                                        struct wlr_input_device *device,
-                                        double dx,
-                                        double dy,
-                                        double dx_unaccel,
-                                        double dy_unaccel)
+static void _send_pointer_move_signal(struct cwc_cursor *cursor,
+                                      uint32_t time_msec,
+                                      struct wlr_input_device *device,
+                                      double dx,
+                                      double dy,
+                                      double dx_unaccel,
+                                      double dy_unaccel)
 {
-    struct cwc_pointer_pointer_move_event event = {
+    struct cwc_pointer_move_event event = {
         .cursor     = cursor,
         .dx         = dx,
         .dy         = dy,
@@ -309,12 +310,6 @@ void process_cursor_motion(struct cwc_cursor *cursor,
                                  g_config.cursor_inactive_timeout_ms);
     wlr_idle_notifier_v1_notify_activity(server.idle->idle_notifier, wlr_seat);
 
-    if (cursor->grab) {
-        _process_cursor_motion_grab(cursor, time_msec, device, dx, dy,
-                                    dx_unaccel, dy_unaccel);
-        return;
-    }
-
     switch (cursor->state) {
     case CWC_CURSOR_STATE_MOVE:
         wlr_cursor_move(wlr_cursor, device, dx, dy);
@@ -345,6 +340,9 @@ void process_cursor_motion(struct cwc_cursor *cursor,
         clock_gettime(CLOCK_MONOTONIC, &now);
         time_msec = timespec_to_msec(&now);
     }
+
+    if (!cursor->send_events)
+        goto move;
 
     wlr_relative_pointer_manager_v1_send_relative_motion(
         server.input->relative_pointer_manager, wlr_seat,
@@ -393,8 +391,14 @@ void process_cursor_motion(struct cwc_cursor *cursor,
         wlr_seat_pointer_clear_focus(wlr_seat);
     }
 
+move:
     if (dx || dy)
         wlr_cursor_move(wlr_cursor, device, dx, dy);
+
+    if (cursor->grab) {
+        _send_pointer_move_signal(cursor, time_msec, device, dx, dy, dx_unaccel,
+                                  dy_unaccel);
+    }
 
     cursor->dont_emit_signal = false;
 }
@@ -504,6 +508,9 @@ static void on_cursor_axis(struct wl_listener *listener, void *data)
     struct wlr_pointer_axis_event *event = data;
     wlr_idle_notifier_v1_notify_activity(server.idle->idle_notifier,
                                          cursor->seat);
+
+    if (!cursor->send_events)
+        return;
 
     wlr_seat_pointer_notify_axis(
         cursor->seat, event->time_msec, event->orientation, event->delta,
@@ -835,6 +842,23 @@ void stop_interactive(struct cwc_cursor *cursor)
     *grabbed = NULL;
 }
 
+static void _send_pointer_button_event(struct cwc_cursor *cursor,
+                                       uint32_t button,
+                                       bool press)
+{
+    struct cwc_pointer_button_event event = {
+        .cursor = cursor,
+        .button = button,
+        .press  = press,
+    };
+    lua_State *L = g_config_get_lua_State();
+    lua_settop(L, 0);
+    luaC_object_push(L, cursor);
+    lua_pushnumber(L, button);
+    lua_pushboolean(L, press);
+    cwc_signal_emit("pointer::button", &event, L, 3);
+}
+
 /* mouse click */
 static void on_cursor_button(struct wl_listener *listener, void *data)
 {
@@ -877,11 +901,15 @@ static void on_cursor_button(struct wl_listener *listener, void *data)
                               false);
     }
 
-    // don't notify when either state is have keybind to prevent
-    // half state which when the key is pressed but never released
-    if (!handled)
-        wlr_seat_pointer_notify_button(cursor->seat, event->time_msec,
-                                       event->button, event->state);
+    if (cursor->grab)
+        _send_pointer_button_event(cursor, event->button,
+                                   WL_POINTER_BUTTON_STATE_PRESSED);
+
+    if (handled || !cursor->send_events)
+        return;
+
+    wlr_seat_pointer_notify_button(cursor->seat, event->time_msec,
+                                   event->button, event->state);
 }
 
 /* cursor render */
@@ -1108,8 +1136,9 @@ struct cwc_cursor *cwc_cursor_create(struct wlr_seat *seat)
     cursor->info.size        = g_config.cursor_size;
     cursor->hyprcursor_mgr =
         hyprcursor_manager_create_with_logger(NULL, hyprcursor_logger);
-    cursor->scale = 1.0f;
-    cursor->state = CWC_CURSOR_STATE_NORMAL;
+    cursor->scale       = 1.0f;
+    cursor->state       = CWC_CURSOR_STATE_NORMAL;
+    cursor->send_events = true;
 
     // set_xcursor must after creating manager to load the theme
     cursor->xcursor_mgr = wlr_xcursor_manager_create(NULL, cursor->info.size);

@@ -596,8 +596,8 @@ kbd.bind({ MODKEY, mod.CTRL }, "slash", function()
     local pos = pointer.get_position()
     local kbd = cwc.kbd.get()[1]
     local ptr = pointer.get()[1]
-    print(ptr)
-    ptr.grab = not ptr.grab
+    -- ptr.grab = not ptr.grab
+    ptr.send_events = not ptr.send_events
     if c.decoration_mode == enum.decoration_mode.CLIENT_SIDE then
         c.decoration_mode = enum.decoration_mode.SERVER_SIDE
     else

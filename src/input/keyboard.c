@@ -155,6 +155,9 @@ static void process_key_event(struct cwc_seat *seat,
                 keybind_kbd_execute(kmap, seat, modifiers, keysym, false);
         }
         break;
+    default:
+        cwc_log(CWC_ERROR, "TODO: HANDLE REPEAT");
+        break;
     }
 
     if (!handled) {
