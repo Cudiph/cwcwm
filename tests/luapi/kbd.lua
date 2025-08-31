@@ -36,17 +36,26 @@ local function ro_test(kbd)
 end
 
 local function prop_test(kbd)
+    assert(not kbd.grab)
+    kbd.grab = true
+    assert(kbd.grab)
+    kbd.grab = false
+
+    assert(kbd.send_events)
+    kbd.send_events = false
+    assert(not kbd.send_events)
+    kbd.send_events = true
 end
 
 local function method_test(kbd)
 end
 
 local function test()
-    local pointer = cwc.pointer.get()[1]
+    local kbd = cwc.kbd.get()[1]
 
-    ro_test(pointer)
-    prop_test(pointer)
-    method_test(pointer)
+    ro_test(kbd)
+    prop_test(kbd)
+    method_test(kbd)
 
     print(string.format("%s test \27[1;32mPASSED\27[0m", objname))
 end

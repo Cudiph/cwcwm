@@ -44,6 +44,7 @@
 #include "cwc/server.h"
 #include "cwc/signal.h"
 #include "cwc/util.h"
+#include "lua.h"
 
 /**
  * Returns NULL if the keyboard is not grabbed by an input method,
@@ -101,9 +102,41 @@ static void on_kbd_modifiers(struct wl_listener *listener, void *data)
     process_modifier_event(seat, kbd->wlr);
 }
 
+static void _send_kbd_key_signal(struct wlr_keyboard *kbd,
+                                 struct wlr_keyboard_key_event *event,
+                                 struct cwc_keyboard_property *property)
+{
+    lua_State *L = g_config_get_lua_State();
+    if (!luaC_object_valid(L, kbd->data))
+        return;
+
+    uint32_t xkb_keycode = event->keycode + 8;
+    lua_settop(L, 0);
+    luaC_object_push(L, kbd->data);
+    lua_pushnumber(L, event->time_msec);
+    lua_pushnumber(L, xkb_keycode);
+
+    struct cwc_keyboard_key_event cwc_event = {.kbdg      = kbd->data,
+                                               .time_msec = event->time_msec,
+                                               .keycode   = xkb_keycode};
+
+    switch (event->state) {
+    case WL_KEYBOARD_KEY_STATE_PRESSED:
+        cwc_signal_emit("kbd::pressed", &cwc_event, L, 3);
+        break;
+    case WL_KEYBOARD_KEY_STATE_RELEASED:
+        cwc_signal_emit("kbd::released", &cwc_event, L, 3);
+        break;
+    default:
+        cwc_log(CWC_ERROR, "TODO: handle repeat");
+        break;
+    }
+}
+
 static void process_key_event(struct cwc_seat *seat,
                               struct wlr_keyboard *kbd,
-                              struct wlr_keyboard_key_event *event)
+                              struct wlr_keyboard_key_event *event,
+                              struct cwc_keyboard_property *property)
 {
     struct wlr_seat *wlr_seat = seat->wlr_seat;
 
@@ -160,6 +193,9 @@ static void process_key_event(struct cwc_seat *seat,
         break;
     }
 
+    if (!property->send_events)
+        goto send_signal;
+
     if (!handled) {
         struct wlr_input_method_keyboard_grab_v2 *kbd_grab =
             keyboard_get_im_grab(seat, kbd);
@@ -182,6 +218,10 @@ static void process_key_event(struct cwc_seat *seat,
         wlr_seat_keyboard_notify_key(wlr_seat, event->time_msec, event->keycode,
                                      event->state);
     }
+
+send_signal:
+    if (property->grab)
+        _send_kbd_key_signal(kbd, event, property);
 }
 
 static void on_kbd_group_key(struct wl_listener *listener, void *data)
@@ -192,7 +232,7 @@ static void on_kbd_group_key(struct wl_listener *listener, void *data)
     struct wlr_keyboard *wlr_kbd         = &kbd_group->wlr_kbd_group->keyboard;
     struct wlr_keyboard_key_event *event = data;
 
-    process_key_event(seat, wlr_kbd, event);
+    process_key_event(seat, wlr_kbd, event, &kbd_group->property);
 }
 
 static void on_kbd_key(struct wl_listener *listener, void *data)
@@ -201,13 +241,20 @@ static void on_kbd_key(struct wl_listener *listener, void *data)
     struct cwc_seat *seat    = kbd->seat;
     struct wlr_keyboard_key_event *event = data;
 
-    process_key_event(seat, kbd->wlr, event);
+    /* This should not exist and use only keyboard group, but I forgor
+     * why I used wlr_keyboard instead of group.
+     */
+    struct cwc_keyboard_property prop = {
+        .send_events = true,
+        .grab        = false,
+    };
+
+    process_key_event(seat, kbd->wlr, event, &prop);
 }
 
 static void _notify_focus_signal(struct wlr_surface *old_surface,
                                  struct wlr_surface *new_surface)
 {
-
     struct cwc_toplevel *old = cwc_toplevel_try_from_wlr_surface(old_surface);
     struct cwc_toplevel *new = cwc_toplevel_try_from_wlr_surface(new_surface);
 
@@ -310,8 +357,9 @@ struct cwc_keyboard *cwc_keyboard_create(struct cwc_seat *seat,
 
     cwc_log(CWC_DEBUG, "creating keyboard: %p", kbd);
 
-    kbd->wlr  = wlr_keyboard_from_input_device(dev);
-    kbd->seat = seat;
+    kbd->wlr       = wlr_keyboard_from_input_device(dev);
+    kbd->wlr->data = kbd;
+    kbd->seat      = seat;
 
     wlr_seat_set_keyboard(seat->wlr_seat, kbd->wlr);
     cwc_keyboard_update_keymap(kbd->wlr);
@@ -338,10 +386,12 @@ void cwc_keyboard_destroy(struct cwc_keyboard *kbd)
 struct cwc_keyboard_group *cwc_keyboard_group_create(struct cwc_seat *seat,
                                                      bool virtual)
 {
-    struct cwc_keyboard_group *kbd_group = calloc(1, sizeof(*kbd_group));
-    kbd_group->wlr_kbd_group             = wlr_keyboard_group_create();
-    kbd_group->seat                      = seat;
-    struct wlr_keyboard *wlr_kbd         = &kbd_group->wlr_kbd_group->keyboard;
+    struct cwc_keyboard_group *kbd_group    = calloc(1, sizeof(*kbd_group));
+    kbd_group->wlr_kbd_group                = wlr_keyboard_group_create();
+    kbd_group->wlr_kbd_group->keyboard.data = kbd_group;
+    kbd_group->seat                         = seat;
+    struct wlr_keyboard *wlr_kbd    = &kbd_group->wlr_kbd_group->keyboard;
+    kbd_group->property.send_events = true;
 
     cwc_log(CWC_DEBUG, "creating keyboard group: %p", kbd_group);
 

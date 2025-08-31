@@ -37,6 +37,23 @@
 #include "cwc/server.h"
 #include "cwc/util.h"
 
+/** Emitted when a key is pressed.
+ *
+ * @signal kbd::pressed
+ * @tparam cwc_kbd kbd The keyboard object.
+ * @tparam integer time_msec The event time in milliseconds.
+ * @tparam integer keycode The xkb keycode.
+ */
+
+/** Emitted when a key is released.
+ *
+ * @signal kbd::released
+ * @tparam cwc_kbd kbd The keyboard object.
+ * @tparam integer time_msec The event time in milliseconds.
+ * @tparam integer keycode The xkb keycode.
+ */
+//============================ CODE =================================
+
 /** Get all keyboard in the server.
  *
  * @staticfct get
@@ -381,6 +398,50 @@ static int luaC_kbd_get_seat(lua_State *L)
     return 1;
 }
 
+/** Grab the keyboard event and redirect it to signal.
+ *
+ * @property grab
+ * @tparam[opt=false] boolean grab
+ * @readonly
+ */
+static int luaC_kbd_get_grab(lua_State *L)
+{
+    struct cwc_keyboard_group *kbdg = luaC_kbd_checkudata(L, 1);
+    lua_pushboolean(L, kbdg->property.grab);
+
+    return 1;
+}
+static int luaC_kbd_set_grab(lua_State *L)
+{
+    struct cwc_keyboard_group *kbdg = luaC_kbd_checkudata(L, 1);
+    bool grab                       = lua_toboolean(L, 2);
+    kbdg->property.grab             = grab;
+
+    return 0;
+}
+
+/** Send keyboard events to the client.
+ *
+ * @property send_events
+ * @tparam[opt=true] boolean send_events
+ * @readonly
+ */
+static int luaC_kbd_get_send_events(lua_State *L)
+{
+    struct cwc_keyboard_group *kbdg = luaC_kbd_checkudata(L, 1);
+    lua_pushboolean(L, kbdg->property.send_events);
+
+    return 1;
+}
+static int luaC_kbd_set_send_events(lua_State *L)
+{
+    struct cwc_keyboard_group *kbdg = luaC_kbd_checkudata(L, 1);
+    bool send_events                = lua_toboolean(L, 2);
+    kbdg->property.send_events      = send_events;
+
+    return 0;
+}
+
 #define REG_METHOD(name)    {#name, luaC_kbd_##name}
 #define REG_READ_ONLY(name) {"get_" #name, luaC_kbd_get_##name}
 #define REG_SETTER(name)    {"set_" #name, luaC_kbd_set_##name}
@@ -401,6 +462,9 @@ void luaC_kbd_setup(lua_State *L)
 
     luaL_Reg kbd_methods[] = {
         REG_READ_ONLY(seat),
+
+        REG_PROPERTY(grab),
+        REG_PROPERTY(send_events),
 
         {NULL, NULL},
     };

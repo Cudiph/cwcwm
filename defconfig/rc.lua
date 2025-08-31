@@ -197,3 +197,11 @@ end)
 cwc.connect_signal("pointer::move", function(pointer, msec, dx, dy, dx_u, dy_u)
     print(pointer, msec, dx, dy, dx_u, dy_u)
 end)
+
+cwc.connect_signal("kbd::pressed", function(kbdg, msec, keycode)
+    print("press", kbdg, msec, keycode)
+end)
+
+cwc.connect_signal("kbd::released", function(kbdg, msec, keycode)
+    print("release", kbdg, msec, keycode)
+end)

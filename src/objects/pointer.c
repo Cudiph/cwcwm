@@ -39,7 +39,7 @@
 #include "cwc/luaclass.h"
 #include "cwc/server.h"
 
-/** Emitted when a pointer is moved or input device motion event is triggered..
+/** Emitted when a pointer is moved or input device motion event is triggered.
  *
  * @signal pointer::move
  * @tparam cwc_pointer pointer The pointer object.

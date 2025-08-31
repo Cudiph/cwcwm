@@ -395,10 +395,9 @@ move:
     if (dx || dy)
         wlr_cursor_move(wlr_cursor, device, dx, dy);
 
-    if (cursor->grab) {
+    if (cursor->grab)
         _send_pointer_move_signal(cursor, time_msec, device, dx, dy, dx_unaccel,
                                   dy_unaccel);
-    }
 
     cursor->dont_emit_signal = false;
 }
