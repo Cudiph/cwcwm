@@ -68,7 +68,8 @@ keyboard_get_im_grab(struct cwc_seat *seat, struct wlr_keyboard *keyboard)
 }
 
 static void process_modifier_event(struct cwc_seat *seat,
-                                   struct wlr_keyboard *wlr_kbd)
+                                   struct wlr_keyboard *wlr_kbd,
+                                   struct cwc_keyboard_property *property)
 {
     struct wlr_seat *wlr_seat = seat->wlr_seat;
     struct wlr_input_method_keyboard_grab_v2 *kbd_grab =
@@ -79,6 +80,9 @@ static void process_modifier_event(struct cwc_seat *seat,
                                                          &wlr_kbd->modifiers);
         return;
     }
+
+    if (!property->send_events)
+        return;
 
     wlr_seat_set_keyboard(wlr_seat, wlr_kbd);
     wlr_seat_keyboard_notify_modifiers(wlr_seat, &wlr_kbd->modifiers);
@@ -91,7 +95,7 @@ static void on_kbd_group_modifiers(struct wl_listener *listener, void *data)
     struct cwc_seat *seat        = kbd_group->seat;
     struct wlr_keyboard *wlr_kbd = &kbd_group->wlr_kbd_group->keyboard;
 
-    process_modifier_event(seat, wlr_kbd);
+    process_modifier_event(seat, wlr_kbd, &kbd_group->property);
 }
 
 static void on_kbd_modifiers(struct wl_listener *listener, void *data)
@@ -99,7 +103,12 @@ static void on_kbd_modifiers(struct wl_listener *listener, void *data)
     struct cwc_keyboard *kbd = wl_container_of(listener, kbd, modifiers_l);
     struct cwc_seat *seat    = kbd->seat;
 
-    process_modifier_event(seat, kbd->wlr);
+    struct cwc_keyboard_property prop = {
+        .send_events = true,
+        .grab        = false,
+    };
+
+    process_modifier_event(seat, kbd->wlr, &prop);
 }
 
 static void _send_kbd_key_signal(struct wlr_keyboard *kbd,
