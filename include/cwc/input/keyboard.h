@@ -9,16 +9,12 @@
 
 struct cwc_server;
 
-struct cwc_keyboard_property {
-    bool grab;
-    bool send_events;
-};
-
 struct cwc_keyboard_group {
     struct cwc_seat *seat;
     struct wlr_keyboard_group *wlr_kbd_group;
 
-    struct cwc_keyboard_property property;
+    bool grab;
+    bool send_events;
 
     struct wl_listener modifiers_l;
     struct wl_listener key_l;
@@ -46,7 +42,7 @@ struct wlr_surface;
 void keyboard_focus_surface(struct cwc_seat *seat, struct wlr_surface *surface);
 
 struct cwc_keyboard_key_event {
-    struct cwc_keyboard_group *kbdg;
+    struct cwc_keyboard_group *kbd_group;
     uint32_t time_msec;
     uint32_t keycode;
 };

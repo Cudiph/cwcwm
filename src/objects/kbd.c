@@ -407,7 +407,7 @@ static int luaC_kbd_get_seat(lua_State *L)
 static int luaC_kbd_get_grab(lua_State *L)
 {
     struct cwc_keyboard_group *kbdg = luaC_kbd_checkudata(L, 1);
-    lua_pushboolean(L, kbdg->property.grab);
+    lua_pushboolean(L, kbdg->grab);
 
     return 1;
 }
@@ -415,7 +415,7 @@ static int luaC_kbd_set_grab(lua_State *L)
 {
     struct cwc_keyboard_group *kbdg = luaC_kbd_checkudata(L, 1);
     bool grab                       = lua_toboolean(L, 2);
-    kbdg->property.grab             = grab;
+    kbdg->grab                      = grab;
 
     return 0;
 }
@@ -429,7 +429,7 @@ static int luaC_kbd_set_grab(lua_State *L)
 static int luaC_kbd_get_send_events(lua_State *L)
 {
     struct cwc_keyboard_group *kbdg = luaC_kbd_checkudata(L, 1);
-    lua_pushboolean(L, kbdg->property.send_events);
+    lua_pushboolean(L, kbdg->send_events);
 
     return 1;
 }
@@ -437,7 +437,7 @@ static int luaC_kbd_set_send_events(lua_State *L)
 {
     struct cwc_keyboard_group *kbdg = luaC_kbd_checkudata(L, 1);
     bool send_events                = lua_toboolean(L, 2);
-    kbdg->property.send_events      = send_events;
+    kbdg->send_events               = send_events;
 
     return 0;
 }
