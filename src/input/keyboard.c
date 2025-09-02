@@ -51,11 +51,11 @@
  * or if event is from virtual keyboard of the same client as grab.
  */
 static struct wlr_input_method_keyboard_grab_v2 *
-keyboard_get_im_grab(struct cwc_seat *seat, struct wlr_keyboard *keyboard)
+keyboard_get_im_grab(struct cwc_seat *seat,
+                     struct cwc_keyboard_group *kbd_group)
 {
-    struct cwc_input_method *im = seat->input_method;
-    struct wlr_virtual_keyboard_v1 *virtual_keyboard =
-        wlr_input_device_get_virtual_keyboard(&keyboard->base);
+    struct cwc_input_method *im                      = seat->input_method;
+    struct wlr_virtual_keyboard_v1 *virtual_keyboard = kbd_group->vkbd;
 
     if (!im || !im->wlr->keyboard_grab
         || (virtual_keyboard
@@ -73,7 +73,7 @@ static void process_modifier_event(struct cwc_keyboard_group *kbd_group)
     struct wlr_seat *wlr_seat    = seat->wlr_seat;
     struct wlr_keyboard *wlr_kbd = &kbd_group->wlr_kbd_group->keyboard;
     struct wlr_input_method_keyboard_grab_v2 *kbd_grab =
-        keyboard_get_im_grab(seat, wlr_kbd);
+        keyboard_get_im_grab(seat, kbd_group);
     if (kbd_grab) {
         wlr_input_method_keyboard_grab_v2_set_keyboard(kbd_grab, wlr_kbd);
         wlr_input_method_keyboard_grab_v2_send_modifiers(kbd_grab,
@@ -191,7 +191,7 @@ static void process_key_event(struct cwc_keyboard_group *kbd_group,
 
     if (!handled) {
         struct wlr_input_method_keyboard_grab_v2 *kbd_grab =
-            keyboard_get_im_grab(seat, wlr_kbd);
+            keyboard_get_im_grab(seat, kbd_group);
 
         if (kbd_grab) {
             wlr_input_method_keyboard_grab_v2_set_keyboard(kbd_grab, wlr_kbd);
@@ -322,17 +322,20 @@ void cwc_keyboard_update_keymap(struct wlr_keyboard *wlr_kbd)
     xkb_context_unref(ctx);
 }
 
-struct cwc_keyboard_group *cwc_keyboard_group_create(struct cwc_seat *seat,
-                                                     bool virtual)
+struct cwc_keyboard_group *
+cwc_keyboard_group_create(struct cwc_seat *seat,
+                          struct wlr_virtual_keyboard_v1 *virtual)
 {
-    struct cwc_keyboard_group *kbd_group    = calloc(1, sizeof(*kbd_group));
+    struct cwc_keyboard_group *kbd_group = calloc(1, sizeof(*kbd_group));
+    if (!kbd_group)
+        return NULL;
+
+    cwc_log(CWC_DEBUG, "creating keyboard group: %p", kbd_group);
+
     kbd_group->wlr_kbd_group                = wlr_keyboard_group_create();
     kbd_group->wlr_kbd_group->keyboard.data = kbd_group;
     kbd_group->seat                         = seat;
     kbd_group->send_events                  = true;
-    struct wlr_keyboard *wlr_kbd = &kbd_group->wlr_kbd_group->keyboard;
-
-    cwc_log(CWC_DEBUG, "creating keyboard group: %p", kbd_group);
 
     kbd_group->modifiers_l.notify = on_kbd_group_modifiers;
     kbd_group->key_l.notify       = on_kbd_group_key;
@@ -342,12 +345,14 @@ struct cwc_keyboard_group *cwc_keyboard_group_create(struct cwc_seat *seat,
                   &kbd_group->key_l);
 
     if (virtual) {
+        kbd_group->vkbd = virtual;
         wl_list_init(&kbd_group->config_commit_l.link);
     } else {
         kbd_group->config_commit_l.notify = on_config_commit;
         wl_signal_add(&g_config.events.commit, &kbd_group->config_commit_l);
     }
 
+    struct wlr_keyboard *wlr_kbd = &kbd_group->wlr_kbd_group->keyboard;
     wlr_seat_set_keyboard(seat->wlr_seat, wlr_kbd);
     cwc_keyboard_update_keymap(wlr_kbd);
     apply_config(wlr_kbd);
@@ -408,19 +413,17 @@ static void on_vkbd_destroy(struct wl_listener *listener, void *data)
     free(kbd);
 }
 
+/* vkbd keyboard group only has itself as the member */
 static void on_new_vkbd(struct wl_listener *listener, void *data)
 {
     struct wlr_virtual_keyboard_v1 *vkbd = data;
     struct cwc_seat *seat = vkbd->seat ? vkbd->seat->data : server.seat;
     struct cwc_keyboard_group *kbd_group =
-        cwc_keyboard_group_create(seat, true);
+        cwc_keyboard_group_create(seat, vkbd);
+    cwc_keyboard_group_add_device(kbd_group, &vkbd->keyboard.base);
 
     cwc_log(WLR_DEBUG, "new virtual keyboard (%s): %p", seat->wlr_seat->name,
             kbd_group);
-
-    wlr_keyboard_set_keymap(&kbd_group->wlr_kbd_group->keyboard,
-                            vkbd->keyboard.keymap);
-    wlr_keyboard_group_add_keyboard(kbd_group->wlr_kbd_group, &vkbd->keyboard);
 
     struct cwc_virtual_keyboard *cwc_vkbd = calloc(1, sizeof(*cwc_vkbd));
     cwc_vkbd->base                        = kbd_group;

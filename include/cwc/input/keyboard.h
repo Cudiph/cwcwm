@@ -12,6 +12,7 @@ struct cwc_server;
 struct cwc_keyboard_group {
     struct cwc_seat *seat;
     struct wlr_keyboard_group *wlr_kbd_group;
+    struct wlr_virtual_keyboard_v1 *vkbd;
 
     bool grab;
     bool send_events;
@@ -28,8 +29,9 @@ struct cwc_virtual_keyboard {
     struct wl_listener destroy_l;
 };
 
-struct cwc_keyboard_group *cwc_keyboard_group_create(struct cwc_seat *seat,
-                                                     bool virtual);
+struct cwc_keyboard_group *
+cwc_keyboard_group_create(struct cwc_seat *seat,
+                          struct wlr_virtual_keyboard_v1 *virtual);
 
 void cwc_keyboard_group_destroy(struct cwc_keyboard_group *kbd_group);
 

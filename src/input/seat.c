@@ -168,7 +168,7 @@ struct cwc_seat *cwc_seat_create(struct cwc_input_manager *manager,
     seat->wlr_seat->data = seat;
 
     seat->cursor    = cwc_cursor_create(seat->wlr_seat);
-    seat->kbd_group = cwc_keyboard_group_create(seat, false);
+    seat->kbd_group = cwc_keyboard_group_create(seat, NULL);
 
     wl_list_init(&seat->switch_devs);
     wl_list_init(&seat->tablet_devs);
