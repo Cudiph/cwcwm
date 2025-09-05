@@ -26,6 +26,7 @@
 
 #include <lauxlib.h>
 #include <libgen.h>
+#include <limits.h>
 #include <lua.h>
 #include <lualib.h>
 #include <stdio.h>
@@ -537,6 +538,10 @@ static int luaC_loadrc(lua_State *L, char *path)
 
     if (luacheck)
         puts(" OK");
+
+    char real_path[PATH_MAX];
+    cwc_log(CWC_INFO, "successfully loaded configuration: %s",
+            realpath(path, real_path));
 
     return 0;
 }
