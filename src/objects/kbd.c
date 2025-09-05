@@ -43,6 +43,7 @@
  * @tparam cwc_kbd kbd The keyboard object.
  * @tparam integer time_msec The event time in milliseconds.
  * @tparam integer keycode The xkb keycode.
+ * @tparam string name Name of the key.
  */
 
 /** Emitted when a key is released.
@@ -51,6 +52,7 @@
  * @tparam cwc_kbd kbd The keyboard object.
  * @tparam integer time_msec The event time in milliseconds.
  * @tparam integer keycode The xkb keycode.
+ * @tparam string name Name of the key.
  */
 //============================ CODE =================================
 

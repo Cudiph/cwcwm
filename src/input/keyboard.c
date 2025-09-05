@@ -97,17 +97,22 @@ static void on_kbd_group_modifiers(struct wl_listener *listener, void *data)
 }
 
 static void _send_kbd_key_signal(struct cwc_keyboard_group *kbd_group,
-                                 struct wlr_keyboard_key_event *event)
+                                 struct wlr_keyboard_key_event *event,
+                                 xkb_keysym_t keysym)
 {
     lua_State *L = g_config_get_lua_State();
     if (!luaC_object_valid(L, kbd_group))
         return;
+
+    char keyname[65] = {0};
+    xkb_keysym_get_name(keysym, keyname, 64);
 
     uint32_t xkb_keycode = event->keycode + 8;
     lua_settop(L, 0);
     luaC_object_push(L, kbd_group);
     lua_pushnumber(L, event->time_msec);
     lua_pushnumber(L, xkb_keycode);
+    lua_pushstring(L, keyname);
 
     struct cwc_keyboard_key_event cwc_event = {.kbd_group = kbd_group,
                                                .time_msec = event->time_msec,
@@ -214,7 +219,7 @@ static void process_key_event(struct cwc_keyboard_group *kbd_group,
 
 send_signal:
     if (kbd_group->grab)
-        _send_kbd_key_signal(kbd_group, event);
+        _send_kbd_key_signal(kbd_group, event, keysym);
 }
 
 static void on_kbd_group_key(struct wl_listener *listener, void *data)
