@@ -398,6 +398,22 @@ static int luaC_kbd_get_seat(lua_State *L)
     return 1;
 }
 
+/** Get active modifiers in this keyboard.
+ *
+ * @property modifiers
+ * @tparam[opt=0] bitfield modifiers
+ * @readonly
+ */
+static int luaC_kbd_get_modifiers(lua_State *L)
+{
+    struct cwc_keyboard_group *kbdg = luaC_kbd_checkudata(L, 1);
+
+    uint32_t mods = wlr_keyboard_get_modifiers(&kbdg->wlr_kbd_group->keyboard);
+    lua_pushnumber(L, mods);
+
+    return 1;
+}
+
 /** Grab the keyboard event and redirect it to signal.
  *
  * @property grab
@@ -461,10 +477,9 @@ void luaC_kbd_setup(lua_State *L)
     };
 
     luaL_Reg kbd_methods[] = {
-        REG_READ_ONLY(seat),
+        REG_READ_ONLY(seat), REG_READ_ONLY(modifiers),
 
-        REG_PROPERTY(grab),
-        REG_PROPERTY(send_events),
+        REG_PROPERTY(grab),  REG_PROPERTY(send_events),
 
         {NULL, NULL},
     };

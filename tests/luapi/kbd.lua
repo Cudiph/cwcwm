@@ -33,6 +33,7 @@ end
 
 local function ro_test(kbd)
     assert(kbd.seat == "seat0")
+    assert(kbd.modifiers == 0)
 end
 
 local function prop_test(kbd)
