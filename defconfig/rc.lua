@@ -193,15 +193,3 @@ end)
 cwc.connect_signal("screen::mouse_enter", function(s)
     s:focus()
 end)
-
-cwc.connect_signal("pointer::move", function(pointer, msec, dx, dy, dx_u, dy_u)
-    print(pointer, msec, dx, dy, dx_u, dy_u)
-end)
-
-cwc.connect_signal("kbd::pressed", function(kbdg, msec, keycode, keyname)
-    print("press", kbdg, msec, keycode, keyname)
-end)
-
-cwc.connect_signal("kbd::released", function(kbdg, msec, keycode, keyname)
-    print("release", kbdg, msec, keycode, keyname)
-end)

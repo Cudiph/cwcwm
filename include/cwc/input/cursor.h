@@ -158,8 +158,12 @@ struct cwc_pointer_move_event {
 
 struct cwc_pointer_button_event {
     struct cwc_cursor *cursor;
-    uint32_t button;
-    bool press;
+    struct wlr_pointer_button_event *event;
+};
+
+struct cwc_pointer_axis_event {
+    struct cwc_cursor *cursor;
+    struct wlr_pointer_axis_event *event;
 };
 
 #endif // !_CWC_INPUT_CURSOR_H

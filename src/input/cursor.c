@@ -498,6 +498,24 @@ static void on_cursor_motion_absolute(struct wl_listener *listener, void *data)
     process_cursor_motion(cursor, event->time_msec, device, dx, dy, dx, dy);
 }
 
+static void _send_pointer_axis_signal(struct cwc_cursor *cursor,
+                                      struct wlr_pointer_axis_event *event)
+{
+    struct cwc_pointer_axis_event cwc_event = {
+        .cursor = cursor,
+        .event  = event,
+    };
+
+    lua_State *L = g_config_get_lua_State();
+    lua_settop(L, 0);
+    luaC_object_push(L, cursor);
+    lua_pushnumber(L, event->time_msec);
+    lua_pushboolean(L, event->orientation);
+    lua_pushnumber(L, event->delta);
+    lua_pushnumber(L, event->delta_discrete);
+    cwc_signal_emit("pointer::axis", &cwc_event, L, 5);
+}
+
 /* scroll wheel */
 static void on_cursor_axis(struct wl_listener *listener, void *data)
 {
@@ -508,12 +526,13 @@ static void on_cursor_axis(struct wl_listener *listener, void *data)
     wlr_idle_notifier_v1_notify_activity(server.idle->idle_notifier,
                                          cursor->seat);
 
-    if (!cursor->send_events)
-        return;
+    if (cursor->send_events)
+        wlr_seat_pointer_notify_axis(
+            cursor->seat, event->time_msec, event->orientation, event->delta,
+            event->delta_discrete, event->source, event->relative_direction);
 
-    wlr_seat_pointer_notify_axis(
-        cursor->seat, event->time_msec, event->orientation, event->delta,
-        event->delta_discrete, event->source, event->relative_direction);
+    if (cursor->grab)
+        _send_pointer_axis_signal(cursor, event);
 }
 
 void start_interactive_move(struct cwc_toplevel *toplevel)
@@ -841,21 +860,21 @@ void stop_interactive(struct cwc_cursor *cursor)
     *grabbed = NULL;
 }
 
-static void _send_pointer_button_event(struct cwc_cursor *cursor,
-                                       uint32_t button,
-                                       bool press)
+static void _send_pointer_button_signal(struct cwc_cursor *cursor,
+                                        struct wlr_pointer_button_event *event,
+                                        bool press)
 {
-    struct cwc_pointer_button_event event = {
+    struct cwc_pointer_button_event cwc_event = {
         .cursor = cursor,
-        .button = button,
-        .press  = press,
+        .event  = event,
     };
     lua_State *L = g_config_get_lua_State();
     lua_settop(L, 0);
     luaC_object_push(L, cursor);
-    lua_pushnumber(L, button);
-    lua_pushboolean(L, press);
-    cwc_signal_emit("pointer::button", &event, L, 3);
+    lua_pushnumber(L, event->time_msec);
+    lua_pushnumber(L, event->button);
+    lua_pushboolean(L, event->state);
+    cwc_signal_emit("pointer::button", &cwc_event, L, 4);
 }
 
 /* mouse click */
@@ -900,15 +919,13 @@ static void on_cursor_button(struct wl_listener *listener, void *data)
                               false);
     }
 
+    if (!handled && cursor->send_events)
+        wlr_seat_pointer_notify_button(cursor->seat, event->time_msec,
+                                       event->button, event->state);
+
     if (cursor->grab)
-        _send_pointer_button_event(cursor, event->button,
-                                   WL_POINTER_BUTTON_STATE_PRESSED);
-
-    if (handled || !cursor->send_events)
-        return;
-
-    wlr_seat_pointer_notify_button(cursor->seat, event->time_msec,
-                                   event->button, event->state);
+        _send_pointer_button_signal(cursor, event,
+                                    WL_POINTER_BUTTON_STATE_PRESSED);
 }
 
 /* cursor render */

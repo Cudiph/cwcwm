@@ -50,6 +50,27 @@
  * @tparam number dy_unaccel The y vector unaccelerated.
  */
 
+/** Emitted when a mouse button is pressed/released.
+ *
+ * @signal pointer::button
+ * @tparam cwc_pointer pointer The pointer object.
+ * @tparam integer time_msec The event time in milliseconds.
+ * @tparam integer button The button code from linux/input-event-codes.h.
+ * @tparam boolean pressed The state of the button, `true` means pressed.
+ * @see cuteful.enum.mouse_btn
+ */
+
+/** Emitted when an axis event is triggered.
+ *
+ * @signal pointer::axis
+ * @tparam cwc_pointer pointer The pointer object.
+ * @tparam integer time_msec The event time in milliseconds.
+ * @tparam boolean horizontal The orientation of the axis.
+ * @tparam number delta
+ * @tparam number delta_discrete
+ * @see cuteful.enum.mouse_axis
+ */
+
 //============================ CODE =================================
 
 /** Get all pointer in the server.
