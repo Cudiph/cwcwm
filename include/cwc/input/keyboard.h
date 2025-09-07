@@ -12,6 +12,10 @@ struct cwc_server;
 struct cwc_keyboard_group {
     struct cwc_seat *seat;
     struct wlr_keyboard_group *wlr_kbd_group;
+    struct wlr_virtual_keyboard_v1 *vkbd;
+
+    bool grab;
+    bool send_events;
 
     struct wl_listener modifiers_l;
     struct wl_listener key_l;
@@ -19,22 +23,15 @@ struct cwc_keyboard_group {
     struct wl_listener config_commit_l; // for native
 };
 
-struct cwc_keyboard {
-    struct cwc_seat *seat;
-    struct wlr_keyboard *wlr;
-
-    struct wl_listener modifiers_l;
-    struct wl_listener key_l;
-};
-
 struct cwc_virtual_keyboard {
-    struct cwc_keyboard *base;
+    struct cwc_keyboard_group *base;
 
     struct wl_listener destroy_l;
 };
 
-struct cwc_keyboard_group *cwc_keyboard_group_create(struct cwc_seat *seat,
-                                                     bool virtual);
+struct cwc_keyboard_group *
+cwc_keyboard_group_create(struct cwc_seat *seat,
+                          struct wlr_virtual_keyboard_v1 *virtual);
 
 void cwc_keyboard_group_destroy(struct cwc_keyboard_group *kbd_group);
 
@@ -45,6 +42,12 @@ void cwc_keyboard_update_keymap(struct wlr_keyboard *wlr_kbd);
 
 struct wlr_surface;
 void keyboard_focus_surface(struct cwc_seat *seat, struct wlr_surface *surface);
+
+struct cwc_keyboard_key_event {
+    struct cwc_keyboard_group *kbd_group;
+    uint32_t time_msec;
+    uint32_t keycode;
+};
 
 //================== KEYBINDING ====================
 enum cwc_keybind_type {

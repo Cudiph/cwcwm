@@ -12,9 +12,9 @@ local signal_list = {
     "screen::prop::active_workspace",
     "screen::prop::selected_tag",
     "screen::focus",
-    "screen::unfocus",
+    -- "screen::unfocus",
     "screen::mouse_enter",
-    "screen::mouse_leave",
+    -- "screen::mouse_leave",
 }
 
 local triggered_list = {}

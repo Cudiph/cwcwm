@@ -44,9 +44,8 @@ file                                          = {
     "../src/objects/screen.c",
     "../src/objects/tag.c",
     "../src/objects/timer.c",
-
-    "../src/input/cursor.c",
-    "../src/input/keybinding.c",
+    "../src/objects/pointer.c",
+    "../src/objects/kbd.c",
 
     "../plugins/cwcle.c",
 
@@ -2243,6 +2242,8 @@ local coreclassmap = {
 
 local inputmodulemap = {
     ["cwc.input"] = "cwc.input<span class='listplusign'> + cwc_input</span>",
+    ["cwc.kbd"] = "cwc.kbd<span class='listplusign'> + cwc_kbd</span>",
+    ["cwc.pointer"] = "cwc.pointer<span class='listplusign'> + cwc_pointer</span>",
 }
 
 -- Add the full module name in front.

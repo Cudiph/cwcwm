@@ -21,7 +21,7 @@ local signal_list = {
     "client::property::maximized",
     "client::property::minimized",
     "client::property::floating",
-    "client::property::urgent",
+    -- "client::property::urgent",
     "client::property::tag",
     "client::property::workspace",
     "client::prop::title",

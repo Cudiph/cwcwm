@@ -66,8 +66,11 @@ struct cwc_cursor {
     struct wl_event_source *animation_timer;
     float scale;
 
+    // states
     struct wlr_pointer_constraint_v1 *active_constraint;
     bool dont_emit_signal;
+    bool grab;
+    bool send_events;
     struct cwc_output *last_output;
 
     // cursor inactive timeout
@@ -143,5 +146,24 @@ void start_interactive_resize(struct cwc_toplevel *toplevel, uint32_t edges);
 
 /* no op when is not from interactive */
 void stop_interactive(struct cwc_cursor *cursor);
+
+/* signal data struct */
+struct cwc_pointer_move_event {
+    struct cwc_cursor *cursor;
+    double dx;
+    double dy;
+    double dx_unaccel;
+    double dy_unaccel;
+};
+
+struct cwc_pointer_button_event {
+    struct cwc_cursor *cursor;
+    struct wlr_pointer_button_event *event;
+};
+
+struct cwc_pointer_axis_event {
+    struct cwc_cursor *cursor;
+    struct wlr_pointer_axis_event *event;
+};
 
 #endif // !_CWC_INPUT_CURSOR_H

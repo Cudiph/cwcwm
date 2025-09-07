@@ -39,20 +39,23 @@
 #include "cwc/input/seat.h"
 #include "cwc/input/text_input.h"
 #include "cwc/layout/bsp.h"
+#include "cwc/luaclass.h"
+#include "cwc/luaobject.h"
 #include "cwc/server.h"
 #include "cwc/signal.h"
 #include "cwc/util.h"
+#include "lua.h"
 
 /**
  * Returns NULL if the keyboard is not grabbed by an input method,
  * or if event is from virtual keyboard of the same client as grab.
  */
 static struct wlr_input_method_keyboard_grab_v2 *
-keyboard_get_im_grab(struct cwc_seat *seat, struct wlr_keyboard *keyboard)
+keyboard_get_im_grab(struct cwc_seat *seat,
+                     struct cwc_keyboard_group *kbd_group)
 {
-    struct cwc_input_method *im = seat->input_method;
-    struct wlr_virtual_keyboard_v1 *virtual_keyboard =
-        wlr_input_device_get_virtual_keyboard(&keyboard->base);
+    struct cwc_input_method *im                      = seat->input_method;
+    struct wlr_virtual_keyboard_v1 *virtual_keyboard = kbd_group->vkbd;
 
     if (!im || !im->wlr->keyboard_grab
         || (virtual_keyboard
@@ -64,18 +67,22 @@ keyboard_get_im_grab(struct cwc_seat *seat, struct wlr_keyboard *keyboard)
     return im->wlr->keyboard_grab;
 }
 
-static void process_modifier_event(struct cwc_seat *seat,
-                                   struct wlr_keyboard *wlr_kbd)
+static void process_modifier_event(struct cwc_keyboard_group *kbd_group)
 {
-    struct wlr_seat *wlr_seat = seat->wlr_seat;
+    struct cwc_seat *seat        = kbd_group->seat;
+    struct wlr_seat *wlr_seat    = seat->wlr_seat;
+    struct wlr_keyboard *wlr_kbd = &kbd_group->wlr_kbd_group->keyboard;
     struct wlr_input_method_keyboard_grab_v2 *kbd_grab =
-        keyboard_get_im_grab(seat, wlr_kbd);
+        keyboard_get_im_grab(seat, kbd_group);
     if (kbd_grab) {
         wlr_input_method_keyboard_grab_v2_set_keyboard(kbd_grab, wlr_kbd);
         wlr_input_method_keyboard_grab_v2_send_modifiers(kbd_grab,
                                                          &wlr_kbd->modifiers);
         return;
     }
+
+    if (!kbd_group->send_events)
+        return;
 
     wlr_seat_set_keyboard(wlr_seat, wlr_kbd);
     wlr_seat_keyboard_notify_modifiers(wlr_seat, &wlr_kbd->modifiers);
@@ -85,25 +92,51 @@ static void on_kbd_group_modifiers(struct wl_listener *listener, void *data)
 {
     struct cwc_keyboard_group *kbd_group =
         wl_container_of(listener, kbd_group, modifiers_l);
-    struct cwc_seat *seat        = kbd_group->seat;
-    struct wlr_keyboard *wlr_kbd = &kbd_group->wlr_kbd_group->keyboard;
 
-    process_modifier_event(seat, wlr_kbd);
+    process_modifier_event(kbd_group);
 }
 
-static void on_kbd_modifiers(struct wl_listener *listener, void *data)
+static void _send_kbd_key_signal(struct cwc_keyboard_group *kbd_group,
+                                 struct wlr_keyboard_key_event *event,
+                                 xkb_keysym_t keysym)
 {
-    struct cwc_keyboard *kbd = wl_container_of(listener, kbd, modifiers_l);
-    struct cwc_seat *seat    = kbd->seat;
+    lua_State *L = g_config_get_lua_State();
+    if (!luaC_object_valid(L, kbd_group))
+        return;
 
-    process_modifier_event(seat, kbd->wlr);
+    char keyname[65] = {0};
+    xkb_keysym_get_name(keysym, keyname, 64);
+
+    uint32_t xkb_keycode = event->keycode + 8;
+    lua_settop(L, 0);
+    luaC_object_push(L, kbd_group);
+    lua_pushnumber(L, event->time_msec);
+    lua_pushnumber(L, xkb_keycode);
+    lua_pushstring(L, keyname);
+
+    struct cwc_keyboard_key_event cwc_event = {.kbd_group = kbd_group,
+                                               .time_msec = event->time_msec,
+                                               .keycode   = xkb_keycode};
+
+    switch (event->state) {
+    case WL_KEYBOARD_KEY_STATE_PRESSED:
+        cwc_signal_emit("kbd::pressed", &cwc_event, L, 3);
+        break;
+    case WL_KEYBOARD_KEY_STATE_RELEASED:
+        cwc_signal_emit("kbd::released", &cwc_event, L, 3);
+        break;
+    default:
+        cwc_log(CWC_ERROR, "TODO: handle repeat");
+        break;
+    }
 }
 
-static void process_key_event(struct cwc_seat *seat,
-                              struct wlr_keyboard *kbd,
+static void process_key_event(struct cwc_keyboard_group *kbd_group,
                               struct wlr_keyboard_key_event *event)
 {
-    struct wlr_seat *wlr_seat = seat->wlr_seat;
+    struct cwc_seat *seat        = kbd_group->seat;
+    struct wlr_keyboard *wlr_kbd = &kbd_group->wlr_kbd_group->keyboard;
+    struct wlr_seat *wlr_seat    = seat->wlr_seat;
 
     wlr_idle_notifier_v1_notify_activity(server.idle->idle_notifier, wlr_seat);
 
@@ -114,11 +147,11 @@ static void process_key_event(struct cwc_seat *seat,
     // don't need to account keyname change when the modifier is changed.
     // It will also look more readable e.g. MOD + "1" | MOD + SHIFT + "1"
     // while using transformed is MOD + "1" + MOD | SHIFT + "exclam".
-    struct xkb_state *state = xkb_state_new(kbd->keymap);
+    struct xkb_state *state = xkb_state_new(wlr_kbd->keymap);
     int keysym              = xkb_state_key_get_one_sym(state, keycode);
     xkb_state_unref(state);
 
-    uint32_t modifiers = wlr_keyboard_get_modifiers(kbd);
+    uint32_t modifiers = wlr_keyboard_get_modifiers(wlr_kbd);
     bool handled       = 0;
 
     struct cwc_keybind_map *kmap;
@@ -153,14 +186,20 @@ static void process_key_event(struct cwc_seat *seat,
                 keybind_kbd_execute(kmap, seat, modifiers, keysym, false);
         }
         break;
+    default:
+        cwc_log(CWC_ERROR, "TODO: HANDLE REPEAT");
+        break;
     }
+
+    if (!kbd_group->send_events)
+        goto send_signal;
 
     if (!handled) {
         struct wlr_input_method_keyboard_grab_v2 *kbd_grab =
-            keyboard_get_im_grab(seat, kbd);
+            keyboard_get_im_grab(seat, kbd_group);
 
         if (kbd_grab) {
-            wlr_input_method_keyboard_grab_v2_set_keyboard(kbd_grab, kbd);
+            wlr_input_method_keyboard_grab_v2_set_keyboard(kbd_grab, wlr_kbd);
             wlr_input_method_keyboard_grab_v2_send_key(
                 kbd_grab, event->time_msec, event->keycode, event->state);
             handled = true;
@@ -173,36 +212,28 @@ static void process_key_event(struct cwc_seat *seat,
     }
 
     if (!handled) {
-        wlr_seat_set_keyboard(wlr_seat, kbd);
+        wlr_seat_set_keyboard(wlr_seat, wlr_kbd);
         wlr_seat_keyboard_notify_key(wlr_seat, event->time_msec, event->keycode,
                                      event->state);
     }
+
+send_signal:
+    if (kbd_group->grab)
+        _send_kbd_key_signal(kbd_group, event, keysym);
 }
 
 static void on_kbd_group_key(struct wl_listener *listener, void *data)
 {
     struct cwc_keyboard_group *kbd_group =
         wl_container_of(listener, kbd_group, key_l);
-    struct cwc_seat *seat                = kbd_group->seat;
-    struct wlr_keyboard *wlr_kbd         = &kbd_group->wlr_kbd_group->keyboard;
     struct wlr_keyboard_key_event *event = data;
 
-    process_key_event(seat, wlr_kbd, event);
-}
-
-static void on_kbd_key(struct wl_listener *listener, void *data)
-{
-    struct cwc_keyboard *kbd = wl_container_of(listener, kbd, key_l);
-    struct cwc_seat *seat    = kbd->seat;
-    struct wlr_keyboard_key_event *event = data;
-
-    process_key_event(seat, kbd->wlr, event);
+    process_key_event(kbd_group, event);
 }
 
 static void _notify_focus_signal(struct wlr_surface *old_surface,
                                  struct wlr_surface *new_surface)
 {
-
     struct cwc_toplevel *old = cwc_toplevel_try_from_wlr_surface(old_surface);
     struct cwc_toplevel *new = cwc_toplevel_try_from_wlr_surface(new_surface);
 
@@ -296,49 +327,20 @@ void cwc_keyboard_update_keymap(struct wlr_keyboard *wlr_kbd)
     xkb_context_unref(ctx);
 }
 
-struct cwc_keyboard *cwc_keyboard_create(struct cwc_seat *seat,
-                                         struct wlr_input_device *dev)
-{
-    struct cwc_keyboard *kbd = calloc(1, sizeof(*kbd));
-    if (!kbd)
-        return NULL;
-
-    cwc_log(CWC_DEBUG, "creating keyboard: %p", kbd);
-
-    kbd->wlr  = wlr_keyboard_from_input_device(dev);
-    kbd->seat = seat;
-
-    wlr_seat_set_keyboard(seat->wlr_seat, kbd->wlr);
-    cwc_keyboard_update_keymap(kbd->wlr);
-    apply_config(kbd->wlr);
-
-    kbd->key_l.notify       = on_kbd_key;
-    kbd->modifiers_l.notify = on_kbd_modifiers;
-    wl_signal_add(&kbd->wlr->events.key, &kbd->key_l);
-    wl_signal_add(&kbd->wlr->events.modifiers, &kbd->modifiers_l);
-
-    return kbd;
-}
-
-void cwc_keyboard_destroy(struct cwc_keyboard *kbd)
-{
-    cwc_log(CWC_DEBUG, "destroying keyboard: %p", kbd);
-
-    wl_list_remove(&kbd->modifiers_l.link);
-    wl_list_remove(&kbd->key_l.link);
-
-    free(kbd);
-}
-
-struct cwc_keyboard_group *cwc_keyboard_group_create(struct cwc_seat *seat,
-                                                     bool virtual)
+struct cwc_keyboard_group *
+cwc_keyboard_group_create(struct cwc_seat *seat,
+                          struct wlr_virtual_keyboard_v1 *virtual)
 {
     struct cwc_keyboard_group *kbd_group = calloc(1, sizeof(*kbd_group));
-    kbd_group->wlr_kbd_group             = wlr_keyboard_group_create();
-    kbd_group->seat                      = seat;
-    struct wlr_keyboard *wlr_kbd         = &kbd_group->wlr_kbd_group->keyboard;
+    if (!kbd_group)
+        return NULL;
 
     cwc_log(CWC_DEBUG, "creating keyboard group: %p", kbd_group);
+
+    kbd_group->wlr_kbd_group                = wlr_keyboard_group_create();
+    kbd_group->wlr_kbd_group->keyboard.data = kbd_group;
+    kbd_group->seat                         = seat;
+    kbd_group->send_events                  = true;
 
     kbd_group->modifiers_l.notify = on_kbd_group_modifiers;
     kbd_group->key_l.notify       = on_kbd_group_key;
@@ -347,12 +349,21 @@ struct cwc_keyboard_group *cwc_keyboard_group_create(struct cwc_seat *seat,
     wl_signal_add(&kbd_group->wlr_kbd_group->keyboard.events.key,
                   &kbd_group->key_l);
 
-    kbd_group->config_commit_l.notify = on_config_commit;
-    wl_signal_add(&g_config.events.commit, &kbd_group->config_commit_l);
+    if (virtual) {
+        kbd_group->vkbd = virtual;
+        wl_list_init(&kbd_group->config_commit_l.link);
+    } else {
+        kbd_group->config_commit_l.notify = on_config_commit;
+        wl_signal_add(&g_config.events.commit, &kbd_group->config_commit_l);
+    }
 
+    struct wlr_keyboard *wlr_kbd = &kbd_group->wlr_kbd_group->keyboard;
     wlr_seat_set_keyboard(seat->wlr_seat, wlr_kbd);
     cwc_keyboard_update_keymap(wlr_kbd);
     apply_config(wlr_kbd);
+
+    lua_State *L = g_config_get_lua_State();
+    luaC_object_kbd_register(L, kbd_group);
 
     return kbd_group;
 }
@@ -360,6 +371,9 @@ struct cwc_keyboard_group *cwc_keyboard_group_create(struct cwc_seat *seat,
 void cwc_keyboard_group_destroy(struct cwc_keyboard_group *kbd_group)
 {
     cwc_log(CWC_DEBUG, "destroying keyboard group: %p", kbd_group);
+
+    lua_State *L = g_config_get_lua_State();
+    luaC_object_unregister(L, kbd_group);
 
     wl_list_remove(&kbd_group->modifiers_l.link);
     wl_list_remove(&kbd_group->key_l.link);
@@ -400,24 +414,24 @@ static void on_vkbd_destroy(struct wl_listener *listener, void *data)
 
     wl_list_remove(&kbd->destroy_l.link);
 
-    cwc_keyboard_destroy(kbd->base);
+    cwc_keyboard_group_destroy(kbd->base);
     free(kbd);
 }
 
+/* vkbd keyboard group only has itself as the member */
 static void on_new_vkbd(struct wl_listener *listener, void *data)
 {
     struct wlr_virtual_keyboard_v1 *vkbd = data;
-    struct cwc_seat *seat    = vkbd->seat ? vkbd->seat->data : server.seat;
-    struct cwc_keyboard *kbd = cwc_keyboard_create(seat, &vkbd->keyboard.base);
+    struct cwc_seat *seat = vkbd->seat ? vkbd->seat->data : server.seat;
+    struct cwc_keyboard_group *kbd_group =
+        cwc_keyboard_group_create(seat, vkbd);
+    cwc_keyboard_group_add_device(kbd_group, &vkbd->keyboard.base);
 
     cwc_log(WLR_DEBUG, "new virtual keyboard (%s): %p", seat->wlr_seat->name,
-            kbd);
-
-    if (vkbd->has_keymap)
-        wlr_keyboard_set_keymap(kbd->wlr, vkbd->keyboard.keymap);
+            kbd_group);
 
     struct cwc_virtual_keyboard *cwc_vkbd = calloc(1, sizeof(*cwc_vkbd));
-    cwc_vkbd->base                        = kbd;
+    cwc_vkbd->base                        = kbd_group;
 
     cwc_vkbd->destroy_l.notify = on_vkbd_destroy;
     wl_signal_add(&vkbd->keyboard.base.events.destroy, &cwc_vkbd->destroy_l);
