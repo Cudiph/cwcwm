@@ -2,8 +2,9 @@ local cwc = cwc
 local objname = "cwc_pointer"
 
 local signal_list = {
-    "pointer::move",
+    -- "pointer::move",
     -- "pointer::button",
+    -- "pointer::move",
 }
 
 local triggered_list = {}
