@@ -51,9 +51,11 @@ struct cwc_server {
     struct wl_listener new_xdg_toplevel_l;
     struct wl_listener new_xdg_popup_l;
 
+#ifdef CWC_XWAYLAND
     struct wlr_xwayland *xwayland;
     struct wl_listener xw_ready_l;
     struct wl_listener xw_new_surface_l;
+#endif // CWC_XWAYLAND
 
     struct wlr_xdg_decoration_manager_v1 *xdg_decoration_manager;
     struct wl_listener new_decoration_l;

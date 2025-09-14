@@ -31,8 +31,11 @@
 #include <wlr/types/wlr_xdg_activation_v1.h>
 #include <wlr/types/wlr_xdg_decoration_v1.h>
 #include <wlr/util/box.h>
+
+#ifdef CWC_XWAYLAND
 #include <xcb/xcb.h>
 #include <xcb/xproto.h>
+#endif /* ifdef CWC_XWAYLAND */
 
 #include "cwc/config.h"
 #include "cwc/desktop/layer_shell.h"
@@ -391,6 +394,7 @@ static void on_toplevel_destroy(struct wl_listener *listener, void *data)
     wl_list_remove(&toplevel->set_appid_l.link);
     wl_list_remove(&toplevel->set_title_l.link);
 
+#ifdef CWC_XWAYLAND
     if (cwc_toplevel_is_x11(toplevel)) {
         wl_list_remove(&toplevel->xwprops->associate_l.link);
         wl_list_remove(&toplevel->xwprops->dissociate_l.link);
@@ -398,6 +402,9 @@ static void on_toplevel_destroy(struct wl_listener *listener, void *data)
         wl_list_remove(&toplevel->xwprops->req_activate_l.link);
         free(toplevel->xwprops);
     } else {
+#else
+    {
+#endif // CWC_XWAYLAND
         wl_list_remove(&toplevel->map_l.link);
         wl_list_remove(&toplevel->unmap_l.link);
         wl_list_remove(&toplevel->commit_l.link);
@@ -465,6 +472,7 @@ static void cwc_toplevel_init_common_stuff(struct cwc_toplevel *toplevel)
     toplevel->set_title_l.notify = on_set_title;
     toplevel->set_appid_l.notify = on_set_app_id;
 
+#ifdef CWC_XWAYLAND
     if (cwc_toplevel_is_x11(toplevel)) {
         struct wlr_xwayland_surface *xwsurface = toplevel->xwsurface;
         wl_signal_add(&xwsurface->events.destroy, &toplevel->destroy_l);
@@ -481,8 +489,10 @@ static void cwc_toplevel_init_common_stuff(struct cwc_toplevel *toplevel)
 
         wl_signal_add(&xwsurface->events.set_title, &toplevel->set_title_l);
         wl_signal_add(&xwsurface->events.set_class, &toplevel->set_appid_l);
-
     } else {
+#else
+    {
+#endif // CWC_XWAYLAND
         struct wlr_xdg_toplevel *xdg_toplevel = toplevel->xdg_toplevel;
         wl_signal_add(&xdg_toplevel->events.destroy, &toplevel->destroy_l);
         wl_signal_add(&xdg_toplevel->events.request_maximize,
@@ -877,6 +887,8 @@ void cleanup_decoration_manager(struct cwc_server *s)
 
 //================ XWAYLAND ==================
 
+#ifdef CWC_XWAYLAND
+
 /* - */
 static void on_request_configure(struct wl_listener *listener, void *data)
 {
@@ -998,20 +1010,25 @@ void xwayland_fini(struct cwc_server *s)
     s->xwayland = NULL;
 }
 
+#endif /* ifdef CWC_XWAYLAND */
+
 //================= TOPLEVEL ACTIONS =======================
 
 void cwc_toplevel_send_close(struct cwc_toplevel *toplevel)
 {
+#ifdef CWC_XWAYLAND
     if (cwc_toplevel_is_x11(toplevel)) {
         wlr_xwayland_surface_close(toplevel->xwsurface);
         return;
     }
+#endif // CWC_XWAYLAND
 
     wlr_xdg_toplevel_send_close(toplevel->xdg_toplevel);
 }
 
 void cwc_toplevel_kill(struct cwc_toplevel *toplevel)
 {
+#ifdef CWC_XWAYLAND
     if (cwc_toplevel_is_x11(toplevel)) {
         xcb_connection_t *conn =
             wlr_xwayland_get_xwm_connection(server.xwayland);
@@ -1019,6 +1036,7 @@ void cwc_toplevel_kill(struct cwc_toplevel *toplevel)
         xcb_flush(conn);
         return;
     }
+#endif // CWC_XWAYLAND
 
     wl_client_destroy(toplevel->xdg_toplevel->base->client->client);
 }
@@ -1060,6 +1078,7 @@ cwc_toplevel_try_from_wlr_surface(struct wlr_surface *surface)
             return (struct cwc_toplevel *)data;
     }
 
+#ifdef CWC_XWAYLAND
     struct wlr_xwayland_surface *wlr_xwayland =
         wlr_xwayland_surface_try_from_wlr_surface(surface);
 
@@ -1068,12 +1087,14 @@ cwc_toplevel_try_from_wlr_surface(struct wlr_surface *surface)
         if (data->type == DATA_TYPE_XWAYLAND)
             return (struct cwc_toplevel *)data;
     }
+#endif // CWC_XWAYLAND
 
     return NULL;
 }
 
 struct wlr_box cwc_toplevel_get_geometry(struct cwc_toplevel *toplevel)
 {
+#ifdef CWC_XWAYLAND
     if (cwc_toplevel_is_x11(toplevel)) {
         return (struct wlr_box){
             .x      = toplevel->xwsurface->x,
@@ -1082,6 +1103,7 @@ struct wlr_box cwc_toplevel_get_geometry(struct cwc_toplevel *toplevel)
             .height = toplevel->xwsurface->height,
         };
     }
+#endif // CWC_XWAYLAND
 
     return toplevel->xdg_toplevel->base->geometry;
 }
@@ -1250,6 +1272,7 @@ inline bool cwc_toplevel_is_visible(struct cwc_toplevel *toplevel)
 
 bool cwc_toplevel_should_float(struct cwc_toplevel *toplevel)
 {
+#ifdef CWC_XWAYLAND
     if (cwc_toplevel_is_x11(toplevel)) {
         struct wlr_xwayland_surface *surface = toplevel->xwsurface;
         xcb_size_hints_t *size_hints         = surface->size_hints;
@@ -1261,6 +1284,7 @@ bool cwc_toplevel_should_float(struct cwc_toplevel *toplevel)
                && (size_hints->max_width == size_hints->min_width
                    || size_hints->max_height == size_hints->min_height);
     }
+#endif // CWC_XWAYLAND
 
     struct wlr_xdg_toplevel_state state = toplevel->xdg_toplevel->current;
     return toplevel->xdg_toplevel->parent
@@ -1271,12 +1295,14 @@ bool cwc_toplevel_should_float(struct cwc_toplevel *toplevel)
 
 void cwc_toplevel_set_tiled(struct cwc_toplevel *toplevel, uint32_t edges)
 {
+#ifdef CWC_XWAYLAND
     if (cwc_toplevel_is_x11(toplevel)) {
         wlr_xwayland_surface_set_maximized(toplevel->xwsurface,
                                            edges != WLR_EDGE_NONE,
                                            edges != WLR_EDGE_NONE);
         return;
     }
+#endif // CWC_XWAYLAND
 
     if (wl_resource_get_version(toplevel->xdg_toplevel->resource)
         >= XDG_TOPLEVEL_STATE_TILED_RIGHT_SINCE_VERSION) {

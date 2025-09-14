@@ -13,7 +13,10 @@
 #include <wlr/types/wlr_output_layout.h>
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_xdg_shell.h>
+
+#ifdef CWC_XWAYLAND
 #include <wlr/xwayland.h>
+#endif // CWC_XWAYLAND
 
 #include "cwc/layout/container.h"
 #include "cwc/types.h"
@@ -109,6 +112,8 @@ scene_surface_at(double lx, double ly, double *sx, double *sy);
 
 //================ XWAYLAND ==================
 
+#ifdef CWC_XWAYLAND
+
 /* additional toplevel props for xwayland shell */
 struct xwayland_props {
     struct cwc_toplevel *toplevel;
@@ -119,6 +124,8 @@ struct xwayland_props {
     struct wl_listener req_configure_l;
     struct wl_listener req_activate_l;
 };
+
+#endif // CWC_XWAYLAND
 
 void cwc_toplevel_send_close(struct cwc_toplevel *toplevel);
 void cwc_toplevel_kill(struct cwc_toplevel *toplevel);
@@ -247,8 +254,11 @@ static inline bool cwc_toplevel_is_x11(struct cwc_toplevel *toplevel)
 
 static inline bool cwc_toplevel_is_unmanaged(struct cwc_toplevel *toplevel)
 {
+#ifdef CWC_XWAYLAND
     if (cwc_toplevel_is_x11(toplevel))
         return toplevel->xwsurface->override_redirect;
+#endif // CWC_XWAYLAND
+
     return false;
 }
 
@@ -265,10 +275,12 @@ static inline void cwc_toplevel_set_suspended(struct cwc_toplevel *toplevel,
 static inline void __cwc_toplevel_set_fullscreen(struct cwc_toplevel *toplevel,
                                                  bool set)
 {
+#ifdef CWC_XWAYLAND
     if (cwc_toplevel_is_x11(toplevel)) {
         wlr_xwayland_surface_set_fullscreen(toplevel->xwsurface, set);
         return;
     }
+#endif // CWC_XWAYLAND
 
     wlr_xdg_toplevel_set_fullscreen(toplevel->xdg_toplevel, set);
 }
@@ -276,10 +288,12 @@ static inline void __cwc_toplevel_set_fullscreen(struct cwc_toplevel *toplevel,
 static inline void __cwc_toplevel_set_maximized(struct cwc_toplevel *toplevel,
                                                 bool set)
 {
+#ifdef CWC_XWAYLAND
     if (cwc_toplevel_is_x11(toplevel)) {
         wlr_xwayland_surface_set_maximized(toplevel->xwsurface, set, set);
         return;
     }
+#endif // CWC_XWAYLAND
 
     wlr_xdg_toplevel_set_maximized(toplevel->xdg_toplevel, set);
 }
@@ -287,10 +301,12 @@ static inline void __cwc_toplevel_set_maximized(struct cwc_toplevel *toplevel,
 static inline void __cwc_toplevel_set_minimized(struct cwc_toplevel *toplevel,
                                                 bool set)
 {
+#ifdef CWC_XWAYLAND
     if (cwc_toplevel_is_x11(toplevel)) {
         wlr_xwayland_surface_set_minimized(toplevel->xwsurface, set);
         return;
     }
+#endif // CWC_XWAYLAND
 
     wlr_xdg_toplevel_set_suspended(toplevel->xdg_toplevel, set);
     return;
@@ -299,10 +315,12 @@ static inline void __cwc_toplevel_set_minimized(struct cwc_toplevel *toplevel,
 static inline void cwc_toplevel_set_activated(struct cwc_toplevel *toplevel,
                                               bool activated)
 {
+#ifdef CWC_XWAYLAND
     if (cwc_toplevel_is_x11(toplevel)) {
         wlr_xwayland_surface_activate(toplevel->xwsurface, activated);
         return;
     }
+#endif // CWC_XWAYLAND
 
     wlr_xdg_toplevel_set_activated(toplevel->xdg_toplevel, activated);
 }
@@ -310,12 +328,14 @@ static inline void cwc_toplevel_set_activated(struct cwc_toplevel *toplevel,
 static inline uint32_t
 cwc_toplevel_set_size(struct cwc_toplevel *toplevel, int w, int h)
 {
+#ifdef CWC_XWAYLAND
     if (cwc_toplevel_is_x11(toplevel)) {
         int lx, ly;
         wlr_scene_node_coords(&toplevel->surf_tree->node, &lx, &ly);
         wlr_xwayland_surface_configure(toplevel->xwsurface, lx, ly, w, h);
         return 0;
     }
+#endif // CWC_XWAYLAND
 
     return wlr_xdg_toplevel_set_size(toplevel->xdg_toplevel, w, h);
 }
@@ -349,25 +369,31 @@ cwc_toplevel_is_configure_allowed(struct cwc_toplevel *toplevel)
 
 static inline bool cwc_toplevel_wants_fullscreen(struct cwc_toplevel *toplevel)
 {
+#ifdef CWC_XWAYLAND
     if (cwc_toplevel_is_x11(toplevel))
         return toplevel->xwsurface->fullscreen;
+#endif // CWC_XWAYLAND
 
     return toplevel->xdg_toplevel->requested.fullscreen;
 }
 
 static inline bool cwc_toplevel_wants_maximized(struct cwc_toplevel *toplevel)
 {
+#ifdef CWC_XWAYLAND
     if (cwc_toplevel_is_x11(toplevel))
         return toplevel->xwsurface->maximized_horz
                && toplevel->xwsurface->maximized_vert;
+#endif // CWC_XWAYLAND
 
     return toplevel->xdg_toplevel->requested.maximized;
 }
 
 static inline bool cwc_toplevel_wants_minimized(struct cwc_toplevel *toplevel)
 {
+#ifdef CWC_XWAYLAND
     if (cwc_toplevel_is_x11(toplevel))
         return toplevel->xwsurface->minimized;
+#endif // CWC_XWAYLAND
 
     return toplevel->xdg_toplevel->requested.minimized;
 }
@@ -384,8 +410,10 @@ cwc_toplevel_can_enter_interactive(struct cwc_toplevel *toplevel)
 static inline struct wlr_surface *
 cwc_toplevel_get_wlr_surface(struct cwc_toplevel *toplevel)
 {
+#ifdef CWC_XWAYLAND
     if (cwc_toplevel_is_x11(toplevel))
         return toplevel->xwsurface->surface;
+#endif // CWC_XWAYLAND
 
     return toplevel->xdg_toplevel->base->surface;
 }
@@ -393,12 +421,14 @@ cwc_toplevel_get_wlr_surface(struct cwc_toplevel *toplevel)
 static inline struct cwc_toplevel *
 cwc_toplevel_get_parent(struct cwc_toplevel *toplevel)
 {
+#ifdef CWC_XWAYLAND
     if (cwc_toplevel_is_x11(toplevel)) {
         if (toplevel->xwsurface->parent)
             return toplevel->xwsurface->parent->data;
 
         return NULL;
     }
+#endif // CWC_XWAYLAND
 
     if (toplevel->xdg_toplevel->parent)
         return toplevel->xdg_toplevel->parent->base->data;
@@ -408,16 +438,20 @@ cwc_toplevel_get_parent(struct cwc_toplevel *toplevel)
 
 static inline char *cwc_toplevel_get_title(struct cwc_toplevel *toplevel)
 {
+#ifdef CWC_XWAYLAND
     if (cwc_toplevel_is_x11(toplevel))
         return toplevel->xwsurface->title;
+#endif // CWC_XWAYLAND
 
     return toplevel->xdg_toplevel->title;
 }
 
 static inline pid_t cwc_toplevel_get_pid(struct cwc_toplevel *toplevel)
 {
+#ifdef CWC_XWAYLAND
     if (cwc_toplevel_is_x11(toplevel))
         return toplevel->xwsurface->pid;
+#endif // CWC_XWAYLAND
 
     pid_t pid = 0;
     wl_client_get_credentials(toplevel->xdg_toplevel->base->client->client,
@@ -427,8 +461,10 @@ static inline pid_t cwc_toplevel_get_pid(struct cwc_toplevel *toplevel)
 
 static inline char *cwc_toplevel_get_app_id(struct cwc_toplevel *toplevel)
 {
+#ifdef CWC_XWAYLAND
     if (cwc_toplevel_is_x11(toplevel))
         return toplevel->xwsurface->class;
+#endif // CWC_XWAYLAND
 
     return toplevel->xdg_toplevel->app_id;
 }
