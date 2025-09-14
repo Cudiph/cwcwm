@@ -467,6 +467,7 @@ void cwc_border_resize(struct cwc_border *border, int rect_w, int rect_h)
 static void init_surf_tree(struct cwc_toplevel *toplevel,
                            struct cwc_container *container)
 {
+#ifdef CWC_XWAYLAND
     if (cwc_toplevel_is_x11(toplevel)) {
         toplevel->surf_tree = wlr_scene_subsurface_tree_create(
             container->tree, toplevel->xwsurface->surface);
@@ -478,6 +479,7 @@ static void init_surf_tree(struct cwc_toplevel *toplevel,
 
         goto assign_common;
     }
+#endif // CWC_XWAYLAND
 
     toplevel->surf_tree = wlr_scene_xdg_surface_create(
         container->tree, toplevel->xdg_toplevel->base);
@@ -598,11 +600,13 @@ void cwc_container_init(struct cwc_output *output,
     _decide_should_tiled_part1(toplevel, cont);
 
 emit_signal:
+#ifdef CWC_XWAYLAND
     // just to make sure the border is fit to the surface correctly,
     // this fix xwayland always has empty room.
     if (cwc_toplevel_is_x11(toplevel) && !cwc_toplevel_is_unmanaged(toplevel))
         cwc_toplevel_set_size_surface(toplevel, toplevel->xwsurface->width,
                                       toplevel->xwsurface->height);
+#endif // CWC_XWAYLAND
 
     lua_State *L = g_config_get_lua_State();
     luaC_object_container_register(L, cont);
@@ -1391,6 +1395,7 @@ void cwc_container_set_size(struct cwc_container *container, int w, int h)
     container->height = cont_h;
 }
 
+#ifdef CWC_XWAYLAND
 static void all_toplevel_update_xwsurface(struct cwc_toplevel *toplevel,
                                           void *data)
 {
@@ -1401,6 +1406,7 @@ static void all_toplevel_update_xwsurface(struct cwc_toplevel *toplevel,
                                        xwsurface->width, xwsurface->height);
     }
 }
+#endif // CWC_XWAYLAND
 
 void cwc_container_set_position_global(struct cwc_container *container,
                                        int x,
@@ -1409,8 +1415,10 @@ void cwc_container_set_position_global(struct cwc_container *container,
     wlr_scene_node_set_position(&container->tree->node, x, y);
 
     struct wlr_box xy = {.x = x, .y = y};
+#ifdef CWC_XWAYLAND
     cwc_container_for_each_toplevel(container, all_toplevel_update_xwsurface,
                                     &xy);
+#endif // CWC_XWAYLAND
 
     save_floating_box_position(container, x, y);
     update_container_output(container);

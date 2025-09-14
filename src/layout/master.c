@@ -16,6 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <stdlib.h>
 #include <wayland-util.h>
 #include <wlr/types/wlr_cursor.h>
 

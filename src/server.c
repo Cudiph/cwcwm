@@ -62,7 +62,10 @@
 #include <wlr/types/wlr_xdg_foreign_v1.h>
 #include <wlr/types/wlr_xdg_foreign_v2.h>
 #include <wlr/types/wlr_xdg_output_v1.h>
+
+#ifdef CWC_XWAYLAND
 #include <wlr/xwayland/shell.h>
+#endif /* ifdef CWC_XWAYLAND */
 
 #include "cwc/config.h"
 #include "cwc/desktop/idle.h"
@@ -111,10 +114,12 @@ static bool filter_global(const struct wl_client *client,
                           const struct wl_global *global,
                           void *data)
 {
+#ifdef CWC_XWAYLAND
     struct wlr_xwayland *xwayland = server.xwayland;
     if (xwayland && global == xwayland->shell_v1->global) {
         return xwayland->server != NULL && client == xwayland->server->client;
     }
+#endif /* ifdef CWC_XWAYLAND */
 
     // Restrict usage of privileged protocols to unsandboxed clients
     const struct wlr_security_context_v1_state *security_context =
@@ -261,7 +266,9 @@ server_init(struct cwc_server *s, char *config_path, char *library_path)
     setup_output(s);
     setup_xdg_shell(s);
     setup_decoration_manager(s);
+#ifdef CWC_XWAYLAND
     xwayland_init(s);
+#endif // CWC_XWAYLAND
 
     s->foreign_toplevel_list = wlr_ext_foreign_toplevel_list_v1_create(dpy, 1);
     s->foreign_toplevel_manager = wlr_foreign_toplevel_manager_v1_create(dpy);
@@ -329,7 +336,9 @@ void server_fini(struct cwc_server *s)
     cwc_input_manager_destroy();
 
     cwc_idle_fini(s);
+#ifdef CWC_XWAYLAND
     xwayland_fini(s);
+#endif // CWC_XWAYLAND
 
     wlr_output_layout_destroy(s->output_layout);
     wlr_allocator_destroy(s->allocator);
