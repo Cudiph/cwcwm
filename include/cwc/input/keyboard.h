@@ -71,6 +71,7 @@ struct cwc_keybind_info {
     void *args;
     bool exclusive; // execute keybind even when locked or inhibited
     bool repeat;
+    bool pass;
 };
 
 struct cwc_keybind_map {

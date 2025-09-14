@@ -156,6 +156,9 @@ int cwc_keybind_map_register_bind_from_lua(lua_State *L,
 
         lua_getfield(L, data_index, "repeated");
         info.repeat = lua_toboolean(L, -1);
+
+        lua_getfield(L, data_index, "pass");
+        info.pass = lua_toboolean(L, -1);
     }
 
     // ready for register

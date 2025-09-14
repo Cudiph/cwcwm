@@ -3,7 +3,8 @@ local objname = "cwc_kbd"
 
 local signal_list = {
     -- "kbd::press",
-    -- "kbd::release", }
+    -- "kbd::release",
+}
 
 local triggered_list = {}
 

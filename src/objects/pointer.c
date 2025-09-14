@@ -68,7 +68,6 @@
  * @tparam boolean horizontal The orientation of the axis.
  * @tparam number delta
  * @tparam number delta_discrete
- * @see cuteful.enum.mouse_axis
  */
 
 //============================ CODE =================================

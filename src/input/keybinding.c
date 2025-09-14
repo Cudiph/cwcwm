@@ -256,6 +256,9 @@ static bool _keybind_execute(struct cwc_keybind_map *kmap,
         wl_event_source_timer_update(kmap->repeat_timer, g_config.repeat_delay);
     }
 
+    if (info->pass)
+        return false;
+
     return true;
 }
 

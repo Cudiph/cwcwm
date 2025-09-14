@@ -34,7 +34,7 @@ local function test()
 
     kmap:bind({ enum.modifier.LOGO }, "a", function()
         print("test")
-    end, { description = "b", group = "c", exclusive = true, repeated = true })
+    end, { description = "b", group = "c", exclusive = true, repeated = true, pass = true })
 
     assert(#kmap.member)
 
@@ -50,11 +50,14 @@ local function test()
 
     assert(bind_a.repeated)
     assert(bind_a.exclusive)
+    assert(bind_a.pass)
 
     bind_a.repeated = false
     assert(not bind_a.repeated)
     bind_a.exclusive = false
     assert(not bind_a.exclusive)
+    bind_a.pass = false
+    assert(not bind_a.pass)
 
     assert(#bind_a.modifier_name == 1)
     assert(#bind_a.modifier == 1)

@@ -134,6 +134,29 @@ static int luaC_kbind_set_repeated(lua_State *L)
     return 0;
 }
 
+/** Pass option of the keybind.
+ *
+ * @property pass
+ * @tparam[opt=false] boolean pass
+ */
+static int luaC_kbind_get_pass(lua_State *L)
+{
+    struct cwc_keybind_info *kbind = luaC_kbind_checkudata(L, 1);
+
+    lua_pushboolean(L, kbind->pass);
+
+    return 1;
+}
+static int luaC_kbind_set_pass(lua_State *L)
+{
+    luaL_checktype(L, 2, LUA_TBOOLEAN);
+    struct cwc_keybind_info *kbind = luaC_kbind_checkudata(L, 1);
+
+    kbind->pass = lua_toboolean(L, 2);
+
+    return 0;
+}
+
 /** Registered modifiers of this keybind.
  *
  * @property modifier
@@ -252,6 +275,7 @@ void luaC_kbind_setup(lua_State *L)
         REG_PROPERTY(group),
         REG_PROPERTY(exclusive),
         REG_PROPERTY(repeated),
+        REG_PROPERTY(pass),
 
         {NULL, NULL},
     };

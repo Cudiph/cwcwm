@@ -48,6 +48,7 @@ local function binds_list()
             "\tDescription: %s\n" ..
             "\tExclusive: %s\n" ..
             "\tRepeat: %s\n" ..
+            "\tPass: %s\n" ..
             "\tModifier: %s\n" ..
             "\tKeysym: 0x%x\n" ..
             ""
@@ -58,6 +59,7 @@ local function binds_list()
             bind.description or "-",
             bind.exclusive,
             bind.repeated,
+            bind.pass,
             #modnum_list > 0 and modnum_list or '-',
             bind.keysym
         )

@@ -96,10 +96,11 @@ static int luaC_kbindmap_get_member(lua_State *L)
  * @tparam[opt] table data Additional data
  * @tparam[opt] string data.group Keybinding group
  * @tparam[opt] string data.description Keybinding description
- * @tparam[opt] string data.exclusive Allow keybind to be executed even in
+ * @tparam[opt] boolean data.exclusive Allow keybind to be executed even in
  * lockscreen and shortcut inhibit
- * @tparam[opt] string data.repeated Repeat keybind when hold (only on_press
+ * @tparam[opt] boolean data.repeated Repeat keybind when hold (only on_press
  * will be executed)
+ * @tparam[opt] boolean data.pass Keypress will still pass through the client
  * @noreturn
  * @see cuteful.enum.modifier
  * @see cwc.pointer.bind
