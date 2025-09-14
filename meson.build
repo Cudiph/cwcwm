@@ -26,6 +26,7 @@ libinput = dependency('libinput')
 xxhash = dependency('libxxhash')
 lua = dependency('luajit')
 xcb = dependency('xcb', required: get_option('xwayland'))
+xwayland = dependency('xwayland', required: get_option('xwayland'))
 libdrm_header = dependency('libdrm').partial_dependency(compile_args: true, includes: true)
 libm = cc.find_library('m', required : true)
 libdl = cc.find_library('dl', required : true)
@@ -55,7 +56,7 @@ all_deps = [
   libdl,
 ]
 
-if get_option('xwayland').enabled() or get_option('xwayland').auto() and xcb.found()
+if get_option('xwayland').enabled() or get_option('xwayland').auto() and xcb.found() and xwayland.found()
   add_project_arguments(['-DCWC_XWAYLAND'], language: 'c')
 endif
 
