@@ -22,15 +22,40 @@
 #include <wlr/types/wlr_tablet_pad.h>
 #include <wlr/types/wlr_tablet_tool.h>
 #include <wlr/types/wlr_tablet_v2.h>
+#include <wlr/types/wlr_cursor.h>
 
 #include "cwc/input/manager.h"
 #include "cwc/input/seat.h"
 #include "cwc/input/tablet.h"
+#include "cwc/input/cursor.h"
 #include "cwc/server.h"
+
+
+#include "cwc/config.h"
+#include "cwc/desktop/idle.h"
+#include "cwc/desktop/output.h"
+#include "cwc/desktop/toplevel.h"
+#include "cwc/input/keyboard.h"
+#include "cwc/luaclass.h"
+#include "cwc/signal.h"
 
 static void on_axis(struct wl_listener *listener, void *data)
 {
     struct wlr_tablet_tool_axis_event *event = data;
+    struct cwc_tablet *tablet = wl_container_of(listener, tablet, axis_l);
+   
+    struct wlr_input_device *device                 = &event->tablet->base;
+    if(event->updated_axes & WLR_TABLET_TOOL_AXIS_X || event->updated_axes & WLR_TABLET_TOOL_AXIS_Y){
+        double lx, ly;
+        struct cwc_cursor *cursor = server.seat->cursor;
+        wlr_cursor_absolute_to_layout_coords(cursor->wlr_cursor, device, event->x,
+                                             event->y, &lx, &ly);
+
+        double dx = lx - cursor->wlr_cursor->x;
+        double dy = ly - cursor->wlr_cursor->y;
+
+        process_cursor_motion(cursor, event->time_msec, device, dx, dy, dx, dy);
+    }
 }
 
 static void on_proximity(struct wl_listener *listener, void *data)
@@ -41,11 +66,62 @@ static void on_proximity(struct wl_listener *listener, void *data)
 static void on_tip(struct wl_listener *listener, void *data)
 {
     struct wlr_tablet_tool_tip_event *event = data;
+
 }
 
 static void on_button(struct wl_listener *listener, void *data)
 {
     struct wlr_tablet_tool_button_event *event = data;
+
+    struct cwc_tablet *tablet = wl_container_of(listener, tablet, button_l);
+    struct cwc_cursor *cursor = server.seat->cursor;
+
+    double cx = cursor->wlr_cursor->x;
+    double cy = cursor->wlr_cursor->y;
+    double sx, sy;
+    struct cwc_toplevel *toplevel = cwc_toplevel_at(cx, cy, &sx, &sy);
+
+    wlr_idle_notifier_v1_notify_activity(server.idle->idle_notifier,
+                                         cursor->seat);
+
+    bool handled = false;
+    if (event->state == WLR_BUTTON_PRESSED) {
+        struct cwc_output *new_output =
+            cwc_output_at(server.output_layout, cx, cy);
+        if (new_output)
+            cwc_output_focus(new_output);
+
+        if (toplevel)
+            cwc_toplevel_focus(toplevel, false);
+
+        struct wlr_keyboard *kbd = wlr_seat_get_keyboard(cursor->seat);
+        uint32_t modifiers       = kbd ? wlr_keyboard_get_modifiers(kbd) : 0;
+
+        handled |= keybind_mouse_execute(server.main_mouse_kmap, modifiers,
+                                         event->button, true);
+
+    } else {
+        struct wlr_keyboard *kbd = wlr_seat_get_keyboard(cursor->seat);
+        uint32_t modifiers       = kbd ? wlr_keyboard_get_modifiers(kbd) : 0;
+
+        stop_interactive(cursor);
+
+        // same as keyboard binding always pass release button to client
+        keybind_mouse_execute(server.main_mouse_kmap, modifiers, event->button,
+                              false);
+    }
+
+    // don't notify when either state is have keybind to prevent
+    // half state which when the key is pressed but never released
+    if (!handled)
+        wlr_seat_pointer_notify_button(cursor->seat, event->time_msec,
+                                       event->button, event->state);
+}
+static void on_destroy(struct wl_listener *listener, void *data)
+{
+    struct cwc_tablet *tablet = wl_container_of(listener, tablet, destroy_l);
+
+    cwc_tablet_destroy(tablet);
 }
 
 struct cwc_tablet *cwc_tablet_create(struct cwc_seat *seat,
@@ -70,6 +146,9 @@ struct cwc_tablet *cwc_tablet_create(struct cwc_seat *seat,
     wl_signal_add(&tablet->tablet->wlr_tablet->events.button,
                   &tablet->button_l);
 
+    tablet->destroy_l.notify = on_destroy;
+    wl_signal_add(&dev->events.destroy, &tablet->destroy_l);
+
     wl_list_insert(&seat->tablet_devs, &tablet->link);
 
     return tablet;
@@ -82,6 +161,8 @@ void cwc_tablet_destroy(struct cwc_tablet *tablet)
     wl_list_remove(&tablet->tip_l.link);
     wl_list_remove(&tablet->button_l.link);
 
+
+    wl_list_remove(&tablet->destroy_l.link);
     wl_list_remove(&tablet->link);
 
     free(tablet);
