@@ -613,8 +613,9 @@ emit_signal:
     cwc_object_emit_signal_simple("container::new", L, cont);
 }
 
-void cwc_container_insert_toplevel(struct cwc_container *c,
-                                   struct cwc_toplevel *toplevel)
+static void _cwc_container_insert_toplevel(struct cwc_container *c,
+                                           struct cwc_toplevel *toplevel,
+                                           bool emit_signal)
 {
     if (cwc_container_is_unmanaged(c) || cwc_toplevel_is_unmanaged(toplevel))
         return;
@@ -634,8 +635,22 @@ void cwc_container_insert_toplevel(struct cwc_container *c,
     wlr_scene_node_set_position(&toplevel->surf_tree->node, bw, bw);
 
     cwc_container_set_size(c, c->width, c->height);
-    cwc_object_emit_signal_varr("container::insert", g_config_get_lua_State(),
-                                2, c, toplevel);
+
+    if (emit_signal)
+        cwc_object_emit_signal_varr("container::insert",
+                                    g_config_get_lua_State(), 2, c, toplevel);
+}
+
+void cwc_container_insert_toplevel(struct cwc_container *c,
+                                   struct cwc_toplevel *toplevel)
+{
+    _cwc_container_insert_toplevel(c, toplevel, true);
+}
+
+static void cwc_container_insert_toplevel_silence(struct cwc_container *c,
+                                                  struct cwc_toplevel *toplevel)
+{
+    _cwc_container_insert_toplevel(c, toplevel, false);
 }
 
 static void _destroy_container(struct cwc_container *container)
@@ -1036,12 +1051,12 @@ void cwc_container_swap(struct cwc_container *source,
     struct cwc_toplevel **toplevel;
     wl_array_for_each(toplevel, &source_temp_array)
     {
-        cwc_container_insert_toplevel(target, *toplevel);
+        cwc_container_insert_toplevel_silence(target, *toplevel);
     }
 
     wl_array_for_each(toplevel, &target_temp_array)
     {
-        cwc_container_insert_toplevel(source, *toplevel);
+        cwc_container_insert_toplevel_silence(source, *toplevel);
     }
 
     cwc_container_set_front_toplevel(stop);
