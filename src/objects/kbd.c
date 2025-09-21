@@ -482,9 +482,12 @@ void luaC_kbd_setup(lua_State *L)
     };
 
     luaL_Reg kbd_methods[] = {
-        REG_READ_ONLY(seat), REG_READ_ONLY(modifiers),
+        REG_READ_ONLY(data),
+        REG_READ_ONLY(seat),
+        REG_READ_ONLY(modifiers),
 
-        REG_PROPERTY(grab),  REG_PROPERTY(send_events),
+        REG_PROPERTY(grab),
+        REG_PROPERTY(send_events),
 
         {NULL, NULL},
     };

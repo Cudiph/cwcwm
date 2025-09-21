@@ -110,6 +110,14 @@ void luaC_register_table(lua_State *L,
         return 1;                                                             \
     }                                                                         \
                                                                               \
+    static inline int luaC_##obj_classname##_get_data(lua_State *L)           \
+    {                                                                         \
+        struct cstruct_name *cstructure =                                     \
+            luaC_##obj_classname##_checkudata(L, 1);                          \
+        luaC_object_udata_push(L, cstructure);                                \
+        return 1;                                                             \
+    }                                                                         \
+                                                                              \
     static inline int luaC_##obj_classname##_tostring(lua_State *L)           \
     {                                                                         \
         struct cstruct_name *cstructure =                                     \

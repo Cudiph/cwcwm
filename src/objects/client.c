@@ -1225,6 +1225,7 @@ void luaC_client_setup(lua_State *L)
         REG_METHOD(set_border_color),
 
         // read only properties
+        REG_READ_ONLY(data),
         REG_READ_ONLY(pid),
         REG_READ_ONLY(title),
         REG_READ_ONLY(appid),

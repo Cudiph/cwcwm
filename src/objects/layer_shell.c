@@ -142,7 +142,8 @@ void luaC_layer_shell_setup(lua_State *L)
     luaL_Reg layer_shell_methods[] = {
         REG_METHOD(kill),
 
-        REG_READ_ONLY(screen), REG_READ_ONLY(namespace), REG_READ_ONLY(pid),
+        REG_READ_ONLY(data), REG_READ_ONLY(screen), REG_READ_ONLY(namespace),
+        REG_READ_ONLY(pid),
 
         {NULL, NULL},
     };

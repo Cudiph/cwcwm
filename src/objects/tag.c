@@ -315,6 +315,7 @@ void luaC_tag_setup(lua_State *L)
         {"set_useless_gaps", luaC_tag_set_gap     },
 
         // ro prop
+        REG_READ_ONLY(data),
         REG_READ_ONLY(index),
         REG_READ_ONLY(screen),
 

@@ -26,11 +26,19 @@
 #include <lua.h>
 
 extern const char *const LUAC_OBJECT_REGISTRY_KEY;
+extern const char *const LUAC_OBJECT_UDATA_REGISTRY_KEY;
 
 /* get the object registry table */
 static inline void luaC_object_registry_push(lua_State *L)
 {
     lua_pushstring(L, LUAC_OBJECT_REGISTRY_KEY);
+    lua_rawget(L, LUA_REGISTRYINDEX);
+}
+
+/* get the object user data registry table */
+static inline void luaC_object_data_registry_push(lua_State *L)
+{
+    lua_pushstring(L, LUAC_OBJECT_UDATA_REGISTRY_KEY);
     lua_rawget(L, LUA_REGISTRYINDEX);
 }
 
@@ -47,6 +55,15 @@ luaC_object_register(lua_State *L, int idx, const void *pointer)
 
     lua_pop(L, 2);
 
+    /* user data */
+    luaC_object_data_registry_push(L);
+
+    lua_pushlightuserdata(L, (void *)pointer);
+    lua_newtable(L);
+    lua_rawset(L, -3);
+
+    lua_pop(L, 1);
+
     return 0;
 }
 
@@ -54,6 +71,15 @@ luaC_object_register(lua_State *L, int idx, const void *pointer)
 static inline int luaC_object_unregister(lua_State *L, const void *pointer)
 {
     luaC_object_registry_push(L);
+
+    lua_pushlightuserdata(L, (void *)pointer);
+    lua_pushnil(L);
+    lua_rawset(L, -3);
+
+    lua_pop(L, 1);
+
+    /* user data */
+    luaC_object_data_registry_push(L);
 
     lua_pushlightuserdata(L, (void *)pointer);
     lua_pushnil(L);
@@ -89,6 +115,20 @@ static inline bool luaC_object_valid(lua_State *L, const void *pointer)
     bool valid = !lua_isnil(L, -1);
     lua_pop(L, 1);
     return valid;
+}
+
+/** Push a referenced object user data onto the stack.
+ * \param L The Lua VM state.
+ * \param pointer The object udata to push.
+ * \return The number of element pushed on stack.
+ */
+static inline int luaC_object_udata_push(lua_State *L, const void *pointer)
+{
+    luaC_object_data_registry_push(L);
+    lua_pushlightuserdata(L, (void *)pointer);
+    lua_rawget(L, -2);
+    lua_remove(L, -2);
+    return 1;
 }
 
 #endif // !_CWC_LUAOBJECT_H

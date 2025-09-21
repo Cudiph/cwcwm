@@ -352,6 +352,8 @@ void luaC_timer_setup(lua_State *L)
         REG_METHOD(start),     REG_METHOD(stop),
         REG_METHOD(again),     REG_METHOD(destroy),
 
+        REG_READ_ONLY(data),
+
         REG_PROPERTY(started), REG_PROPERTY(timeout),
 
         {NULL, NULL},

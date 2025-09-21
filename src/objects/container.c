@@ -328,6 +328,7 @@ void luaC_container_setup(lua_State *L)
         {"get_client_stack", luaC_container_get_client_stack},
 
         // readonly
+        REG_READ_ONLY(data),
         REG_READ_ONLY(clients),
         REG_READ_ONLY(front),
 

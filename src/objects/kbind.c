@@ -266,6 +266,7 @@ void luaC_kbind_setup(lua_State *L)
     };
 
     luaL_Reg kbind_methods[] = {
+        REG_READ_ONLY(data),
         REG_READ_ONLY(modifier),
         REG_READ_ONLY(modifier_name),
         REG_READ_ONLY(keyname),

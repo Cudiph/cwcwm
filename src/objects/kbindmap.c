@@ -181,10 +181,10 @@ void luaC_kbindmap_setup(lua_State *L)
     };
 
     luaL_Reg kbindmap_methods[] = {
-        REG_METHOD(bind),      REG_METHOD(active_only),
-        REG_METHOD(clear),     REG_METHOD(destroy),
+        REG_METHOD(bind),     REG_METHOD(active_only),
+        REG_METHOD(clear),    REG_METHOD(destroy),
 
-        REG_READ_ONLY(member),
+        REG_READ_ONLY(data),  REG_READ_ONLY(member),
 
         REG_PROPERTY(active),
 

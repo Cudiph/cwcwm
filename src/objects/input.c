@@ -339,8 +339,8 @@ void luaC_input_setup(lua_State *L)
     };
 
     luaL_Reg input_methods[] = {
-
         // readonly prop
+        REG_READ_ONLY(data),
         REG_READ_ONLY(type),
         REG_READ_ONLY(name),
         REG_READ_ONLY(sysname),

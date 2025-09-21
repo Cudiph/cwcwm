@@ -484,7 +484,7 @@ void luaC_pointer_setup(lua_State *L)
     luaL_Reg pointer_methods[] = {
         REG_METHOD(move),       REG_METHOD(move_to),
 
-        REG_READ_ONLY(seat),
+        REG_READ_ONLY(data),    REG_READ_ONLY(seat),
 
         REG_PROPERTY(position), REG_PROPERTY(grab),  REG_PROPERTY(send_events),
 

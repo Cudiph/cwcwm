@@ -21,7 +21,8 @@
 
 #include "cwc/luaobject.h"
 
-const char *const LUAC_OBJECT_REGISTRY_KEY = "cwc.object.registry";
+const char *const LUAC_OBJECT_REGISTRY_KEY       = "cwc.object.registry";
+const char *const LUAC_OBJECT_UDATA_REGISTRY_KEY = "cwc.object.data.registry";
 
 /** Setup the object system at startup.
  * \param L The Lua VM state.
@@ -29,6 +30,10 @@ const char *const LUAC_OBJECT_REGISTRY_KEY = "cwc.object.registry";
 void luaC_object_setup(lua_State *L)
 {
     lua_pushstring(L, LUAC_OBJECT_REGISTRY_KEY);
+    lua_newtable(L);
+    lua_rawset(L, LUA_REGISTRYINDEX);
+
+    lua_pushstring(L, LUAC_OBJECT_UDATA_REGISTRY_KEY);
     lua_newtable(L);
     lua_rawset(L, LUA_REGISTRYINDEX);
 }

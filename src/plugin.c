@@ -338,9 +338,13 @@ void luaC_plugin_setup(lua_State *L)
     luaL_Reg plugin_methods[] = {
         REG_METHOD(unload),
 
-        REG_READ_ONLY(name),    REG_READ_ONLY(description),
-        REG_READ_ONLY(version), REG_READ_ONLY(author),
-        REG_READ_ONLY(license), REG_READ_ONLY(filename),
+        REG_READ_ONLY(data),
+        REG_READ_ONLY(name),
+        REG_READ_ONLY(description),
+        REG_READ_ONLY(version),
+        REG_READ_ONLY(author),
+        REG_READ_ONLY(license),
+        REG_READ_ONLY(filename),
 
         {NULL, NULL},
     };

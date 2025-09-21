@@ -294,6 +294,16 @@
 #   end
 <h2><a href="#$(no_spaces(kind))">$(kind)</a></h2>
 <table class="function_list">
+# if kind == "Object properties" then
+    <tr class="summary_row">
+      <td class="shortname" $(nowrap)><a href="#">data</a></td>
+      <td class="summarytype" nowrap>table</td>
+      <td class="summary">user data table</td>
+      <td class="baseclass" nowrap>
+          <span class="chips">Read only</span>
+      </td>
+    </tr>
+# end
 #  end
 #  for item in iter(k.items) do if not item.tags.hidden then
 #   local dn = display_name(item)

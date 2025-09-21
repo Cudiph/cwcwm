@@ -1082,6 +1082,7 @@ void luaC_screen_setup(lua_State *L)
         REG_METHOD(destroy),
 
         // readonly prop
+        REG_READ_ONLY(data),
         REG_READ_ONLY(geometry),
         REG_READ_ONLY(name),
         REG_READ_ONLY(description),
