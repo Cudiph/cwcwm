@@ -570,6 +570,9 @@ int luaC_init()
     cwc_assert(
         !luaL_dostring(L, "awesome = { connect_signal = function() end}"),
         "incorrect dostring");
+
+    // config table
+    cwc_assert(!luaL_dostring(L, "__cwc_config = {}"), "incorrect dostring");
     lua_settop(L, 0);
 
     // reg c lib

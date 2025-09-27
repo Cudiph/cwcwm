@@ -293,7 +293,12 @@ create_type {
     subfield_title = "Parameters",
 }
 
-
+create_type {
+    name           = "config",
+    title          = "Config key",
+    project_level  = false,
+    subfield_title = "Type constraints",
+}
 
 -- Documentation for objects properties
 create_type {
@@ -2274,6 +2279,7 @@ local add_args = {
 local display_type = {
     property           = true,
     beautiful          = true,
+    config             = true,
     field              = true,
     deprecatedproperty = true,
     clientruleproperty = true,

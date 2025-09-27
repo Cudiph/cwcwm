@@ -18,13 +18,69 @@
 
 #include <cairo.h>
 #include <libinput.h>
+#include <lua.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "cwc/config.h"
 #include "cwc/desktop/toplevel.h"
+#include "cwc/input/keyboard.h"
+#include "cwc/luac.h"
 #include "cwc/util.h"
+
+static struct wl_listener commit_listener;
+
+#define UPDATE_XKB_OPTIONS(opt_name)                               \
+    if (luaC_config_get(L, "xkb_" #opt_name)) {                    \
+        free(g_config.xkb_##opt_name);                             \
+        g_config.xkb_##opt_name = strdup(luaL_checkstring(L, -1)); \
+        update_xkb_idle();                                         \
+    }
+
+static void on_commit(struct wl_listener *listener, void *data)
+{
+    lua_State *L = g_config_get_lua_State();
+
+    if (luaC_config_get(L, "tasklist_show_all"))
+        g_config.tasklist_show_all = lua_toboolean(L, -1);
+
+    if (luaC_config_get(L, "border_color_rotation_degree"))
+        g_config.border_color_rotation_degree = lua_tointeger(L, -1);
+    if (luaC_config_get(L, "border_width"))
+        g_config.border_width = lua_tointeger(L, -1);
+    if (luaC_config_get(L, "default_decoration_mode"))
+        g_config.decoration_mode = lua_tointeger(L, -1);
+
+    if (luaC_config_get(L, "useless_gaps")) {
+        g_config.useless_gaps = lua_tointeger(L, -1);
+    }
+
+    if (luaC_config_get(L, "cursor_size"))
+        g_config.cursor_size = lua_tointeger(L, -1);
+    if (luaC_config_get(L, "cursor_inactive_timeout"))
+        g_config.cursor_inactive_timeout_ms = lua_tointeger(L, -1);
+    if (luaC_config_get(L, "cursor_edge_threshold"))
+        g_config.cursor_edge_threshold = lua_tointeger(L, -1);
+    if (luaC_config_get(L, "cursor_edge_snapping_overlay_color")) {
+        for (int i = 0; i < 3; i++) {
+            lua_rawgeti(L, -1, i + 1);
+            g_config.cursor_edge_snapping_overlay_color[i] =
+                lua_tonumber(L, -1);
+            lua_pop(L, 1);
+        }
+    }
+
+    if (luaC_config_get(L, "repeat_rate"))
+        g_config.repeat_rate = lua_tointeger(L, -1);
+    if (luaC_config_get(L, "repeat_delay"))
+        g_config.repeat_delay = lua_tointeger(L, -1);
+    UPDATE_XKB_OPTIONS(rules)
+    UPDATE_XKB_OPTIONS(model)
+    UPDATE_XKB_OPTIONS(layout)
+    UPDATE_XKB_OPTIONS(variant)
+    UPDATE_XKB_OPTIONS(options)
+}
 
 void cwc_config_init()
 {
@@ -32,6 +88,9 @@ void cwc_config_init()
     g_config.old_config = malloc(sizeof(struct cwc_config));
     memcpy(g_config.old_config, &g_config, sizeof(g_config));
     wl_signal_init(&g_config.events.commit);
+
+    commit_listener.notify = on_commit;
+    wl_signal_add(&g_config.events.commit, &commit_listener);
 }
 
 void cwc_config_commit()

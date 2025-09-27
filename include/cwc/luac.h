@@ -109,4 +109,19 @@ static inline cairo_pattern_t *luaC_checkcolor(lua_State *L, int idx)
     return *pattern;
 }
 
+/* return true if top value on the stack is not nil.
+ *
+ * [-0, +1, -]
+ */
+static inline bool luaC_config_get(lua_State *L, const char *key)
+{
+    lua_getglobal(L, "__cwc_config");
+    lua_pushstring(L, key);
+    lua_rawget(L, -2);
+
+    lua_remove(L, -2);
+
+    return !lua_isnil(L, -1);
+}
+
 #endif // !_CWC_LUAC_H
