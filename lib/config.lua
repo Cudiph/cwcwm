@@ -87,21 +87,81 @@ function config.check_enum(enum_table)
     end
 end
 
---- The color of client border
--- @config border_color_normal
--- @param gears_color
+--- If `false` it will show only in the active tag otherwise show all client.
+-- @config tasklist_show_all
+-- @tparam[opt=true] boolean tasklist_show_all
 
---- The color of fcoused client border
+--- The color of client border.
+-- @config border_color_normal
+-- @tparam gears_color border_color_normal
+-- @propertydefault `#888888`
+
+--- The color of focused client border.
 -- @config border_color_focus
--- @param gears_color
+-- @tparam gears_color border_color_focus
+-- @propertydefault nil
+
+--- Rotation of the color pattern in degree.
+-- @config border_color_rotation
+-- @tparam[opt=0] gears_color border_color_rotation
+
+--- Thickness of the client border in pixel.
+-- @config border_width
+-- @tparam[opt=0] gears_color border_width
+
+--- Default mode of the client decoration (SSD or CSD).
+-- @config default_decoration_mode
+-- @tparam[opt=0] enum default_decoration_mode
+-- @see cuteful.enum.decoration_mode
 
 --- The size of the cursor
 -- @config cursor_size
--- @param integer
+-- @tparam[opt=24] integer cursor_size
+
+--- Time in miliseconds to hide the cursor (0 means never hide).
+-- @config cursor_inactive_timeout
+-- @tparam[opt=5000] integer cursor_inactive_timeout
+
+--- Distance in pixel from the edge of screen to trigger edge tiling for floating client.
+-- @config cursor_edge_threshold
+-- @tparam[opt=16] integer cursor_edge_threshold
+
+--- Overlay color when edge threshold is active.
+-- @config cursor_edge_snapping_overlay_color
+-- @tparam table cursor_edge_snapping_overlay_color
+-- @propertydefault {0.1, 0.2, 0.4, 0.1}
+
+--- Keyboard repeat rate in hz.
+-- @config repeat_rate
+-- @tparam[opt=30] integer repeat_rate
+
+--- Keyboard repeat delay in miliseconds.
+-- @config repeat_delay
+-- @tparam[opt=400] integer repeat_delay
+
+--- XKB Rules.
+-- @config xkb_rules
+-- @tparam[opt=""] string xkb_rules
+
+--- XKB model.
+-- @config xkb_model
+-- @tparam[opt=""] string xkb_model
+
+--- XKB layout.
+-- @config xkb_layout
+-- @tparam[opt=""] string xkb_layout
+
+--- XKB variant.
+-- @config xkb_variant
+-- @tparam[opt=""] string xkb_variant
+
+--- XKB options.
+-- @config xkb_options
+-- @tparam[opt=""] string xkb_options
 
 --- The gap size between clients
 -- @config useless_gaps
--- @param integer
+-- @tparam[opt=0] integer useless_gaps
 
 -- sanity check table either a string (the type) or a function that return a boolean that determine if
 -- it pass the sanity check (true) or not (false)
@@ -110,7 +170,7 @@ local sanity_check = {
 
     border_color_normal                = config.check_color,
     border_color_focus                 = config.check_color,
-    border_color_rotation_degree       = "number",
+    border_color_rotation              = config.check_positive,
     border_width                       = config.check_positive,
     default_decoration_mode            = config.check_enum(enum.decoration_mode),
 
@@ -128,7 +188,9 @@ local sanity_check = {
     xkb_options                        = "string",
 }
 
---- Check if item is a positive number.
+--- Add a checker before to constraint value before writing it to the config table.
+--
+-- If the key exist it will throw error.
 --
 -- @staticfct sanity_check_add
 -- @tparam string key Config key to add.

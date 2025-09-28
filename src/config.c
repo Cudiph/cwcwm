@@ -45,7 +45,7 @@ static void on_commit(struct wl_listener *listener, void *data)
     if (luaC_config_get(L, "tasklist_show_all"))
         g_config.tasklist_show_all = lua_toboolean(L, -1);
 
-    if (luaC_config_get(L, "border_color_rotation_degree"))
+    if (luaC_config_get(L, "border_color_rotation"))
         g_config.border_color_rotation_degree = lua_tointeger(L, -1);
     if (luaC_config_get(L, "border_width"))
         g_config.border_width = lua_tointeger(L, -1);

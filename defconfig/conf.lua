@@ -2,9 +2,12 @@ local gears = require("gears")
 local enum = require("cuteful.enum")
 
 local conf = {
+    -- misc --
+    tasklist_show_all                  = false,
+
     -- pointer config --
     cursor_size                        = 20,
-    cursor_inactive_timeout            = 5,
+    cursor_inactive_timeout            = 5000,
     cursor_edge_threshold              = 32,
     cursor_edge_snapping_overlay_color = { 0.1, 0.2, 0.3, 0.05 },
 

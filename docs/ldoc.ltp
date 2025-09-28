@@ -405,7 +405,7 @@
     <dd>
     $(M(ldoc.descript(item),item))
 
-#  if kind == "Object properties" and item.params[1] and #item.metadata > 0 then
+#  if (kind == "Object properties" or kind == "Config key") and item.params[1] and #item.metadata > 0 then
     <h3>Constraints:</h3>
     <span class="property_type">
       <table class="see_also">

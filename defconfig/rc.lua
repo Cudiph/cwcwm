@@ -46,9 +46,6 @@ cwc.connect_signal("input::new", function(dev)
     end
 end)
 
--- uncategorized
-cwc.tasklist_show_all = false
-
 ------------------------------- SCREEN SETUP ------------------------------------
 cwc.connect_signal("screen::new", function(screen)
     -- screen settings
