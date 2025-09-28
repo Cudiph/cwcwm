@@ -258,14 +258,14 @@ static int luaC_pointer_set_cursor_size(lua_State *L)
  */
 static int luaC_pointer_get_inactive_timeout(lua_State *L)
 {
-    lua_pushnumber(L, g_config.cursor_inactive_timeout_ms);
+    lua_pushnumber(L, g_config.cursor_inactive_timeout);
     return 1;
 }
 static int luaC_pointer_set_inactive_timeout(lua_State *L)
 {
     int seconds = luaL_checkint(L, 1);
 
-    g_config.cursor_inactive_timeout_ms = seconds * 1000;
+    g_config.cursor_inactive_timeout = seconds * 1000;
     return 0;
 }
 

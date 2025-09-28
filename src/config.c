@@ -47,11 +47,11 @@ static void on_commit(struct wl_listener *listener, void *data)
         g_config.tasklist_show_all = lua_toboolean(L, -1);
 
     if (luaC_config_get(L, "border_color_rotation"))
-        g_config.border_color_rotation_degree = lua_tointeger(L, -1);
+        g_config.border_color_rotation = lua_tointeger(L, -1);
     if (luaC_config_get(L, "border_width"))
         g_config.border_width = lua_tointeger(L, -1);
     if (luaC_config_get(L, "default_decoration_mode"))
-        g_config.decoration_mode = lua_tointeger(L, -1);
+        g_config.default_decoration_mode = lua_tointeger(L, -1);
 
     if (luaC_config_get(L, "useless_gaps")) {
         g_config.useless_gaps = lua_tointeger(L, -1);
@@ -60,7 +60,7 @@ static void on_commit(struct wl_listener *listener, void *data)
     if (luaC_config_get(L, "cursor_size"))
         g_config.cursor_size = lua_tointeger(L, -1);
     if (luaC_config_get(L, "cursor_inactive_timeout"))
-        g_config.cursor_inactive_timeout_ms = lua_tointeger(L, -1);
+        g_config.cursor_inactive_timeout = lua_tointeger(L, -1);
     if (luaC_config_get(L, "cursor_edge_threshold"))
         g_config.cursor_edge_threshold = lua_tointeger(L, -1);
     if (luaC_config_get(L, "cursor_edge_snapping_overlay_color")) {
@@ -105,13 +105,13 @@ void cwc_config_set_default()
 {
     g_config.tasklist_show_all = true;
 
-    g_config.border_color_rotation_degree = 0;
-    g_config.useless_gaps                 = 0;
-    g_config.border_width                 = 1;
-    g_config.decoration_mode              = CWC_TOPLEVEL_DECORATION_SERVER_SIDE;
+    g_config.border_color_rotation   = 0;
+    g_config.useless_gaps            = 0;
+    g_config.border_width            = 1;
+    g_config.default_decoration_mode = CWC_TOPLEVEL_DECORATION_SERVER_SIDE;
 
     g_config.cursor_size                           = 24;
-    g_config.cursor_inactive_timeout_ms            = 5000;
+    g_config.cursor_inactive_timeout               = 5000;
     g_config.cursor_edge_threshold                 = 16;
     g_config.cursor_edge_snapping_overlay_color[0] = 0.1;
     g_config.cursor_edge_snapping_overlay_color[1] = 0.2;

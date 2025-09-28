@@ -268,7 +268,8 @@ static void _surface_initial_commit(struct cwc_toplevel *toplevel)
             // | WLR_XDG_TOPLEVEL_WM_CAPABILITIES_MINIMIZE
             | WLR_XDG_TOPLEVEL_WM_CAPABILITIES_FULLSCREEN);
 
-    cwc_toplevel_set_decoration_mode(toplevel, g_config.decoration_mode);
+    cwc_toplevel_set_decoration_mode(toplevel,
+                                     g_config.default_decoration_mode);
 }
 
 static void on_surface_commit(struct wl_listener *listener, void *data)
@@ -859,7 +860,7 @@ static void on_new_toplevel_decoration(struct wl_listener *listener, void *data)
     toplevel->decoration = cwc_deco;
 
     cwc_deco->base                         = deco;
-    cwc_deco->mode                         = g_config.decoration_mode;
+    cwc_deco->mode                         = g_config.default_decoration_mode;
     cwc_deco->set_decoration_mode_l.notify = on_set_decoration_mode;
     cwc_deco->destroy_l.notify             = on_decoration_destroy;
     wl_signal_add(&deco->events.request_mode, &cwc_deco->set_decoration_mode_l);

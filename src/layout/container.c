@@ -583,9 +583,8 @@ void cwc_container_init(struct cwc_output *output,
         pattern =
             cairo_pattern_reference(*(cairo_pattern_t **)lua_touserdata(L, -1));
 
-    cwc_border_init(&cont->border, pattern,
-                    g_config.border_color_rotation_degree, cont->width,
-                    cont->height, border_w);
+    cwc_border_init(&cont->border, pattern, g_config.border_color_rotation,
+                    cont->width, cont->height, border_w);
     cairo_pattern_destroy(pattern);
 
     cwc_border_attach_to_scene(&cont->border, cont->tree);

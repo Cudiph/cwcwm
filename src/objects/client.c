@@ -346,7 +346,7 @@ static int luaC_client_focused(lua_State *L)
  */
 static int luaC_client_get_default_decoration_mode(lua_State *L)
 {
-    lua_pushnumber(L, g_config.decoration_mode);
+    lua_pushnumber(L, g_config.default_decoration_mode);
     return 1;
 }
 static int luaC_client_set_default_decoration_mode(lua_State *L)
@@ -362,7 +362,7 @@ static int luaC_client_set_default_decoration_mode(lua_State *L)
     default:
         luaL_error(L, "Invalid decoration mode value: %d", deco_mode);
     }
-    g_config.decoration_mode = deco_mode;
+    g_config.default_decoration_mode = deco_mode;
     return 0;
 }
 
@@ -391,7 +391,7 @@ static int luaC_client_set_border_color_rotation(lua_State *L)
 {
     int rot = luaL_checkint(L, 1);
 
-    g_config.border_color_rotation_degree = rot;
+    g_config.border_color_rotation = rot;
 
     return 0;
 }

@@ -307,7 +307,7 @@ void process_cursor_motion(struct cwc_cursor *cursor,
 
     cwc_cursor_unhide(cursor);
     wl_event_source_timer_update(cursor->inactive_timer,
-                                 g_config.cursor_inactive_timeout_ms);
+                                 g_config.cursor_inactive_timeout);
     wlr_idle_notifier_v1_notify_activity(server.idle->idle_notifier, wlr_seat);
 
     switch (cursor->state) {

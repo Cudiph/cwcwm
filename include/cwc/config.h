@@ -11,18 +11,18 @@ struct cwc_config {
     bool tasklist_show_all;
 
     // client
-    int border_color_rotation_degree;
-    int border_width;
-    int decoration_mode; // enum cwc_toplevel_decoration_mode
+    int border_color_rotation;   // degree
+    int border_width;            // px
+    int default_decoration_mode; // enum cwc_toplevel_decoration_mode
 
     // screen
     int useless_gaps;
 
     // pointer device
     int cursor_size;
-    int cursor_inactive_timeout_ms;
-    int cursor_edge_threshold;
-    float cursor_edge_snapping_overlay_color[4];
+    int cursor_inactive_timeout;                 // milisecond
+    int cursor_edge_threshold;                   // px
+    float cursor_edge_snapping_overlay_color[4]; // rgba
 
     // kbd
     int repeat_rate;
