@@ -26,7 +26,7 @@
         cwcwm = callPackage ./default.nix {};
         shellOverride = old: {
           nativeBuildInputs = old.nativeBuildInputs ++ [];
-          BuildInputs = old.BuildInputs ++ [];
+          buildInputs = old.buildInputs ++ [];
         };
       in {
         packages.default = cwcwm;
