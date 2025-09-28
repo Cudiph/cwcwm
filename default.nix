@@ -13,6 +13,7 @@
   xwayland,
   libxcb,
   libxcb-wm,
+  gnumake,
   meson,
   ninja,
   pkg-config,
@@ -21,6 +22,7 @@
   git,
   libdrm,
   python3Minimal,
+  boost,
 }:
 stdenv.mkDerivation {
   pname = "cwcwm";
@@ -32,6 +34,7 @@ stdenv.mkDerivation {
   };
 
   nativeBuildInputs = [
+    gnumake
     meson
     ninja
     pkg-config
@@ -39,6 +42,7 @@ stdenv.mkDerivation {
     wayland-scanner
     git
     python3Minimal
+    boost
   ];
 
   buildInputs = [
@@ -56,6 +60,8 @@ stdenv.mkDerivation {
     luajitPackages.lgi
     libdrm
   ];
+
+  mesonFlags = ["-Dplugins=true" "-Dtests=true"];
 
   meta = {
     mainProgram = "cwc";
