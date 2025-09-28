@@ -30,7 +30,7 @@
 #include "cwc/util.h"
 #include "lauxlib.h"
 
-static struct wl_listener commit_listener;
+static struct wl_listener on_commit_l;
 
 #define UPDATE_XKB_OPTIONS(opt_name)                               \
     if (luaC_config_get(L, "xkb_" #opt_name)) {                    \
@@ -90,8 +90,8 @@ void cwc_config_init()
     memcpy(g_config.old_config, &g_config, sizeof(g_config));
     wl_signal_init(&g_config.events.commit);
 
-    commit_listener.notify = on_commit;
-    wl_signal_add(&g_config.events.commit, &commit_listener);
+    on_commit_l.notify = on_commit;
+    wl_signal_add(&g_config.events.commit, &on_commit_l);
 }
 
 void cwc_config_commit()

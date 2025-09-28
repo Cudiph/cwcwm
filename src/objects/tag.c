@@ -310,7 +310,6 @@ void luaC_tag_setup(lua_State *L)
         {"view_only",        luaC_tag_view_only   },
         {"strategy_idx",     luaC_tag_strategy_idx},
 
-        // TODO: remove this on v0.1
         {"get_useless_gaps", luaC_tag_get_gap     },
         {"set_useless_gaps", luaC_tag_set_gap     },
 

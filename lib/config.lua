@@ -71,12 +71,12 @@ function config.check_positive(item)
     return false
 end
 
---- Check if item is a positive number.
+--- Return a function that will check if item is a part of the passed enum table.
 --
 -- @staticfct check_enum
 -- @tparam number item Item to check.
 -- @tparam table enum_table The enum table.
--- @treturn boolean
+-- @treturn function
 function config.check_enum(enum_table)
     return function(item)
         for _, pair in pairs(enum_table) do
@@ -93,13 +93,13 @@ end
 
 --- The color of client border.
 -- @config border_color_normal
--- @tparam gears_color border_color_normal
--- @propertydefault `#888888`
+-- @tparam[opt=#888888] gears_color border_color_normal
+-- @see gears.color
 
 --- The color of focused client border.
 -- @config border_color_focus
--- @tparam gears_color border_color_focus
--- @propertydefault nil
+-- @tparam[opt=#888888] gears_color border_color_focus
+-- @see gears.color
 
 --- Rotation of the color pattern in degree.
 -- @config border_color_rotation
@@ -197,7 +197,7 @@ local sanity_check = {
 -- @tparam function|string checker Function or data type as a tester.
 -- @noreturn
 function config.sanity_check_add(key, checker)
-    if sanity_check[key] then
+    if sanity_check[key] ~= nil then
         return print_error("config: sanity check for `" .. key .. "` already exist")
     end
 

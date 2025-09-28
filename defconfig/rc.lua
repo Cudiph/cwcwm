@@ -24,11 +24,6 @@ end
 -- execute keybind script
 gears.protected_call(require, "keybind")
 
--- plugin config
-if cwc.cwcle then
-    cwc.cwcle.set_border_color_raised(gears.color("#d2d6f9"))
-end
-
 -- use all implementation
 impl.use_all()
 
