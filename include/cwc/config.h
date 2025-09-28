@@ -14,8 +14,6 @@ struct cwc_config {
     int border_color_rotation_degree;
     int border_width;
     int decoration_mode; // enum cwc_toplevel_decoration_mode
-    struct _cairo_pattern *border_color_focus;  // USE SETTER
-    struct _cairo_pattern *border_color_normal; // USE SETTER
 
     // screen
     int useless_gaps;
@@ -61,9 +59,6 @@ void cwc_config_init();
 void cwc_config_commit();
 
 void cwc_config_set_default();
-
-void cwc_config_set_cairo_pattern(struct _cairo_pattern **dest,
-                                  struct _cairo_pattern *src);
 
 void cwc_config_set_number_positive(int *dest, int src);
 

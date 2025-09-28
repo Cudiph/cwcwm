@@ -28,6 +28,7 @@
 #include "cwc/input/keyboard.h"
 #include "cwc/luac.h"
 #include "cwc/util.h"
+#include "lauxlib.h"
 
 static struct wl_listener commit_listener;
 
@@ -102,14 +103,12 @@ void cwc_config_commit()
 
 void cwc_config_set_default()
 {
-    g_config.tasklist_show_all            = true;
+    g_config.tasklist_show_all = true;
+
     g_config.border_color_rotation_degree = 0;
-    g_config.border_color_focus           = NULL;
-    g_config.border_color_normal =
-        cairo_pattern_create_rgba(127 / 255.0, 127 / 255.0, 127 / 255.0, 1);
-    g_config.useless_gaps    = 0;
-    g_config.border_width    = 1;
-    g_config.decoration_mode = CWC_TOPLEVEL_DECORATION_SERVER_SIDE;
+    g_config.useless_gaps                 = 0;
+    g_config.border_width                 = 1;
+    g_config.decoration_mode              = CWC_TOPLEVEL_DECORATION_SERVER_SIDE;
 
     g_config.cursor_size                           = 24;
     g_config.cursor_inactive_timeout_ms            = 5000;
@@ -126,14 +125,6 @@ void cwc_config_set_default()
     g_config.xkb_layout   = NULL;
     g_config.xkb_variant  = NULL;
     g_config.xkb_options  = NULL;
-}
-
-void cwc_config_set_cairo_pattern(cairo_pattern_t **dst, cairo_pattern_t *src)
-{
-    if (g_config.border_color_focus)
-        cairo_pattern_destroy(*dst);
-
-    *dst = cairo_pattern_reference(src);
 }
 
 void cwc_config_set_number_positive(int *dest, int src)

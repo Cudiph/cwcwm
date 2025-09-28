@@ -111,7 +111,7 @@ end
 
 --- Default mode of the client decoration (SSD or CSD).
 -- @config default_decoration_mode
--- @tparam[opt=0] enum default_decoration_mode
+-- @tparam[opt=SERVER_SIDE] enum default_decoration_mode
 -- @see cuteful.enum.decoration_mode
 
 --- The size of the cursor

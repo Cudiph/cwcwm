@@ -36,6 +36,7 @@
 #include "cwc/layout/bsp.h"
 #include "cwc/layout/container.h"
 #include "cwc/layout/master.h"
+#include "cwc/luac.h"
 #include "cwc/luaclass.h"
 #include "cwc/luaobject.h"
 #include "cwc/server.h"
@@ -576,9 +577,17 @@ void cwc_container_init(struct cwc_output *output,
 
     wlr_scene_node_raise_to_top(&cont->popup_tree->node);
 
-    cwc_border_init(&cont->border, g_config.border_color_normal,
+    cairo_pattern_t *pattern = NULL;
+    lua_State *L             = g_config_get_lua_State();
+    if (luaC_config_get(L, "border_color_normal"))
+        pattern =
+            cairo_pattern_reference(*(cairo_pattern_t **)lua_touserdata(L, -1));
+
+    cwc_border_init(&cont->border, pattern,
                     g_config.border_color_rotation_degree, cont->width,
                     cont->height, border_w);
+    cairo_pattern_destroy(pattern);
+
     cwc_border_attach_to_scene(&cont->border, cont->tree);
 
     // ===== toplevel initialization =====
@@ -608,7 +617,6 @@ emit_signal:
                                       toplevel->xwsurface->height);
 #endif // CWC_XWAYLAND
 
-    lua_State *L = g_config_get_lua_State();
     luaC_object_container_register(L, cont);
     cwc_object_emit_signal_simple("container::new", L, cont);
 }

@@ -64,8 +64,13 @@ static void raise_next_container(struct cwc_container *current)
             continue;
 
         if (cwc_container_is_visible(container)) {
-            cwc_border_set_pattern(&current->border,
-                                   g_config.border_color_normal);
+            cairo_pattern_t *pattern = NULL;
+            lua_State *L             = g_config_get_lua_State();
+            if (luaC_config_get(L, "border_color_normal"))
+                pattern = cairo_pattern_reference(
+                    *(cairo_pattern_t **)lua_touserdata(L, -1));
+            cwc_border_set_pattern(&current->border, pattern);
+            cairo_pattern_destroy(pattern);
             raise_container(container);
             break;
         }
@@ -84,8 +89,13 @@ static void raise_prev_container(struct cwc_container *current)
             continue;
 
         if (cwc_container_is_visible(container)) {
-            cwc_border_set_pattern(&current->border,
-                                   g_config.border_color_normal);
+            cairo_pattern_t *pattern = NULL;
+            lua_State *L             = g_config_get_lua_State();
+            if (luaC_config_get(L, "border_color_normal"))
+                pattern = cairo_pattern_reference(
+                    *(cairo_pattern_t **)lua_touserdata(L, -1));
+            cwc_border_set_pattern(&current->border, pattern);
+            cairo_pattern_destroy(pattern);
             raise_container(container);
             break;
         }

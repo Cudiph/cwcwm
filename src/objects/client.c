@@ -381,36 +381,6 @@ static int luaC_client_set_border_width_cfg(lua_State *L)
     return 0;
 }
 
-/** Set the default border color for focused client.
- *
- * @configfct set_border_color_focus
- * @tparam pattern cairo_pattern_t Cairo pattern object from gears.color
- * @noreturn
- * @see gears.color
- */
-static int luaC_client_set_border_color_focus(lua_State *L)
-{
-    cairo_pattern_t *pattern = luaC_checkcolor(L, 1);
-    cwc_config_set_cairo_pattern(&g_config.border_color_focus, pattern);
-
-    return 0;
-}
-
-/** Set the default border color for toplevel.
- *
- * @configfct set_border_color_normal
- * @tparam pattern cairo_pattern_t Cairo pattern object from gears.color
- * @noreturn
- * @see gears.color
- */
-static int luaC_client_set_border_color_normal(lua_State *L)
-{
-    cairo_pattern_t *pattern = luaC_checkcolor(L, 1);
-    cwc_config_set_cairo_pattern(&g_config.border_color_normal, pattern);
-
-    return 0;
-}
-
 /** Set the border color rotation config in degree
  *
  * @configfct set_border_color_rotation
@@ -1275,8 +1245,6 @@ void luaC_client_setup(lua_State *L)
         FIELD(default_decoration_mode),
 
         {"set_border_width",          luaC_client_set_border_width_cfg     },
-        {"set_border_color_focus",    luaC_client_set_border_color_focus   },
-        {"set_border_color_normal",   luaC_client_set_border_color_normal  },
         {"set_border_color_rotation", luaC_client_set_border_color_rotation},
         {NULL,                        NULL                                 },
     };
