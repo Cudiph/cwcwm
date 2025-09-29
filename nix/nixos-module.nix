@@ -4,7 +4,7 @@ self: {
   pkgs,
   ...
 }: let
-  cfg = config.programs.cwcwm;
+  cfg = config.programs.cwc;
 in {
   options = {
     programs.cwc = {
