@@ -80,7 +80,10 @@ in
       --set CWC_PLUGIN_PATH "$out/share/cwc/plugins"
     '';
 
-    passthru = {inherit luajit;};
+    passthru = {
+      providedSessions = ["cwc"];
+      inherit luajit;
+    };
     meta = {
       mainProgram = "cwc";
       description = "Hackable wayland compositor";
