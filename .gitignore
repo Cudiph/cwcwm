@@ -10,3 +10,6 @@ subprojects/
 
 # generated docs
 doc/
+
+# nix related
+result

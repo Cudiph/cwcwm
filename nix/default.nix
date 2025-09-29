@@ -8,9 +8,7 @@
   libxkbcommon,
   libinput,
   xxHash,
-  lua,
   luajit,
-  luajitPackages,
   xwayland,
   libxcb,
   libxcb-wm,
@@ -31,11 +29,11 @@
   ]);
 in
   stdenv.mkDerivation {
-    pname = "cwcwm";
+    pname = "cwc";
     version = "nightly";
 
     src = builtins.path {
-      path = ./.;
+      path = ../.;
       name = "source";
     };
 

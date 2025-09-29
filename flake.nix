@@ -14,6 +14,10 @@
         inputs.flake-parts.flakeModules.easyOverlay
       ];
 
+      flake = {
+        nixosModules.cwc = import ./nix/nixos-module.nix self;
+      };
+
       perSystem = {
         config,
         pkgs,
@@ -23,20 +27,20 @@
           (pkgs)
           callPackage
           ;
-        cwcwm = callPackage ./default.nix {};
+        cwc = callPackage ./nix/default.nix {};
         shellOverride = old: {
           nativeBuildInputs = old.nativeBuildInputs ++ [];
           buildInputs = old.buildInputs ++ [];
         };
       in {
-        packages.default = cwcwm;
+        packages.default = cwc;
         overlayAttrs = {
-          inherit (config.packages) cwcwm;
+          inherit (config.packages) cwc;
         };
         packages = {
-          inherit cwcwm;
+          inherit cwc;
         };
-        devShells.default = cwcwm.overrideAttrs shellOverride;
+        devShells.default = cwc.overrideAttrs shellOverride;
         formatter = pkgs.alejandra;
       };
       systems = ["x86_64-linux"];
