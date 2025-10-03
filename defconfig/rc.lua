@@ -24,8 +24,8 @@ end
 -- execute keybind script
 gears.protected_call(require, "keybind")
 
--- use all implementation
-impl.use_all()
+-- use core implementation
+impl.use_core()
 
 -- input device config
 cwc.connect_signal("input::new", function(dev)

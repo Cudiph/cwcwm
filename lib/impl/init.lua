@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
---- Default implementation that can be disabled.
+--- Default implementation that optionally enabled.
 --
 -- `impl.border` - Manage the client border color based on it states.
 --
@@ -9,14 +9,14 @@
 -- @module impl
 ---------------------------------------------------------------------------
 
---- Use all implementation available.
+--- Use implementation that provide core functionality.
 --
--- @staticfct use_all
+-- @staticfct use_core
 -- @noreturn
-local function use_all()
+local function use_core()
     require("impl.border")
 end
 
 return {
-    use_all = use_all
+    use_core = use_core
 }

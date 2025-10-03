@@ -116,6 +116,37 @@ if cwc.cwcle then
 end
 ```
 
+Or better yet using the declarative config like so.
+Below script is equivalent to the script above.
+
+```lua
+---- ./conf.lua ----
+local gears = require("gears")
+
+local conf = {
+    cursor_size = 24,
+    repeat_rate = 30,
+    border_color_normal = gears.color(gears.color("#423e44"))
+    border_color_raised = gears.color(gears.color("#d2d6f9"))
+}
+
+return conf
+
+---- ./rc.lua ----
+local config = require("config")
+
+-- config.init should go first before anything else
+config.init(require("conf"))
+
+-- rest of script...
+```
+
+Before really opening the wayland session,
+it is better to run `cwc --check` to verify if there any error in the configuration,
+so there is no confusing blank screen.
+
+To switch tty press `ALT + CTRL + Fn` where n is the tty number.
+
 ## Default Keybinding
 
 ### cwc
