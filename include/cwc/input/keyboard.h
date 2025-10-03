@@ -141,4 +141,6 @@ bool keybind_mouse_execute(struct cwc_keybind_map *kmap,
 
 void keybind_register_common_key();
 
+void update_xkb_idle();
+
 #endif // !_CWC_INPUT_KEYBOARD_H

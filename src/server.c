@@ -184,8 +184,6 @@ static int setup_wayland_core(struct cwc_server *s)
     return EXIT_SUCCESS;
 }
 
-static void server_subscribe_signal();
-
 /* return non zero if error */
 enum server_init_return_code
 server_init(struct cwc_server *s, char *config_path, char *library_path)
@@ -214,7 +212,6 @@ server_init(struct cwc_server *s, char *config_path, char *library_path)
     s->signal_map         = cwc_hhmap_create(50);
     s->input              = cwc_input_manager_get();
 
-    server_subscribe_signal();
     int lua_status = luaC_init();
     keybind_register_common_key();
 
@@ -417,63 +414,4 @@ void spawn_with_shell(const char *const command)
 {
     wl_event_loop_add_idle(server.wl_event_loop, _spawn_with_shell,
                            strdup(command));
-}
-
-static void _update_border_focus(void *data)
-{
-    struct cwc_toplevel *toplevel = data;
-    if (!toplevel->container)
-        return;
-
-    cwc_border_set_pattern(&toplevel->container->border,
-                           g_config.border_color_focus
-                               ? g_config.border_color_focus
-                               : g_config.border_color_normal);
-}
-
-static void _update_border_unfocus(void *data)
-{
-    struct cwc_toplevel *toplevel = data;
-    if (!toplevel->container)
-        return;
-
-    cwc_border_set_pattern(&toplevel->container->border,
-                           g_config.border_color_normal);
-}
-
-static void _update_border_swap_client(void *data)
-{
-    struct cwc_toplevel **clients = data;
-    struct cwc_toplevel *focused  = cwc_toplevel_get_focused();
-
-    struct cwc_toplevel *toplevel;
-    while ((toplevel = *(clients++))) {
-        if (toplevel == focused)
-            _update_border_focus(toplevel);
-        else
-            _update_border_unfocus(toplevel);
-    }
-}
-
-static void _update_border_swap_container(void *data)
-{
-    struct cwc_container **cts   = data;
-    struct cwc_toplevel *focused = cwc_toplevel_get_focused();
-
-    struct cwc_container *cont;
-    while ((cont = *(cts++))) {
-        struct cwc_toplevel *top = cwc_container_get_front_toplevel(cont);
-        if (top == focused)
-            _update_border_focus(top);
-        else
-            _update_border_unfocus(top);
-    }
-}
-
-static void server_subscribe_signal()
-{
-    cwc_signal_connect("client::focus", _update_border_focus);
-    cwc_signal_connect("client::unfocus", _update_border_unfocus);
-    cwc_signal_connect("client::swap", _update_border_swap_client);
-    cwc_signal_connect("container::swap", _update_border_swap_container);
 }

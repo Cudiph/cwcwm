@@ -42,6 +42,7 @@
 #include <wlr/backend/x11.h>
 #include <wlr/types/wlr_session_lock_v1.h>
 
+#include "cwc-luagen.h"
 #include "cwc/config.h"
 #include "cwc/desktop/layer_shell.h"
 #include "cwc/desktop/output.h"
@@ -568,7 +569,12 @@ int luaC_init()
 
     // awesome compability for awesome module
     cwc_assert(
-        !luaL_dostring(L, "awesome = { connect_signal = function() end}"),
+        !luaL_dostring(L, "awesome = { connect_signal = function() end }"),
+        "incorrect dostring");
+
+    // config table
+    cwc_assert(
+        !luaL_dostring(g_config_get_lua_State(), (char *)_src_defaultcfg_lua),
         "incorrect dostring");
     lua_settop(L, 0);
 

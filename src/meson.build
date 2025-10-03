@@ -1,3 +1,19 @@
+assets = {
+  'config': 'defaultcfg.lua',
+}
+
+script_assets = []
+foreach _, path : assets
+  script_assets += path
+endforeach
+
+script_header = custom_target(
+  name.underscorify() + '_h',
+  input: script_assets,
+  output: 'cwc-luagen.h',
+  command: ['python', meson.source_root() / 'cwctl/gen.py', '@INPUT@', '@OUTPUT@'],
+)
+
 srcs = [
   'main.c',
   'server.c',
@@ -69,6 +85,8 @@ srcs = [
   protocols_server_header['wlr-output-power-management-unstable-v1'],
   protocols_server_header['dwl-ipc-unstable-v2'],
   protocols_code['dwl-ipc-unstable-v2'],
+
+  script_header,
 ]
 
 executable(

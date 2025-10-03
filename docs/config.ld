@@ -293,7 +293,116 @@ create_type {
     subfield_title = "Parameters",
 }
 
+create_type {
+    name            = "config",
+    title           = "Config key",
+    project_level   = false,
+    subfield_title  = "Type constraints",
+    finish_callback = function(item)
+        -- All properties need to have a type. Otherwise they don't render
+        -- properly. Also, because typed properties are kind of the point of
+        -- switching to ldoc in the first place.
+        if (not item.params) or not item.params[1] then
+            print(
+                "WARNING: The " ..
+                item.name .. " property from " .. item.module.name .. " is missing it's type."
+            )
+            return
+        end
 
+        local _, sublist = item:subparam(item.params[1])
+        local type = item:type_of_param(item.params[1])
+
+        -- Force people to use @tparam because it is easier to lint and allows
+        -- multiple types.
+        if (not type) or type == "" then
+            print(
+                "WARNING: Property " .. item.name .. " from " .. item.module.name .. " either " ..
+                " doesn't have a type or uses @param instead of @tparam. @tparam is required" ..
+                " because it allows multi-type and better default value handling."
+            )
+        end
+
+        if type_name_linting[type] then
+            print(
+                "WARNING: Property " .. item.name .. " from " .. item.module.name ..
+                " type is `" .. type .. "`, please use `" .. type_name_linting[type] .. "`."
+            )
+        end
+
+        -- One of the repeated problem we have is the first word of the
+        -- description being removed because it is used as the property name.
+        -- This "rule" might be stupid, but it prevents it from accidentally
+        -- happening again.
+        if item.params[1] ~= item.name:match("[.]?(" .. item.params[1] .. ")$") then
+            print(
+                "WARNING: Property " ..
+                item.name .. " from " .. item.module.name .. " @tparam name" ..
+                " doesn't match the property name. For linting purpose, please fix this."
+            )
+        end
+
+        local def = item:default_of_param(item.params[1])
+
+        -- Check the default value for obvious mistakes.
+        if def then
+            -- Detect the blatant missing quote marks for string. This is important
+            -- to differentiate variables from string literals.
+            if type == "string" and def:sub(1, 1) ~= '"' and def:sub(-1) ~= '"' and not def:find(".") then
+                print(
+                    "WARNING: Property " .. item.name .. " from " .. item.module.name ..
+                    " is a string, but the default value is not quoted."
+                )
+            end
+
+            -- If the default value is `nil`, then the property must be nullable.
+            if def == "nil" and not type:find("nil") then
+                print(
+                    "WARNING: Property " .. item.name .. " from " .. item.module.name ..
+                    " default value is `nil`, but the type doesn't allow it"
+                )
+            end
+
+            if type == "boolean" and (not (def == "true" or def == "false")) and (not def:find(".")) then
+                print(
+                    "WARNING: Property " .. item.name .. " from " .. item.module.name ..
+                    " is a boolean, but is neither `true`, `false` or an alias"
+                )
+            end
+
+            item:add_metadata("Default value", ("<code>%s</code>"):format(def))
+        else
+            -- Properties should have a default value. If they don't or if the
+            -- default depends on the context, then `opt=nil` should be used to
+            -- mute this warning.
+            local auto_opt = nil
+
+            -- This adds a default value. It works for LDoc 1.4.5, but is a
+            -- private API and might break in the future.
+            if item.tags["propertydefault"] and item.tags["propertydefault"][1] then
+                item:add_metadata(
+                    "Default value",
+                    ldoc.markup(item.tags["propertydefault"][1])
+                )
+            elseif auto_opt then
+                local mods = item.modifiers[item.parameter]
+
+                if mods then
+                    mods[item.params[1]].opt = auto_opt
+                end
+
+                item:add_metadata("Default value", ("<code>%s</code>"):format(auto_opt))
+            elseif not sublist then
+                -- The default could not be determined automatically, it requires
+                -- an explicit `opt=<value>`.
+                print(
+                    "WARNING: Property", item.name .. " from " .. item.module.name,
+                    "doesn't have a default value. Add `[opt=value]` to the @tparam"
+                )
+            end
+        end
+    end,
+}
 
 -- Documentation for objects properties
 create_type {
@@ -1706,6 +1815,7 @@ local summarize = {
 
 local no_prefix = {
     property           = true,
+    config             = true,
     signal             = true,
     clientruleproperty = true,
     deprecatedproperty = true,
@@ -2274,6 +2384,7 @@ local add_args = {
 local display_type = {
     property           = true,
     beautiful          = true,
+    config             = true,
     field              = true,
     deprecatedproperty = true,
     clientruleproperty = true,

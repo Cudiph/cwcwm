@@ -23,8 +23,13 @@
 #include "cwc/plugin.h"
 #include "cwc/server.h"
 #include "cwc/signal.h"
+#include "cwc/util.h"
 
-static cairo_pattern_t *raised_pattern = NULL;
+/** The border color when the client is raised.
+ * @config border_color_raised
+ * @tparam[opt=#ffaaff] gears_color border_color_raised
+ * @see gears.color
+ */
 
 static struct lifecwcle {
     struct cwc_container *raised;
@@ -34,6 +39,7 @@ static struct lifecwcle {
     uint32_t modifier;
 
     struct wl_listener on_modifier_l;
+    struct wl_listener on_commit_l;
 } lifecwcle = {0};
 
 static void stop_cycle()
@@ -47,7 +53,16 @@ static void stop_cycle()
 
 static void raise_container(struct cwc_container *container)
 {
+
+    cairo_pattern_t *raised_pattern = NULL;
+    lua_State *L                    = g_config_get_lua_State();
+    if (luaC_config_get(L, "border_color_raised"))
+        raised_pattern =
+            cairo_pattern_reference(*(cairo_pattern_t **)lua_touserdata(L, -1));
+
     cwc_border_set_pattern(&container->border, raised_pattern);
+    cairo_pattern_destroy(raised_pattern);
+
     wlr_scene_node_raise_to_top(&container->tree->node);
     lifecwcle.raised = container;
 }
@@ -64,8 +79,15 @@ static void raise_next_container(struct cwc_container *current)
             continue;
 
         if (cwc_container_is_visible(container)) {
-            cwc_border_set_pattern(&current->border,
-                                   g_config.border_color_normal);
+            cairo_pattern_t *pattern = NULL;
+            lua_State *L             = g_config_get_lua_State();
+            if (luaC_config_get(L, "border_color_normal"))
+                pattern = cairo_pattern_reference(
+                    *(cairo_pattern_t **)lua_touserdata(L, -1));
+
+            cwc_border_set_pattern(&current->border, pattern);
+            cairo_pattern_destroy(pattern);
+
             raise_container(container);
             break;
         }
@@ -84,8 +106,15 @@ static void raise_prev_container(struct cwc_container *current)
             continue;
 
         if (cwc_container_is_visible(container)) {
-            cwc_border_set_pattern(&current->border,
-                                   g_config.border_color_normal);
+            cairo_pattern_t *pattern = NULL;
+            lua_State *L             = g_config_get_lua_State();
+            if (luaC_config_get(L, "border_color_normal"))
+                pattern = cairo_pattern_reference(
+                    *(cairo_pattern_t **)lua_touserdata(L, -1));
+
+            cwc_border_set_pattern(&current->border, pattern);
+            cairo_pattern_destroy(pattern);
+
             raise_container(container);
             break;
         }
@@ -156,22 +185,6 @@ static int luaC_enter_cycle_prev(lua_State *L)
     return 0;
 }
 
-/** Set the border of toplevel when raised.
- *
- * @tparam cairo_pattern_t color Color from gears.color
- * @configfct set_border_color_raised
- * @noreturn
- * @see gears.color
- */
-static int luaC_set_border_color_raised(lua_State *L)
-{
-    cairo_pattern_t *pattern = luaC_checkcolor(L, 1);
-    cairo_pattern_destroy(raised_pattern);
-    raised_pattern = cairo_pattern_reference(pattern);
-
-    return 0;
-}
-
 static void on_kbd_mod(struct wl_listener *listener, void *data)
 {
     uint32_t mod = wlr_keyboard_get_modifiers(lifecwcle.kbd);
@@ -187,13 +200,22 @@ void setup_cwcle(void *data)
 
     lifecwcle.on_modifier_l.notify = on_kbd_mod;
     wl_signal_add(&kbd->events.modifiers, &lifecwcle.on_modifier_l);
+
+    const char *setup_luacode =
+        "local config = require(\"config\")\n"
+        "local gears = require(\"gears\")\n"
+        "\n"
+        "config.sanity_check_add(\"border_color_raised\", config.check_color)\n"
+        "config[\"border_color_raised\"] = gears.color(\"#ffaaff\")\n";
+
+    lua_State *L = g_config_get_lua_State();
+    cwc_assert(!luaL_dostring(L, setup_luacode), "incorrect lua code");
 }
 
 static const luaL_Reg cwcle_staticlibs[] = {
-    {"next",                    luaC_enter_cycle_next       },
-    {"prev",                    luaC_enter_cycle_prev       },
-    {"set_border_color_raised", luaC_set_border_color_raised},
-    {NULL,                      NULL                        },
+    {"next", luaC_enter_cycle_next},
+    {"prev", luaC_enter_cycle_prev},
+    {NULL,   NULL                 },
 };
 
 static void register_lualibs(void *data)
@@ -241,10 +263,6 @@ static void on_cwc_shutdown(void *data)
 
 static int cwcle_init()
 {
-    // default to purple
-    raised_pattern =
-        cairo_pattern_create_rgba(0xff / 255.0, 0xaa / 255.0, 0xff / 255.0, 1);
-
     /* since the module loaded before the server initialized which mean the
      * seat hasn't been created yet, we register the keyboard modifier signal
      * when the event loop run. */
