@@ -4,6 +4,11 @@
 -- any write on the config table will automatically be taken care of,
 -- so no need to manually call `cwc.commit`.
 --
+-- @usage local config = require("config")
+--
+-- config["cursor_size"] = 25
+-- config["cursor_edge_snapping_overlay_color"] = { 0.1, 0.2, 0.3, 0.05 }
+--
 -- @author Dwi Asmoro Bangun
 -- @copyright 2025
 -- @license GPLv3
@@ -103,11 +108,11 @@ end
 
 --- Rotation of the color pattern in degree.
 -- @config border_color_rotation
--- @tparam[opt=0] gears_color border_color_rotation
+-- @tparam[opt=0] integer border_color_rotation
 
 --- Thickness of the client border in pixel.
 -- @config border_width
--- @tparam[opt=0] gears_color border_width
+-- @tparam[opt=0] integer border_width
 
 --- Default mode of the client decoration (SSD or CSD).
 -- @config default_decoration_mode
