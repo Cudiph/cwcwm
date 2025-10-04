@@ -209,7 +209,8 @@ void setup_cwcle(void *data)
         "config[\"border_color_raised\"] = gears.color(\"#ffaaff\")\n";
 
     lua_State *L = g_config_get_lua_State();
-    cwc_assert(!luaL_dostring(L, setup_luacode), "incorrect lua code");
+    if (luaL_dostring(L, setup_luacode))
+        cwc_assert(L, "%s", lua_tostring(L, -1));
 }
 
 static const luaL_Reg cwcle_staticlibs[] = {

@@ -80,7 +80,7 @@ int main(int argc, char **argv)
     setenv("_JAVA_AWT_WM_NONREPARENTING", "1", true);
 
     int c;
-    while ((c = getopt_long(argc, argv, "hvc:s:l:p:d", long_options, NULL))
+    while ((c = getopt_long(argc, argv, "hvc:s:l:p:dk", long_options, NULL))
            != -1)
         switch (c) {
         case 'd':

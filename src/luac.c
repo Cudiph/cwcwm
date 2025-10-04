@@ -573,9 +573,8 @@ int luaC_init()
         "incorrect dostring");
 
     // config table
-    cwc_assert(
-        !luaL_dostring(g_config_get_lua_State(), (char *)_src_defaultcfg_lua),
-        "incorrect dostring");
+    if (luaL_dostring(L, (char *)_src_defaultcfg_lua))
+        cwc_assert(false, "%s", lua_tostring(L, -1));
     lua_settop(L, 0);
 
     // reg c lib

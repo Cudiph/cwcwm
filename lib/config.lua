@@ -168,6 +168,14 @@ end
 -- @config useless_gaps
 -- @tparam[opt=0] integer useless_gaps
 
+local function check_rgba(tbl)
+    for i = 1, 4 do
+        if type(tbl[i]) ~= "number" then return false end
+    end
+
+    return true
+end
+
 -- sanity check table either a string (the type) or a function that return a boolean that determine if
 -- it pass the sanity check (true) or not (false)
 local sanity_check = {
@@ -184,7 +192,7 @@ local sanity_check = {
     cursor_size                        = config.check_positive,
     cursor_inactive_timeout            = config.check_positive,
     cursor_edge_threshold              = config.check_positive,
-    cursor_edge_snapping_overlay_color = "table", -- TODO: proper checking
+    cursor_edge_snapping_overlay_color = check_rgba, -- TODO: proper checking
 
     repeat_rate                        = config.check_positive,
     repeat_delay                       = config.check_positive,
