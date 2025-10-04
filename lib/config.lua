@@ -192,7 +192,7 @@ local sanity_check = {
     cursor_size                        = config.check_positive,
     cursor_inactive_timeout            = config.check_positive,
     cursor_edge_threshold              = config.check_positive,
-    cursor_edge_snapping_overlay_color = check_rgba, -- TODO: proper checking
+    cursor_edge_snapping_overlay_color = check_rgba,
 
     repeat_rate                        = config.check_positive,
     repeat_delay                       = config.check_positive,
