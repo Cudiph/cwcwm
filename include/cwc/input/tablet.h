@@ -13,6 +13,7 @@ struct cwc_tablet {
     struct wl_listener proximity_l;
     struct wl_listener tip_l;
     struct wl_listener button_l;
+    struct wl_listener destroy_l;
 };
 
 struct cwc_tablet *cwc_tablet_create(struct cwc_seat *seat,
