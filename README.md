@@ -58,6 +58,24 @@ Dev dependencies:
 - ninja
 - wayland-protocols
 - clang-format & EmmyLuaCodeStyle (formatting)
+## Installation
+
+<details>
+<summary>Packaging status</summary>
+<a href="https://repology.org/project/cwc/versions">
+    <img src="https://repology.org/badge/vertical-allrepos/cwc.svg?columns=3" alt="Packaging status">
+</a>
+</details>
+
+
+| OS/Distro                       | Command                                                                 |
+| ------------------------------- | ------------------------------------------------------------------------|
+| Archlinux                       | git clone https://aur.archlinux.org/cwc.git  <br> cd cwc  <br> makepkg -si
+| Fedora                          |[Manual](#Manual) 
+| Gentoo                          | eselect repository enable zuki <br> emaint sync <br> emerge \\=gui-wm/cwcwm-0.2.0 or \\=gui-wm/cwcwm-9999 for the git version                     |
+| NixOS                           | nix-env -iA nixos.cwc
+| Debian and Derivatives          | [Manual](#Manual)
+| openSUSE                        | [Manual](#Manual)l](#Manual)
 
 ### Manual
 
@@ -77,14 +95,7 @@ $ sudo make uninstall
 $ make clean
 ```
 
-### AUR
 
-AUR package is available under the package name [cwc][cwc] or [cwc-git][cwc-git] for the git version.
-
-```console
-$ yay -S cwc
-$ yay -S cwc-git
-```
 
 <div align="center">
   <h2>Screenshot</h2>
