@@ -407,8 +407,7 @@ static void dwl_ipc_cleanup()
                           on_client_prop_change_and_update_tag);
     cwc_signal_disconnect("client::prop::tag",
                           on_client_prop_change_and_update_tag);
-    cwc_signal_disconnect("client::prop::fullscreen",
-                          on_client_prop_change);
+    cwc_signal_disconnect("client::prop::fullscreen", on_client_prop_change);
     cwc_signal_disconnect("client::prop::floating", on_client_prop_change);
     cwc_signal_disconnect("client::prop::title", on_client_prop_change);
     cwc_signal_disconnect("client::prop::appid", on_client_prop_change);

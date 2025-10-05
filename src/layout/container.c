@@ -1101,9 +1101,9 @@ void cwc_container_set_enabled(struct cwc_container *container, bool set)
     }
 }
 
-#define EMIT_PROP_SIGNAL_FOR_FRONT_TOPLEVEL(propname, container)  \
-    cwc_object_emit_signal_simple("client::prop::" #propname, \
-                                  g_config_get_lua_State(),       \
+#define EMIT_PROP_SIGNAL_FOR_FRONT_TOPLEVEL(propname, container) \
+    cwc_object_emit_signal_simple("client::prop::" #propname,    \
+                                  g_config_get_lua_State(),      \
                                   cwc_container_get_front_toplevel(container))
 
 void cwc_container_set_floating(struct cwc_container *container, bool set)
