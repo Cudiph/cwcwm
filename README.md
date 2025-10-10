@@ -60,23 +60,23 @@ Dev dependencies:
 - clang-format & EmmyLuaCodeStyle (formatting)
 ## Installation
 
-<details>
 <summary>Packaging status</summary>
-<a href="https://repology.org/project/cwc/versions">
-    <img src="https://repology.org/badge/vertical-allrepos/cwc.svg?columns=3" alt="Packaging status">
+<a href="https://repology.org/project/cwc-misnamed/versions">
+    <img src="https://repology.org/badge/vertical-allrepos/cwc-misnamed.svg?columns=3" alt="Packaging status">
 </a>
-</details>
 
 
-| OS/Distro                       | Command                                                                 |
+<details>
+<summary>Packkaging</summary> 
+
+
+| OS/Distro                       | Command                                                                 
 | ------------------------------- | ------------------------------------------------------------------------|
 | Archlinux                       | git clone https://aur.archlinux.org/cwc.git  <br> cd cwc  <br> makepkg -si
-| Fedora                          |[Manual](#Manual) 
 | Gentoo                          | eselect repository enable zuki <br> emaint sync <br> emerge \\=gui-wm/cwcwm-0.2.0 or \\=gui-wm/cwcwm-9999 for the git version                     |
 | NixOS                           | nix-env -iA nixos.cwc
-| Debian and Derivatives          | [Manual](#Manual)
-| openSUSE                        | [Manual](#Manual)l](#Manual)
 
+</details>
 ### Manual
 
 ```console
@@ -122,3 +122,4 @@ See [LICENSE.md](LICENSE.md) for license details.
 [conventional-commits]: https://www.conventionalcommits.org/en/v1.0.0/#commit-message-with--to-draw-attention-to-breaking-change
 [cwc]: https://aur.archlinux.org/packages/cwc
 [cwc-git]: https://aur.archlinux.org/packages/cwc-git
+
