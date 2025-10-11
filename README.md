@@ -82,7 +82,7 @@ makepkg -si
 ```
 eselect repository enable zuki
 emaint sync
-emerge \\=gui-wm/cwcwm-0.2.0 or \\=gui-wm/cwcwm-9999 for the git version
+emerge \=gui-wm/cwcwm-0.2.0 or \=gui-wm/cwcwm-9999 for the git version
 ```
 </details>
 
