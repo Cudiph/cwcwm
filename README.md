@@ -67,16 +67,33 @@ Dev dependencies:
 
 
 <details>
-<summary>Packkaging</summary> 
+<summary>Arch Linux</summary>
 
-
-| OS/Distro                       | Command                                                                 
-| ------------------------------- | ------------------------------------------------------------------------|
-| Archlinux                       | git clone https://aur.archlinux.org/cwc.git  <br> cd cwc  <br> makepkg -si
-| Gentoo                          | eselect repository enable zuki <br> emaint sync <br> emerge \\=gui-wm/cwcwm-0.2.0 or \\=gui-wm/cwcwm-9999 for the git version                     |
-| NixOS                           | nix-env -iA nixos.cwc
-
+```
+git clone https://aur.archlinux.org/cwc.git
+cd cwc
+makepkg -si
+```
 </details>
+
+<details>
+<summary>Gentoo</summary>
+
+```
+eselect repository enable zuki
+emaint sync
+emerge \\=gui-wm/cwcwm-0.2.0 or \\=gui-wm/cwcwm-9999 for the git version
+```
+</details>
+
+<details>
+<summary>NixOS</summary>
+
+```
+nix-env -iA nixos.cwc
+```
+</details>
+
 ### Manual
 
 ```console
@@ -90,7 +107,7 @@ CwC now should be available in your display manager or execute `cwc` in a tty.
 
 To clear the installation and build artifacts, you can execute:
 
-```console
+```
 $ sudo make uninstall
 $ make clean
 ```
@@ -122,4 +139,3 @@ See [LICENSE.md](LICENSE.md) for license details.
 [conventional-commits]: https://www.conventionalcommits.org/en/v1.0.0/#commit-message-with--to-draw-attention-to-breaking-change
 [cwc]: https://aur.archlinux.org/packages/cwc
 [cwc-git]: https://aur.archlinux.org/packages/cwc-git
-
