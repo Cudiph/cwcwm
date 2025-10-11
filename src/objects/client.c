@@ -130,43 +130,43 @@
 
 /** Property signal.
  *
- * @signal client::property::fullscreen
+ * @signal client::prop::fullscreen
  * @tparam cwc_client c The client object.
  */
 
 /** Property signal.
  *
- * @signal client::property::maximized
+ * @signal client::prop::maximized
  * @tparam cwc_client c The client object.
  */
 
 /** Property signal.
  *
- * @signal client::property::minimized
+ * @signal client::prop::minimized
  * @tparam cwc_client c The client object.
  */
 
 /** Property signal.
  *
- * @signal client::property::floating
+ * @signal client::prop::floating
  * @tparam cwc_client c The client object.
  */
 
 /** Property signal.
  *
- * @signal client::property::urgent
+ * @signal client::prop::urgent
  * @tparam cwc_client c The client object.
  */
 
 /** Property signal.
  *
- * @signal client::property::tag
+ * @signal client::prop::tag
  * @tparam cwc_client c The client object.
  */
 
 /** Property signal.
  *
- * @signal client::property::workspace
+ * @signal client::prop::workspace
  * @tparam cwc_client c The client object.
  */
 

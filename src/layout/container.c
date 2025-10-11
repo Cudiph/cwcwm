@@ -1101,9 +1101,9 @@ void cwc_container_set_enabled(struct cwc_container *container, bool set)
     }
 }
 
-#define EMIT_PROP_SIGNAL_FOR_FRONT_TOPLEVEL(propname, container)  \
-    cwc_object_emit_signal_simple("client::property::" #propname, \
-                                  g_config_get_lua_State(),       \
+#define EMIT_PROP_SIGNAL_FOR_FRONT_TOPLEVEL(propname, container) \
+    cwc_object_emit_signal_simple("client::prop::" #propname,    \
+                                  g_config_get_lua_State(),      \
                                   cwc_container_get_front_toplevel(container))
 
 void cwc_container_set_floating(struct cwc_container *container, bool set)
@@ -1573,12 +1573,12 @@ void cwc_container_move_to_tag(struct cwc_container *container, int workspace)
         cwc_output_get_current_tag_info(container->output));
 
     lua_State *L = g_config_get_lua_State();
-    cwc_object_emit_signal_simple("client::property::workspace", L,
+    cwc_object_emit_signal_simple("client::prop::workspace", L,
                                   cwc_container_get_front_toplevel(container));
 
     if (tag_changed)
         cwc_object_emit_signal_simple(
-            "client::property::tag", L,
+            "client::prop::tag", L,
             cwc_container_get_front_toplevel(container));
 }
 
@@ -1594,7 +1594,7 @@ void cwc_container_set_tag(struct cwc_container *container, tag_bitfield_t tag)
     lua_State *L = g_config_get_lua_State();
     if (changed)
         cwc_object_emit_signal_simple(
-            "client::property::tag", L,
+            "client::prop::tag", L,
             cwc_container_get_front_toplevel(container));
 }
 
