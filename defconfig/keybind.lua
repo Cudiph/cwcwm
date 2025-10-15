@@ -25,6 +25,12 @@ local pointer = cwc.pointer
 -- client interactive mode
 pointer.bind(MODKEY, button.LEFT, pointer.move_interactive)
 pointer.bind(MODKEY, button.RIGHT, pointer.resize_interactive)
+pointer.bind(MODKEY, button.SCROLL_UP, function ()
+    cful.tag.viewprev()
+end)
+pointer.bind(MODKEY, button.SCROLL_DOWN, function ()
+    cful.tag.viewnext()
+end)
 
 ------------------- keyboard binding --------------------
 local kbd = cwc.kbd

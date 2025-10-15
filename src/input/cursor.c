@@ -516,6 +516,37 @@ static void _send_pointer_axis_signal(struct cwc_cursor *cursor,
     cwc_signal_emit("pointer::axis", &cwc_event, L, 5);
 }
 
+/* true means client shouldn't get notified */
+static bool _process_axis_bind(struct cwc_cursor *cursor,
+                               struct wlr_pointer_axis_event *event)
+{
+    struct wlr_keyboard *kbd = wlr_seat_get_keyboard(cursor->seat);
+    uint32_t modifiers       = kbd ? wlr_keyboard_get_modifiers(kbd) : 0;
+
+    if (event->source != WL_POINTER_AXIS_SOURCE_WHEEL)
+        return false;
+
+    enum cwc_cursor_pseudo_btn button = 0;
+
+    if (event->orientation == WL_POINTER_AXIS_VERTICAL_SCROLL) {
+        if (event->delta >= 0)
+            button = SCROLL_DOWN;
+        else if (event->delta <= 0)
+            button = SCROLL_UP;
+    } else if (event->orientation == WL_POINTER_AXIS_HORIZONTAL_SCROLL) {
+        if (event->delta >= 0)
+            button = SCROLL_LEFT;
+        else if (event->delta <= 0)
+            button = SCROLL_RIGHT;
+    }
+
+    if (!button)
+        return false;
+
+    return keybind_mouse_execute(server.main_mouse_kmap, modifiers, button,
+                                 true);
+}
+
 /* scroll wheel */
 static void on_cursor_axis(struct wl_listener *listener, void *data)
 {
@@ -525,6 +556,9 @@ static void on_cursor_axis(struct wl_listener *listener, void *data)
     struct wlr_pointer_axis_event *event = data;
     wlr_idle_notifier_v1_notify_activity(server.idle->idle_notifier,
                                          cursor->seat);
+
+    if (_process_axis_bind(cursor, event))
+        return;
 
     if (cursor->send_events)
         wlr_seat_pointer_notify_axis(

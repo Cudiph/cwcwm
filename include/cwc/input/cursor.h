@@ -22,6 +22,13 @@ enum cwc_cursor_state {
     CWC_CURSOR_STATE_RESIZE_MASTER,
 };
 
+enum cwc_cursor_pseudo_btn {
+    SCROLL_LEFT = 0x13371,
+    SCROLL_UP,
+    SCROLL_RIGHT,
+    SCROLL_DOWN,
+};
+
 struct hyprcursor_buffer {
     struct wlr_buffer base;
     cairo_surface_t *surface;

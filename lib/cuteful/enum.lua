@@ -30,14 +30,20 @@ local enum = {
     --
     -- @table mouse_btn
     mouse_btn = {
-        LEFT    = 0x110,
-        RIGHT   = 0x111,
-        MIDDLE  = 0x112,
-        SIDE    = 0x113,
-        EXTRA   = 0x114,
-        FORWARD = 0x115,
-        BACK    = 0x116,
-        TASK    = 0x117,
+        LEFT         = 0x110,
+        RIGHT        = 0x111,
+        MIDDLE       = 0x112,
+        SIDE         = 0x113,
+        EXTRA        = 0x114,
+        FORWARD      = 0x115,
+        BACK         = 0x116,
+        TASK         = 0x117,
+
+        -- pseudo button this doesn't exist in linux input event codes header
+        SCROLL_LEFT  = 0x13371,
+        SCROLL_UP    = 0x13372,
+        SCROLL_RIGHT = 0x13373,
+        SCROLL_DOWN  = 0x13374,
     },
 
     --- Extracted from wlr_direction `wlr_output_layout.h`
