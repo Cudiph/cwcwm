@@ -8,10 +8,11 @@
 ---------------------------------------------------------------------------
 
 local cuteful = {
-    enum   = require("cuteful.enum"),
-    tag    = require("cuteful.tag"),
-    client = require("cuteful.client"),
-    screen = require("cuteful.screen"),
+    enum    = require("cuteful.enum"),
+    tag     = require("cuteful.tag"),
+    client  = require("cuteful.client"),
+    screen  = require("cuteful.screen"),
+    pointer = require("cuteful.pointer"),
 }
 
 return cuteful

@@ -5,6 +5,9 @@ local signal_list = {
     -- "pointer::move",
     -- "pointer::button",
     -- "pointer::move",
+    -- "pointer::swipe::begin",
+    -- "pointer::swipe::update",
+    -- "pointer::swipe::end",
 }
 
 local triggered_list = {}

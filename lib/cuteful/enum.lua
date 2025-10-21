@@ -39,7 +39,7 @@ local enum = {
         BACK         = 0x116,
         TASK         = 0x117,
 
-        -- pseudo button this doesn't exist in linux input event codes header
+        -- Pseudo button this doesn't exist in linux input event codes header
         SCROLL_LEFT  = 0x13371,
         SCROLL_UP    = 0x13372,
         SCROLL_RIGHT = 0x13373,

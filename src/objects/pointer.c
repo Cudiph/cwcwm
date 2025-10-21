@@ -70,6 +70,32 @@
  * @tparam number delta_discrete
  */
 
+/** Emitted when swipe gestures begin.
+ *
+ * @signal pointer::swipe::begin
+ * @tparam cwc_pointer pointer The pointer object.
+ * @tparam integer time_msec The event time in milliseconds.
+ * @tparam integer fingers Number of fingers that touch the surface.
+ */
+
+/** Emitted when fingers move after swipe gestures started.
+ *
+ * @signal pointer::swipe::update
+ * @tparam cwc_pointer pointer The pointer object.
+ * @tparam integer time_msec The event time in milliseconds.
+ * @tparam integer fingers Number of fingers that touch the surface.
+ * @tparam number dx Difference of x axis compared to the previous event.
+ * @tparam number dy Difference of y axis compared to the previous event.
+ */
+
+/** Emitted when finger(s) lifted from the surface.
+ *
+ * @signal pointer::swipe::end
+ * @tparam cwc_pointer pointer The pointer object.
+ * @tparam integer time_msec The event time in milliseconds.
+ * @tparam boolean cancelled The swipe gesture is considered cancelled.
+ */
+
 //============================ CODE =================================
 
 /** Get all pointer in the server.
@@ -144,12 +170,34 @@ static int luaC_pointer_bind(lua_State *L)
         info.luaref_press = luaL_ref(L, LUA_REGISTRYINDEX);
     }
 
+    int data_index = 4;
     if (on_release_is_function) {
         lua_pushvalue(L, 4);
         info.luaref_release = luaL_ref(L, LUA_REGISTRYINDEX);
+        data_index++;
     }
 
-    keybind_mouse_register(server.main_mouse_kmap, modifiers, button, info);
+    // save the keybind data
+    if (lua_istable(L, data_index)) {
+        lua_getfield(L, data_index, "description");
+        if (lua_isstring(L, -1))
+            info.description = strdup(lua_tostring(L, -1));
+
+        lua_getfield(L, data_index, "group");
+        if (lua_isstring(L, -1))
+            info.group = strdup(lua_tostring(L, -1));
+
+        lua_getfield(L, data_index, "exclusive");
+        info.exclusive = lua_toboolean(L, -1);
+
+        lua_getfield(L, data_index, "repeated");
+        info.repeat = lua_toboolean(L, -1);
+
+        lua_getfield(L, data_index, "pass");
+        info.pass = lua_toboolean(L, -1);
+    }
+
+    keybind_register(server.main_mouse_kmap, modifiers, button, info);
 
     return 0;
 }
