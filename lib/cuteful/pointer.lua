@@ -8,9 +8,9 @@
 -------------------------------------------------------------------------------
 
 local enum_dir = require("cuteful.enum").direction
-local cwc = cwc
 
-local pointer = {}
+local cwc = cwc
+local pointer_api = {}
 
 local function generate_swipe_bind_info_key(fingers, direction)
     return "swipe_" .. fingers .. "_" .. direction
@@ -38,36 +38,41 @@ local function get_direction_from_xy(x, y)
     end
 end
 
-
 -- listen only when bind is called to prevent adding key to signal map in C
-local already_listened = false
-local function listen_init()
-    if already_listened then return end
+local swipe_already_listened = false
+local function swipe_listen_init()
+    if swipe_already_listened then return end
 
     local range_from_initial_pos = 0
     local current_bind = nil
     local initial_update = true
     local direction = nil
     local committed = false
-    local COMMIT_THRESHOLD = 200
+    local commit_threshold = 200
+    local cancel_threshold = 50
 
-    cwc.connect_signal("pointer::swipe::begin", function(pointer, msec, fingers)
+    cwc.connect_signal("pointer::swipe::begin", function()
         range_from_initial_pos = 0
         initial_update = true
         direction = nil
         current_bind = nil
         committed = false
+        commit_threshold = 200
+        cancel_threshold = 50
     end)
 
-    cwc.connect_signal("pointer::swipe::update", function(pointer, msec, fingers, dx, dy)
+    cwc.connect_signal("pointer::swipe::update", function(pointer, _, fingers, dx, dy)
         if initial_update then
             initial_update = false
 
             direction = get_direction_from_xy(dx, dy)
             current_bind = bind_info[generate_swipe_bind_info_key(fingers, direction)]
-        end
 
-        print(direction, range_from_initial_pos, dx, range_from_initial_pos + dx)
+            if current_bind then
+                commit_threshold = current_bind.threshold or commit_threshold
+                cancel_threshold = current_bind.cancel_threshold or cancel_threshold
+            end
+        end
 
         if direction == enum_dir.LEFT or direction == enum_dir.RIGHT then
             range_from_initial_pos = range_from_initial_pos + dx
@@ -75,11 +80,17 @@ local function listen_init()
             range_from_initial_pos = range_from_initial_pos + dy
         end
 
-        if not current_bind then return end
+        if current_bind == nil then return end
 
-        local CANCEL_THRESHOLD = 50
+        if current_bind.skip_events then
+            pointer.send_events = false
+            cwc.timer.delayed_call(function()
+                pointer.send_events = true
+            end)
+        end
+
         if committed then
-            if math.abs(range_from_initial_pos) < CANCEL_THRESHOLD then
+            if math.abs(range_from_initial_pos) < cancel_threshold then
                 current_bind.cancelled()
                 committed = false
             end
@@ -87,22 +98,18 @@ local function listen_init()
             return
         end
 
-
-        if (direction == enum_dir.LEFT or direction == enum_dir.UP) and range_from_initial_pos < -COMMIT_THRESHOLD or
-            (direction == enum_dir.RIGHT or direction == enum_dir.DOWN) and range_from_initial_pos > COMMIT_THRESHOLD
+        if (direction == enum_dir.LEFT or direction == enum_dir.UP)
+            and range_from_initial_pos < -commit_threshold
+            or
+            (direction == enum_dir.RIGHT or direction == enum_dir.DOWN)
+            and range_from_initial_pos > commit_threshold
         then
             current_bind.committed()
             committed = true
         end
     end)
 
-    cwc.connect_signal("pointer::swipe::end", function(pointer, msec, cancelled)
-        if committed and cancelled and current_bind then
-            current_bind.cancelled()
-        end
-    end)
-
-    already_listened = true
+    swipe_already_listened = true
 end
 
 --- Get a screen by its relative index.
@@ -112,18 +119,25 @@ end
 -- @tparam enum direction The swipe direction.
 -- @tparam function committed Callback function when swipe is considered valid.
 -- @tparam function cancelled Callback function when swipe is considered not swiping.
--- @tparam table options.
--- @tparam integer options.threshold Threshold of
-function pointer.bind_swipe(fingers, direction, f_committed, f_cancelled)
-    listen_init()
+-- @tparam table options
+-- @tparam integer options.threshold Threshold distance from initial point that is considered a swipes.
+-- @tparam integer options.cancel_threshold Threshold distance from initial point to be considered cancelled.
+-- @tparam integer options.skip_events Don't send swipe gesturesevents to focused client.
+-- @noreturn
+function pointer_api.bind_swipe(fingers, direction, f_committed, f_cancelled, options)
+    swipe_listen_init()
+
     bind_info[generate_swipe_bind_info_key(fingers, direction)] = {
         committed = f_committed,
         cancelled = f_cancelled,
+        threshold = options and options.threshold,
+        cancel_threshold = options and options.cancel_threshold,
+        skip_events = options and options.skip_events,
     }
 end
 
-function pointer.unbind_swipe(fingers, direction)
+function pointer_api.unbind_swipe(fingers, direction)
     bind_info[generate_swipe_bind_info_key(fingers, direction)] = nil
 end
 
-return pointer
+return pointer_api

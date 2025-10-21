@@ -614,13 +614,15 @@ kbd.bind({ MODKEY, mod.CTRL }, "slash", function()
     print(s.active_tag, s.active_workspace)
 end, { description = "this just for debugging", group = "dev", exclusive = true, repeated = true })
 
+
+------------------ Swipe Gestures ---------------------
 local prev_active_tag = 1
 cful.pointer.bind_swipe(3, direction.RIGHT, function()
     prev_active_tag = cwc.screen.focused().active_tag
     cful.tag.viewnext()
 end, function()
     cwc.screen.focused().active_tag = prev_active_tag
-end)
+end, { skip_events = true, threshold = 250, cancel_threshold = 60 })
 
 cful.pointer.bind_swipe(3, direction.LEFT, function()
     prev_active_tag = cwc.screen.focused().active_tag
