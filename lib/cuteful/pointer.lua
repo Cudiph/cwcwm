@@ -91,7 +91,7 @@ local function swipe_listen_init()
 
         if committed then
             if math.abs(range_from_initial_pos) < cancel_threshold then
-                current_bind.cancelled()
+                current_bind.cancelled(pointer)
                 committed = false
             end
 
@@ -104,7 +104,7 @@ local function swipe_listen_init()
             (direction == enum_dir.RIGHT or direction == enum_dir.DOWN)
             and range_from_initial_pos > commit_threshold
         then
-            current_bind.committed()
+            current_bind.committed(pointer)
             committed = true
         end
     end)
@@ -117,8 +117,8 @@ end
 -- @staticfct bind_swipe
 -- @tparam integer fingers Number of fingers that touch the surface.
 -- @tparam enum direction The swipe direction.
--- @tparam function committed Callback function when swipe is considered valid.
--- @tparam function cancelled Callback function when swipe is considered not swiping.
+-- @tparam function committed Callback function when swipe is considered valid. `fn(cwc_pointer)`
+-- @tparam function cancelled Callback function when swipe is considered not swiping. `fn(cwc_pointer)`
 -- @tparam table options
 -- @tparam integer options.threshold Threshold distance from initial point that is considered a swipes.
 -- @tparam integer options.cancel_threshold Threshold distance from initial point to be considered cancelled.
