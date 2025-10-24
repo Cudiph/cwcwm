@@ -173,4 +173,19 @@ struct cwc_pointer_axis_event {
     struct wlr_pointer_axis_event *event;
 };
 
+struct cwc_pointer_swipe_begin_event {
+    struct cwc_cursor *cursor;
+    struct wlr_pointer_swipe_begin_event *event;
+};
+
+struct cwc_pointer_swipe_update_event {
+    struct cwc_cursor *cursor;
+    struct wlr_pointer_swipe_update_event *event;
+};
+
+struct cwc_pointer_swipe_end_event {
+    struct cwc_cursor *cursor;
+    struct wlr_pointer_swipe_end_event *event;
+};
+
 #endif // !_CWC_INPUT_CURSOR_H

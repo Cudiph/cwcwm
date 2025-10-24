@@ -111,22 +111,15 @@ int cwc_keybind_map_register_bind_from_lua(struct lua_State *L,
 uint64_t keybind_generate_key(uint32_t modifiers, uint32_t key);
 
 /* register a keybind to the map */
-void keybind_kbd_register(struct cwc_keybind_map *kmap,
-                          uint32_t modifiers,
-                          xkb_keysym_t key,
-                          struct cwc_keybind_info info);
-void keybind_mouse_register(struct cwc_keybind_map *kmap,
-                            uint32_t modifiers,
-                            uint32_t button,
-                            struct cwc_keybind_info info);
+void keybind_register(struct cwc_keybind_map *kmap,
+                      uint32_t modifiers,
+                      uint32_t key,
+                      struct cwc_keybind_info info);
 
 /* remove a keybind from a map */
-void keybind_kbd_remove(struct cwc_keybind_map *kmap,
-                        uint32_t modifiers,
-                        xkb_keysym_t key);
-void keybind_mouse_remove(struct cwc_keybind_map *kmap,
-                          uint32_t modifiers,
-                          uint32_t button);
+void keybind_remove(struct cwc_keybind_map *kmap,
+                    uint32_t modifiers,
+                    uint32_t key);
 
 /* true if a keybind entry found/processed */
 bool keybind_kbd_execute(struct cwc_keybind_map *kmap,

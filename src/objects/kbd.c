@@ -132,13 +132,11 @@ int cwc_keybind_map_register_bind_from_lua(lua_State *L,
         info.luaref_press = luaL_ref(L, LUA_REGISTRYINDEX);
     }
 
-    int data_index;
+    int data_index = 4;
     if (on_release_is_function) {
         lua_pushvalue(L, 4);
         info.luaref_release = luaL_ref(L, LUA_REGISTRYINDEX);
-        data_index          = 5;
-    } else {
-        data_index = 4;
+        data_index++;
     }
 
     // save the keybind data
@@ -162,7 +160,7 @@ int cwc_keybind_map_register_bind_from_lua(lua_State *L,
     }
 
     // ready for register
-    keybind_kbd_register(kmap, modifiers, keysym, info);
+    keybind_register(kmap, modifiers, keysym, info);
 
     return 0;
 }
@@ -183,6 +181,7 @@ int cwc_keybind_map_register_bind_from_lua(lua_State *L,
  * lockscreen and shortcut inhibit
  * @tparam[opt] string data.repeated Repeat keybind when hold (only on_press
  * will be executed)
+ * @tparam[opt] boolean data.pass Keypress will still pass through the client
  * @noreturn
  * @see cuteful.enum.modifier
  * @see cwc.pointer.bind
