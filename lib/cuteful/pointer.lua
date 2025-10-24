@@ -8,6 +8,7 @@
 -------------------------------------------------------------------------------
 
 local enum_dir = require("cuteful.enum").direction
+local gears = require("gears")
 
 local cwc = cwc
 local pointer_api = {}
@@ -126,6 +127,10 @@ end
 -- @noreturn
 function pointer_api.bind_swipe(fingers, direction, f_committed, f_cancelled, options)
     swipe_listen_init()
+
+    if options and options.cancel_threshold and options.threshold and options.cancel_threshold >= options.threshold then
+        gears.debug.print_error("Threshold is lower than cancel threshold")
+    end
 
     bind_info[generate_swipe_bind_info_key(fingers, direction)] = {
         committed = f_committed,
