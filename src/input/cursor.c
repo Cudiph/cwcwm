@@ -1067,16 +1067,56 @@ static void on_swipe_end(struct wl_listener *listener, void *data)
                                                event->cancelled);
 }
 
+static inline void
+_send_pointer_pinch_begin_signal(struct cwc_cursor *cursor,
+                                 struct wlr_pointer_pinch_begin_event *event)
+{
+    struct cwc_pointer_pinch_begin_event signal_data = {
+        .cursor = cursor,
+        .event  = event,
+    };
+
+    lua_State *L = g_config_get_lua_State();
+    luaC_object_push(L, cursor);
+    lua_pushnumber(L, event->time_msec);
+    lua_pushnumber(L, event->fingers);
+
+    cwc_signal_emit("pointer::pinch::begin", &signal_data, L, 3);
+}
+
 static void on_pinch_begin(struct wl_listener *listener, void *data)
 {
     struct cwc_cursor *cursor =
         wl_container_of(listener, cursor, pinch_begin_l);
     struct wlr_pointer_pinch_begin_event *event = data;
 
+    _send_pointer_pinch_begin_signal(cursor, event);
+
     if (cursor->send_events)
         wlr_pointer_gestures_v1_send_pinch_begin(server.input->pointer_gestures,
                                                  cursor->seat, event->time_msec,
                                                  event->fingers);
+}
+
+static inline void
+_send_pointer_pinch_update_signal(struct cwc_cursor *cursor,
+                                  struct wlr_pointer_pinch_update_event *event)
+{
+    struct cwc_pointer_pinch_update_event signal_data = {
+        .cursor = cursor,
+        .event  = event,
+    };
+
+    lua_State *L = g_config_get_lua_State();
+    luaC_object_push(L, cursor);
+    lua_pushnumber(L, event->time_msec);
+    lua_pushnumber(L, event->fingers);
+    lua_pushnumber(L, event->dx);
+    lua_pushnumber(L, event->dy);
+    lua_pushnumber(L, event->scale);
+    lua_pushnumber(L, event->rotation);
+
+    cwc_signal_emit("pointer::pinch::update", &signal_data, L, 7);
 }
 
 static void on_pinch_update(struct wl_listener *listener, void *data)
@@ -1085,10 +1125,29 @@ static void on_pinch_update(struct wl_listener *listener, void *data)
         wl_container_of(listener, cursor, pinch_update_l);
     struct wlr_pointer_pinch_update_event *event = data;
 
+    _send_pointer_pinch_update_signal(cursor, event);
+
     if (cursor->send_events)
         wlr_pointer_gestures_v1_send_pinch_update(
             server.input->pointer_gestures, cursor->seat, event->time_msec,
             event->dx, event->dy, event->scale, event->rotation);
+}
+
+static inline void
+_send_pointer_pinch_end_signal(struct cwc_cursor *cursor,
+                               struct wlr_pointer_pinch_end_event *event)
+{
+    struct cwc_pointer_pinch_end_event signal_data = {
+        .cursor = cursor,
+        .event  = event,
+    };
+
+    lua_State *L = g_config_get_lua_State();
+    luaC_object_push(L, cursor);
+    lua_pushnumber(L, event->time_msec);
+    lua_pushboolean(L, event->cancelled);
+
+    cwc_signal_emit("pointer::pinch::end", &signal_data, L, 3);
 }
 
 static void on_pinch_end(struct wl_listener *listener, void *data)
@@ -1096,10 +1155,29 @@ static void on_pinch_end(struct wl_listener *listener, void *data)
     struct cwc_cursor *cursor = wl_container_of(listener, cursor, pinch_end_l);
     struct wlr_pointer_pinch_end_event *event = data;
 
+    _send_pointer_pinch_end_signal(cursor, event);
+
     if (cursor->send_events)
         wlr_pointer_gestures_v1_send_pinch_end(server.input->pointer_gestures,
                                                cursor->seat, event->time_msec,
                                                event->cancelled);
+}
+
+static inline void
+_send_pointer_hold_begin_signal(struct cwc_cursor *cursor,
+                                struct wlr_pointer_hold_begin_event *event)
+{
+    struct cwc_pointer_hold_begin_event signal_data = {
+        .cursor = cursor,
+        .event  = event,
+    };
+
+    lua_State *L = g_config_get_lua_State();
+    luaC_object_push(L, cursor);
+    lua_pushnumber(L, event->time_msec);
+    lua_pushnumber(L, event->fingers);
+
+    cwc_signal_emit("pointer::hold::begin", &signal_data, L, 3);
 }
 
 static void on_hold_begin(struct wl_listener *listener, void *data)
@@ -1107,16 +1185,37 @@ static void on_hold_begin(struct wl_listener *listener, void *data)
     struct cwc_cursor *cursor = wl_container_of(listener, cursor, hold_begin_l);
     struct wlr_pointer_hold_begin_event *event = data;
 
+    _send_pointer_hold_begin_signal(cursor, event);
+
     if (cursor->send_events)
         wlr_pointer_gestures_v1_send_hold_begin(server.input->pointer_gestures,
                                                 cursor->seat, event->time_msec,
                                                 event->fingers);
 }
 
+static inline void
+_send_pointer_hold_end_signal(struct cwc_cursor *cursor,
+                              struct wlr_pointer_hold_end_event *event)
+{
+    struct cwc_pointer_hold_end_event signal_data = {
+        .cursor = cursor,
+        .event  = event,
+    };
+
+    lua_State *L = g_config_get_lua_State();
+    luaC_object_push(L, cursor);
+    lua_pushnumber(L, event->time_msec);
+    lua_pushboolean(L, event->cancelled);
+
+    cwc_signal_emit("pointer::hold::end", &signal_data, L, 3);
+}
+
 static void on_hold_end(struct wl_listener *listener, void *data)
 {
     struct cwc_cursor *cursor = wl_container_of(listener, cursor, hold_end_l);
     struct wlr_pointer_hold_end_event *event = data;
+
+    _send_pointer_hold_end_signal(cursor, event);
 
     if (cursor->send_events)
         wlr_pointer_gestures_v1_send_hold_end(server.input->pointer_gestures,

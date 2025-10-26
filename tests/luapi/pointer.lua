@@ -8,6 +8,11 @@ local signal_list = {
     -- "pointer::swipe::begin",
     -- "pointer::swipe::update",
     -- "pointer::swipe::end",
+    -- "pointer::pinch::begin",
+    -- "pointer::pinch::update",
+    -- "pointer::pinch::end",
+    -- "pointer::hold::begin",
+    -- "pointer::hold::end",
 }
 
 local triggered_list = {}

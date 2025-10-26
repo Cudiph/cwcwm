@@ -96,6 +96,51 @@
  * @tparam boolean cancelled The swipe gesture is considered cancelled.
  */
 
+/** Emitted when pinch gesture begin.
+ *
+ * @signal pointer::pinch::begin
+ * @tparam cwc_pointer pointer The pointer object.
+ * @tparam integer time_msec The event time in milliseconds.
+ * @tparam integer fingers Number of fingers that touch the surface.
+ */
+
+/** Emitted when fingers move after pinch gesture started.
+ *
+ * @signal pointer::pinch::update
+ * @tparam cwc_pointer pointer The pointer object.
+ * @tparam integer time_msec The event time in milliseconds.
+ * @tparam integer fingers Number of fingers that touch the surface.
+ * @tparam number dx Difference of x axis compared to the previous event.
+ * @tparam number dy Difference of y axis compared to the previous event.
+ * @tparam integer scale Absolute scale compared to the begin event.
+ * @tparam integer rotation Relative angle in degrees clockwise compared to the
+ * previous event.
+ */
+
+/** Emitted when finger(s) lifted from the surface.
+ *
+ * @signal pointer::pinch::end
+ * @tparam cwc_pointer pointer The pointer object.
+ * @tparam integer time_msec The event time in milliseconds.
+ * @tparam boolean cancelled The pinch gesture is considered cancelled.
+ */
+
+/** Emitted when hold gesture begin.
+ *
+ * @signal pointer::hold::begin
+ * @tparam cwc_pointer pointer The pointer object.
+ * @tparam integer time_msec The event time in milliseconds.
+ * @tparam integer fingers Number of fingers that touch the surface.
+ */
+
+/** Emitted when finger(s) lifted from the surface.
+ *
+ * @signal pointer::hold::end
+ * @tparam cwc_pointer pointer The pointer object.
+ * @tparam integer time_msec The event time in milliseconds.
+ * @tparam boolean cancelled The hold gesture is considered cancelled.
+ */
+
 //============================ CODE =================================
 
 /** Get all pointer in the server.

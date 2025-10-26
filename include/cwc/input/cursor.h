@@ -188,4 +188,29 @@ struct cwc_pointer_swipe_end_event {
     struct wlr_pointer_swipe_end_event *event;
 };
 
+struct cwc_pointer_pinch_begin_event {
+    struct cwc_cursor *cursor;
+    struct wlr_pointer_pinch_begin_event *event;
+};
+
+struct cwc_pointer_pinch_update_event {
+    struct cwc_cursor *cursor;
+    struct wlr_pointer_pinch_update_event *event;
+};
+
+struct cwc_pointer_pinch_end_event {
+    struct cwc_cursor *cursor;
+    struct wlr_pointer_pinch_end_event *event;
+};
+
+struct cwc_pointer_hold_begin_event {
+    struct cwc_cursor *cursor;
+    struct wlr_pointer_hold_begin_event *event;
+};
+
+struct cwc_pointer_hold_end_event {
+    struct cwc_cursor *cursor;
+    struct wlr_pointer_hold_end_event *event;
+};
+
 #endif // !_CWC_INPUT_CURSOR_H
