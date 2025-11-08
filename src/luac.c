@@ -54,6 +54,7 @@
 #include "cwc/luac.h"
 #include "cwc/luaclass.h"
 #include "cwc/plugin.h"
+#include "cwc/process.h"
 #include "cwc/server.h"
 #include "cwc/signal.h"
 #include "cwc/timer.h"
@@ -223,12 +224,47 @@ cleanup:
 /** Spawn program with shell.
  * @staticfct spawn_with_shell
  * @tparam string cmd Shell command
+ * @tparam[opt] string cmd Shell command
+ * @tparam[opt] function io_cb Callback function when output of stdout or
+ * stderrs ready.
+ * @tparam[opt] string|nil io_cb.stdout Output from stdout of the process.
+ * @tparam[opt] string|nil io_cb.stderr Output from stderr of the process.
+ * @tparam[opt] integer io_cb.pid The process id.
+ * @tparam[opt] any io_cb.data Userdata.
+ * @tparam[opt] function exited_cb Callback when the process exited.
+ * @tparam[opt] integer exited_cb.pid The process id.
+ * @tparam[opt] integer exited_cb.exit_code Exit code of the process.
+ * @tparam[opt] any exited_cb.data Userdata.
  * @noreturn
  */
 static int luaC_spawn_with_shell(lua_State *L)
 {
     const char *cmd = luaL_checkstring(L, 1);
-    spawn_with_shell(cmd);
+
+    if (lua_gettop(L) == 1) {
+        spawn_with_shell(cmd);
+        return 0;
+    }
+
+    struct cwc_process_callback_info info = {0};
+
+    int data_idx = 3;
+    if (lua_type(L, 2) == LUA_TFUNCTION) {
+        lua_pushvalue(L, 2);
+        info.luaref_ioready = luaL_ref(L, LUA_REGISTRYINDEX);
+    }
+    if (lua_type(L, 3) == LUA_TFUNCTION) {
+        lua_pushvalue(L, 3);
+        info.luaref_exited = luaL_ref(L, LUA_REGISTRYINDEX);
+        data_idx++;
+    }
+
+    if (!lua_isnoneornil(L, data_idx)) {
+        lua_pushvalue(L, data_idx);
+        info.luaref_data = luaL_ref(L, LUA_REGISTRYINDEX);
+    }
+
+    spawn_with_shell_easy_async(cmd, info);
 
     return 0;
 }

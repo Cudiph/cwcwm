@@ -88,8 +88,8 @@ static int timer_timed_out(void *data)
 /** Create a new timer.
  *
  * @staticfct new
- * @tparam number timeout
- * @tparam function callback
+ * @tparam number timeout Timeout in seconds
+ * @tparam function callback Callback when the timer ends
  * @tparam[opt] table options Additional settings
  * @tparam[opt=true] boolean options.autostart Immediately start the timer
  * countdown

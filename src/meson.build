@@ -20,6 +20,7 @@ srcs = [
 
   'config.c',
   'plugin.c',
+  'process.c',
   'signal.c',
   'util.c',
   'util-map.c',
