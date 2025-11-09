@@ -61,8 +61,10 @@ static void _spawn_exit_callback_call(struct spawn_obj *obj, int exit_code)
     lua_State *L                           = g_config_get_lua_State();
 
     if (info->type == CWC_PROCESS_TYPE_LUA) {
-
         lua_rawgeti(L, LUA_REGISTRYINDEX, obj->info->luaref_exited);
+        if (lua_type(L, -1) != LUA_TFUNCTION)
+            return;
+
         lua_pushnumber(L, exit_code);
         lua_pushnumber(L, obj->pid);
         lua_rawgeti(L, LUA_REGISTRYINDEX, info->luaref_data);
@@ -240,6 +242,8 @@ static void _spawn_io_callback_call(struct spawn_obj *obj,
 
     if (info->type == CWC_PROCESS_TYPE_LUA) {
         lua_rawgeti(L, LUA_REGISTRYINDEX, info->luaref_ioready);
+        if (lua_type(L, -1) != LUA_TFUNCTION)
+            return;
 
         if (is_stdout) {
             lua_pushstring(L, outbuf);
@@ -268,10 +272,13 @@ static void process_stdfd(int fd, struct spawn_obj *obj, bool is_stdout)
     ioctl(fd, FIONREAD, &ready_bytes);
 
     if (ready_bytes == 0) {
-        if (is_stdout)
+        if (is_stdout) {
             wl_event_source_remove(obj->out);
-        else
+            close(obj->pipefd_out);
+        } else {
             wl_event_source_remove(obj->err);
+            close(obj->pipefd_err);
+        }
         return;
     }
 
@@ -311,20 +318,32 @@ static int on_pipe_stderr(int fd, uint32_t mask, void *data)
 }
 
 struct spawn_async_data {
-    char *command;
+    bool with_shell;
+    union {
+        char *command;
+        struct wl_array *argvarr;
+    };
     struct cwc_process_callback_info *info;
 };
 
-static void _spawn_with_shell_easy_async(void *data)
+static void _spawn_easy_async(void *data)
 {
     struct spawn_async_data *userdata = data;
-    char *command                     = userdata->command;
-
+    char *command;
+    char **argv;
+    struct wl_array *argvarr;
     struct spawn_obj *spawned = calloc(1, sizeof(*spawned));
     if (!spawned)
         goto cleanup;
 
-    cwc_log(CWC_DEBUG, "spawning with shell: %s", command);
+    if (userdata->with_shell) {
+        command = userdata->command;
+        cwc_log(CWC_DEBUG, "spawning with shell: %s", command);
+    } else {
+        argvarr = userdata->argvarr;
+        argv    = argvarr->data;
+        cwc_log(CWC_DEBUG, "spawning : %s", argv[0]);
+    }
 
     int pipefd_out[2];
     int pipefd_err[2];
@@ -340,13 +359,20 @@ static void _spawn_with_shell_easy_async(void *data)
         cwc_log(CWC_ERROR, "can't create child process");
         goto cleanup_fd;
     } else if (childpid == 0) {
+        setsid();
+
         close(pipefd_out[0]);
         close(pipefd_err[0]);
         dup2(pipefd_out[1], STDOUT_FILENO);
         dup2(pipefd_err[1], STDERR_FILENO);
 
-        execl("/bin/sh", "/bin/sh", "-c", command, NULL);
-        cwc_log(CWC_ERROR, "spawn with shell failed: %s", command);
+        if (userdata->with_shell) {
+            execl("/bin/sh", "/bin/sh", "-c", command, NULL);
+            cwc_log(CWC_ERROR, "spawn with shell failed: %s", command);
+        } else {
+            execvp(argv[0], argv);
+            cwc_log(CWC_ERROR, "spawn failed [%d]: %s", errno, argv[0]);
+        }
 
         _exit(0);
     }
@@ -368,7 +394,17 @@ cleanup_fd:
     close(pipefd_out[1]);
     close(pipefd_err[1]);
 cleanup:
-    free(command);
+    if (userdata->with_shell) {
+        free(command);
+    } else {
+        char **s;
+        wl_array_for_each(s, argvarr)
+        {
+            free(*s);
+        }
+        wl_array_release(argvarr);
+    }
+    free(userdata);
 }
 
 void spawn_with_shell_easy_async(const char *const command,
@@ -383,9 +419,39 @@ void spawn_with_shell_easy_async(const char *const command,
     if (!userdata)
         return free(info_dup);
 
-    userdata->info    = info_dup;
-    userdata->command = strdup(command);
+    userdata->info       = info_dup;
+    userdata->command    = strdup(command);
+    userdata->with_shell = true;
 
-    wl_event_loop_add_idle(server.wl_event_loop, _spawn_with_shell_easy_async,
-                           userdata);
+    wl_event_loop_add_idle(server.wl_event_loop, _spawn_easy_async, userdata);
+}
+
+void spawn_easy_async(char **argv, struct cwc_process_callback_info info)
+{
+    struct wl_array *argvarr                   = malloc(sizeof(*argvarr));
+    struct cwc_process_callback_info *info_dup = malloc(sizeof(*info_dup));
+    struct spawn_async_data *userdata          = malloc(sizeof(*userdata));
+    if (!argvarr || !info_dup || !userdata) {
+        free(argvarr);
+        free(info_dup);
+        free(userdata);
+        return;
+    }
+    wl_array_init(argvarr);
+
+    int i = 0;
+    while (argv[i] != NULL) {
+        char **elm = wl_array_add(argvarr, sizeof(char *));
+        *elm       = strdup(argv[i]);
+        i++;
+    }
+    char **elm = wl_array_add(argvarr, sizeof(char *));
+    *elm       = NULL;
+
+    *info_dup            = info;
+    userdata->info       = info_dup;
+    userdata->argvarr    = argvarr;
+    userdata->with_shell = false;
+
+    wl_event_loop_add_idle(server.wl_event_loop, _spawn_easy_async, userdata);
 }

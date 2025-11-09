@@ -44,6 +44,8 @@ struct spawn_obj {
 };
 
 void spawn(char **argv);
+void spawn_easy_async(char **argv, struct cwc_process_callback_info info);
+
 void spawn_with_shell(const char *const command);
 void spawn_with_shell_easy_async(const char *const command,
                                  struct cwc_process_callback_info info);
