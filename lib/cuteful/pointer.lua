@@ -118,8 +118,10 @@ end
 -- @staticfct bind_swipe
 -- @tparam integer fingers Number of fingers that touch the surface.
 -- @tparam enum direction The swipe direction.
--- @tparam function committed Callback function when swipe is considered valid. `fn(cwc_pointer)`
--- @tparam function cancelled Callback function when swipe is considered not swiping. `fn(cwc_pointer)`
+-- @tparam function committed_cb Callback function when swipe is considered valid.
+-- @tparam cwc_pointer committed_cb.pointer The pointer object.
+-- @tparam function cancelled_cb Callback function when swipe is considered not swiping.
+-- @tparam cwc_pointer cancelled_cb.pointer The pointer object.
 -- @tparam table options
 -- @tparam integer options.threshold Threshold distance from initial point that is considered a swipes.
 -- @tparam integer options.cancel_threshold Threshold distance from initial point to be considered cancelled.

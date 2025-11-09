@@ -130,7 +130,4 @@ enum server_init_return_code
 server_init(struct cwc_server *s, char *config_path, char *library_path);
 void server_fini(struct cwc_server *s);
 
-void spawn(char **argv);
-void spawn_with_shell(const char *const command);
-
 #endif // !_CWC_SERVER_H

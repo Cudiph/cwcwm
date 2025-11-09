@@ -67,7 +67,6 @@
 #include <wlr/xwayland/shell.h>
 #endif /* ifdef CWC_XWAYLAND */
 
-#include "cwc/config.h"
 #include "cwc/desktop/idle.h"
 #include "cwc/desktop/layer_shell.h"
 #include "cwc/desktop/output.h"
@@ -79,6 +78,7 @@
 #include "cwc/input/seat.h"
 #include "cwc/luac.h"
 #include "cwc/plugin.h"
+#include "cwc/process.h"
 #include "cwc/server.h"
 #include "cwc/signal.h"
 #include "cwc/util.h"
@@ -285,6 +285,7 @@ server_init(struct cwc_server *s, char *config_path, char *library_path)
     setup_text_input(s);
 
     setup_ipc(s);
+    setup_process(s);
 
     const char *socket = wl_display_add_socket_auto(dpy);
     if (!socket)
@@ -317,6 +318,7 @@ void server_fini(struct cwc_server *s)
 
     cwc_signal_emit_c("cwc::shutdown", NULL);
 
+    cleanup_process(s);
     cleanup_ipc(s);
 
     cleanup_text_input(s);
@@ -342,76 +344,4 @@ void server_fini(struct cwc_server *s)
     wlr_renderer_destroy(s->renderer);
     wl_display_destroy(s->wl_display);
     wlr_scene_node_destroy(&s->scene->tree.node);
-}
-
-void _spawn(void *data)
-{
-    struct wl_array *argvarr = data;
-    char **argv              = argvarr->data;
-    cwc_log(CWC_DEBUG, "spawning : %s", argv[0]);
-    if (fork() == 0) {
-        setsid();
-
-        // fork again so that it reparent to init when the first fork exited
-        if (fork() == 0) {
-            execvp(argv[0], argv);
-            cwc_log(CWC_ERROR, "spawn failed [%d]: %s", errno, argv[0]);
-        }
-
-        _exit(0);
-    } else {
-        wait(NULL); // reap the child
-    }
-
-    // function has argvarr ownership, release it
-    char **s;
-    wl_array_for_each(s, argvarr)
-    {
-        free(*s);
-    }
-    wl_array_release(argvarr);
-    free(argvarr);
-}
-
-void spawn(char **argv)
-{
-    struct wl_array *argvarr = malloc(sizeof(*argvarr));
-    wl_array_init(argvarr);
-
-    int i = 0;
-    while (argv[i] != NULL) {
-        char **elm = wl_array_add(argvarr, sizeof(char *));
-        *elm       = strdup(argv[i]);
-        i++;
-    }
-    char **elm = wl_array_add(argvarr, sizeof(char *));
-    *elm       = NULL;
-
-    wl_event_loop_add_idle(server.wl_event_loop, _spawn, argvarr);
-}
-
-static void _spawn_with_shell(void *data)
-{
-    char *command = data;
-    cwc_log(CWC_DEBUG, "spawning with shell: %s", command);
-    if (fork() == 0) {
-        setsid();
-
-        if (fork() == 0) {
-            execl("/bin/sh", "/bin/sh", "-c", command, NULL);
-            cwc_log(CWC_ERROR, "spawn with shell failed: %s", command);
-        }
-
-        _exit(0);
-    } else {
-        wait(NULL);
-    }
-
-    free(command);
-}
-
-void spawn_with_shell(const char *const command)
-{
-    wl_event_loop_add_idle(server.wl_event_loop, _spawn_with_shell,
-                           strdup(command));
 }
