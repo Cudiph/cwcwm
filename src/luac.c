@@ -197,8 +197,8 @@ static int luaC_commit(lua_State *L)
  * @tparam[opt] integer io_cb.pid The process id.
  * @tparam[opt] any io_cb.data Userdata.
  * @tparam[opt] function exited_cb Callback when the process exited.
- * @tparam[opt] integer exited_cb.pid The process id.
  * @tparam[opt] integer exited_cb.exit_code Exit code of the process.
+ * @tparam[opt] integer exited_cb.pid The process id.
  * @tparam[opt] any exited_cb.data Userdata.
  * @noreturn
  */
@@ -266,8 +266,8 @@ cleanup:
  * @tparam[opt] integer io_cb.pid The process id.
  * @tparam[opt] any io_cb.data Userdata.
  * @tparam[opt] function exited_cb Callback when the process exited.
- * @tparam[opt] integer exited_cb.pid The process id.
  * @tparam[opt] integer exited_cb.exit_code Exit code of the process.
+ * @tparam[opt] integer exited_cb.pid The process id.
  * @tparam[opt] any exited_cb.data Userdata.
  * @noreturn
  */
