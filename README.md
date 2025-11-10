@@ -58,6 +58,41 @@ Dev dependencies:
 - ninja
 - wayland-protocols
 - clang-format & EmmyLuaCodeStyle (formatting)
+## Installation
+
+<summary>Packaging status</summary>
+<a href="https://repology.org/project/cwc-misnamed/versions">
+    <img src="https://repology.org/badge/vertical-allrepos/cwc-misnamed.svg?columns=3" alt="Packaging status">
+</a>
+
+
+<details>
+<summary>Arch Linux</summary>
+
+```
+git clone https://aur.archlinux.org/cwc.git
+cd cwc
+makepkg -si
+```
+</details>
+
+<details>
+<summary>Gentoo</summary>
+
+```
+eselect repository enable zuki
+emaint sync
+emerge \=gui-wm/cwcwm-0.2.0 or \=gui-wm/cwcwm-9999 for the git version
+```
+</details>
+
+<details>
+<summary>NixOS</summary>
+
+```
+nix-env -iA nixos.cwc
+```
+</details>
 
 ### Manual
 
@@ -72,19 +107,12 @@ CwC now should be available in your display manager or execute `cwc` in a tty.
 
 To clear the installation and build artifacts, you can execute:
 
-```console
+```
 $ sudo make uninstall
 $ make clean
 ```
 
-### AUR
 
-AUR package is available under the package name [cwc][cwc] or [cwc-git][cwc-git] for the git version.
-
-```console
-$ yay -S cwc
-$ yay -S cwc-git
-```
 
 <div align="center">
   <h2>Screenshot</h2>
