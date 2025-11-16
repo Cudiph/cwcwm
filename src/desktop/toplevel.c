@@ -209,6 +209,33 @@ static void _decide_should_tiled_part2(struct cwc_toplevel *toplevel)
     }
 }
 
+static void on_unmanaged_set_geometry(struct wl_listener *listener, void *data)
+{
+    struct cwc_toplevel *toplevel =
+        wl_container_of(listener, toplevel, set_geometry_l);
+
+    wlr_scene_node_set_position(&toplevel->container->tree->node,
+                                toplevel->xwsurface->x, toplevel->xwsurface->y);
+}
+
+static void _init_mapped_unmanaged_toplevel(struct cwc_toplevel *toplevel)
+{
+    if (!cwc_toplevel_is_unmanaged(toplevel))
+        return;
+
+    toplevel->set_geometry_l.notify = on_unmanaged_set_geometry;
+    wl_signal_add(&toplevel->xwsurface->events.set_geometry,
+                  &toplevel->set_geometry_l);
+}
+
+static void _fini_unmap_unmanaged_toplevel(struct cwc_toplevel *toplevel)
+{
+    if (!cwc_toplevel_is_unmanaged(toplevel))
+        return;
+
+    wl_list_remove(&toplevel->set_geometry_l.link);
+}
+
 static void on_surface_map(struct wl_listener *listener, void *data)
 {
     struct cwc_toplevel *toplevel = wl_container_of(listener, toplevel, map_l);
@@ -226,6 +253,7 @@ static void on_surface_map(struct wl_listener *listener, void *data)
     }
 
     _init_mapped_managed_toplevel(toplevel);
+    _init_mapped_unmanaged_toplevel(toplevel);
 
     lua_State *L = g_config_get_lua_State();
     if (toplevel->urgent)
@@ -250,6 +278,7 @@ static void on_surface_unmap(struct wl_listener *listener, void *data)
         stop_interactive(cursor);
 
     _fini_unmap_managed_toplevel(toplevel);
+    _fini_unmap_unmanaged_toplevel(toplevel);
 
     toplevel->mapped = false;
     cwc_object_emit_signal_simple("client::unmap", g_config_get_lua_State(),
@@ -890,7 +919,6 @@ void cleanup_decoration_manager(struct cwc_server *s)
 
 #ifdef CWC_XWAYLAND
 
-/* - */
 static void on_request_configure(struct wl_listener *listener, void *data)
 {
     struct xwayland_props *props =

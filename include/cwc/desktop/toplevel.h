@@ -83,6 +83,8 @@ struct cwc_toplevel {
     struct wl_listener foreign_request_activate_l;
     struct wl_listener foreign_request_close_l;
     struct wl_listener foreign_destroy_l;
+
+    struct wl_listener set_geometry_l; // unmanaged only
 };
 
 struct cwc_popup {
