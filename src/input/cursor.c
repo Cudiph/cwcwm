@@ -335,10 +335,17 @@ void process_cursor_motion(struct cwc_cursor *cursor,
         break;
     }
 
+    double cx = wlr_cursor->x;
+    double cy = wlr_cursor->y;
+    double sx, sy;
+    struct wlr_surface *surface = scene_surface_at(cx, cy, &sx, &sy);
+    struct cwc_output *output   = cwc_output_at(server.output_layout, cx, cy);
+
     if (!time_msec) {
         struct timespec now;
         clock_gettime(CLOCK_MONOTONIC, &now);
         time_msec = timespec_to_msec(&now);
+        goto notify;
     }
 
     if (!cursor->send_events)
@@ -347,12 +354,6 @@ void process_cursor_motion(struct cwc_cursor *cursor,
     wlr_relative_pointer_manager_v1_send_relative_motion(
         server.input->relative_pointer_manager, wlr_seat,
         (uint64_t)time_msec * 1000, dx, dy, dx_unaccel, dy_unaccel);
-
-    double cx = wlr_cursor->x;
-    double cy = wlr_cursor->y;
-    double sx, sy;
-    struct wlr_surface *surface = scene_surface_at(cx, cy, &sx, &sy);
-    struct cwc_output *output   = cwc_output_at(server.output_layout, cx, cy);
 
     if (cursor->last_output != output) {
         lua_State *L = g_config_get_lua_State();
@@ -383,6 +384,7 @@ void process_cursor_motion(struct cwc_cursor *cursor,
         dy = sy_confined - sy;
     }
 
+notify:
     if (surface) {
         wlr_seat_pointer_notify_enter(wlr_seat, surface, sx, sy);
         wlr_seat_pointer_notify_motion(wlr_seat, time_msec, sx, sy);
