@@ -141,6 +141,7 @@ static int setup_wayland_core(struct cwc_server *s)
     s->wl_event_loop                       = wl_display_get_event_loop(dpy);
 
     wl_display_set_global_filter(s->wl_display, filter_global, NULL);
+    wl_display_set_default_max_buffer_size(dpy, 1024 * 1024);
 
     if (!(s->backend = wlr_backend_autocreate(s->wl_event_loop, &s->session))) {
         cwc_log(CWC_ERROR, "Failed to create wlr backend");
