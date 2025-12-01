@@ -426,7 +426,7 @@ void on_request_set_cursor(struct wl_listener *listener, void *data)
     struct wlr_seat_client *focused_client =
         cursor->seat->pointer_state.focused_client;
 
-    if (event->seat_client != focused_client)
+    if (!focused_client || event->seat_client != focused_client)
         return;
 
     cwc_cursor_set_surface(cursor, event->surface, event->hotspot_x,
@@ -462,6 +462,9 @@ void on_pointer_focus_change(struct wl_listener *listener, void *data)
         wlr_pointer_constraint_v1_send_deactivated(cursor->active_constraint);
         cursor->active_constraint = NULL;
     }
+
+    if (event->new_surface == NULL)
+        cwc_cursor_set_image_by_name(cursor, "default");
 
     if (!cursor->dont_emit_signal) {
         _notify_mouse_signal(event->old_surface, event->new_surface);
@@ -1645,7 +1648,14 @@ bool cwc_cursor_hyprcursor_change_style(
 static void on_request_set_shape(struct wl_listener *listener, void *data)
 {
     struct wlr_cursor_shape_manager_v1_request_set_shape_event *event = data;
-    cwc_cursor_set_image_by_name(server.seat->cursor,
+    struct cwc_seat *seat = event->seat_client->seat->data;
+    struct wlr_seat_client *focused_client =
+        seat->wlr_seat->pointer_state.focused_client;
+
+    if (!focused_client || event->seat_client != focused_client)
+        return;
+
+    cwc_cursor_set_image_by_name(seat->cursor,
                                  wlr_cursor_shape_v1_name(event->shape));
 }
 
