@@ -302,8 +302,6 @@ void process_cursor_motion(struct cwc_cursor *cursor,
 {
     struct wlr_seat *wlr_seat     = cursor->seat;
     struct wlr_cursor *wlr_cursor = cursor->wlr_cursor;
-    struct wlr_pointer_constraint_v1 *active_constraint =
-        cursor->active_constraint;
 
     cwc_cursor_unhide(cursor);
     wl_event_source_timer_update(cursor->inactive_timer,
@@ -340,6 +338,9 @@ void process_cursor_motion(struct cwc_cursor *cursor,
     double sx, sy;
     struct wlr_surface *surface = scene_surface_at(cx, cy, &sx, &sy);
     struct cwc_output *output   = cwc_output_at(server.output_layout, cx, cy);
+    struct wlr_pointer_constraint_v1 *surf_constraint =
+        wlr_pointer_constraints_v1_constraint_for_surface(
+            server.input->pointer_constraints, surface, cursor->seat);
 
     if (!time_msec) {
         struct timespec now;
@@ -367,17 +368,18 @@ void process_cursor_motion(struct cwc_cursor *cursor,
     }
 
     // sway + dwl implementation in very simplified way, may contain bugs
-    if (active_constraint && device
-        && device->type == WLR_INPUT_DEVICE_POINTER) {
-        if (active_constraint->surface != surface)
-            return;
+    if (surf_constraint && device && device->type == WLR_INPUT_DEVICE_POINTER
+        && surf_constraint->surface
+               == cursor->seat->pointer_state.focused_surface
+        && surf_constraint->surface
+               == cursor->seat->keyboard_state.focused_surface) {
 
         double sx_confined, sy_confined;
-        if (!wlr_region_confine(&cursor->active_constraint->region, sx, sy,
-                                sx + dx, sy + dy, &sx_confined, &sy_confined))
+        if (!wlr_region_confine(&surf_constraint->region, sx, sy, sx + dx,
+                                sy + dy, &sx_confined, &sy_confined))
             return;
 
-        if (active_constraint->type == WLR_POINTER_CONSTRAINT_V1_LOCKED)
+        if (surf_constraint->type == WLR_POINTER_CONSTRAINT_V1_LOCKED)
             return;
 
         dx = sx_confined - sx;
@@ -456,12 +458,6 @@ void on_pointer_focus_change(struct wl_listener *listener, void *data)
         wl_container_of(listener, seat, pointer_focus_change_l);
     struct cwc_cursor *cursor                         = seat->cursor;
     struct wlr_seat_pointer_focus_change_event *event = data;
-
-    if (cursor->active_constraint
-        && cursor->active_constraint->surface != event->new_surface) {
-        wlr_pointer_constraint_v1_send_deactivated(cursor->active_constraint);
-        cursor->active_constraint = NULL;
-    }
 
     if (event->new_surface == NULL)
         cwc_cursor_set_image_by_name(cursor, "default");
@@ -1659,13 +1655,16 @@ static void on_request_set_shape(struct wl_listener *listener, void *data)
                                  wlr_cursor_shape_v1_name(event->shape));
 }
 
-static void warp_to_cursor_hint(struct cwc_cursor *cursor)
+static void warp_to_cursor_hint(struct cwc_cursor *cursor,
+                                struct wlr_pointer_constraint_v1 *constraint)
 {
-    struct wlr_pointer_constraint_v1 *constraint = cursor->active_constraint;
+    if (cursor->seat->pointer_state.focused_surface != constraint->surface)
+        return;
+
     double sx = constraint->current.cursor_hint.x;
     double sy = constraint->current.cursor_hint.y;
     struct cwc_toplevel *toplevel =
-        cwc_toplevel_try_from_wlr_surface(cursor->active_constraint->surface);
+        cwc_toplevel_try_from_wlr_surface(constraint->surface);
 
     if (!toplevel || !constraint->current.cursor_hint.enabled)
         return;
@@ -1685,10 +1684,7 @@ static void on_constraint_destroy(struct wl_listener *listener, void *data)
     cwc_log(CWC_DEBUG, "destroying pointer constraint: %p", constraint);
 
     // warp back to initial position
-    if (cursor->active_constraint == constraint->constraint) {
-        warp_to_cursor_hint(cursor);
-        cursor->active_constraint = NULL;
-    }
+    warp_to_cursor_hint(cursor, constraint->constraint);
 
     wl_list_remove(&constraint->destroy_l.link);
     free(constraint);
@@ -1709,18 +1705,9 @@ static void on_new_pointer_constraint(struct wl_listener *listener, void *data)
 
     cwc_log(CWC_DEBUG, "new pointer constraint: %p", constraint);
 
-    // sway implementation
-    if (cursor->active_constraint == wlr_constraint)
-        return;
+    if (wlr_constraint == NULL)
+        warp_to_cursor_hint(cursor, wlr_constraint);
 
-    if (cursor->active_constraint) {
-        if (wlr_constraint == NULL)
-            warp_to_cursor_hint(cursor);
-
-        wlr_pointer_constraint_v1_send_deactivated(cursor->active_constraint);
-    }
-
-    cursor->active_constraint = wlr_constraint;
     wlr_pointer_constraint_v1_send_activated(wlr_constraint);
 }
 
