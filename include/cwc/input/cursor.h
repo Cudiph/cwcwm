@@ -74,7 +74,6 @@ struct cwc_cursor {
     float scale;
 
     // states
-    struct wlr_pointer_constraint_v1 *active_constraint;
     bool dont_emit_signal;
     bool grab;
     bool send_events;
