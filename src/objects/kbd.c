@@ -28,6 +28,7 @@
 #include <lua.h>
 #include <wlr/types/wlr_keyboard_group.h>
 #include <wlr/types/wlr_seat.h>
+#include <xkbcommon/xkbcommon.h>
 
 #include "cwc/config.h"
 #include "cwc/input/keyboard.h"
@@ -418,6 +419,26 @@ static int luaC_kbd_get_modifiers(lua_State *L)
     return 1;
 }
 
+/** Get current active layout.
+ *
+ * @property layout
+ * @readonly
+ */
+static int luaC_kbd_get_layout(lua_State *L)
+{
+    struct cwc_keyboard_group *kbdg = luaC_kbd_checkudata(L, 1);
+
+    xkb_layout_index_t active_index = xkb_state_serialize_layout(
+        kbdg->wlr_kbd_group->keyboard.xkb_state, XKB_STATE_LAYOUT_EFFECTIVE);
+
+    const char *keymap_name = xkb_keymap_layout_get_name(
+        kbdg->wlr_kbd_group->keyboard.keymap, active_index);
+
+    lua_pushstring(L, keymap_name);
+
+    return 1;
+}
+
 /** Grab the keyboard event and redirect it to signal.
  *
  * @property grab
@@ -484,6 +505,7 @@ void luaC_kbd_setup(lua_State *L)
         REG_READ_ONLY(data),
         REG_READ_ONLY(seat),
         REG_READ_ONLY(modifiers),
+        REG_READ_ONLY(layout),
 
         REG_PROPERTY(grab),
         REG_PROPERTY(send_events),

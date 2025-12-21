@@ -352,25 +352,37 @@ static void on_exited(struct spawn_obj *spawn_obj, int exit_code, void *data)
 
 static void _test(void *args)
 {
-    struct cwc_process_callback_info info = {
-        .type       = CWC_PROCESS_TYPE_C,
-        .on_ioready = on_ioready,
-        .on_exited  = on_exited,
-        .data       = &_chvt,
-    };
+    // struct cwc_process_callback_info info = {
+    //     .type       = CWC_PROCESS_TYPE_C,
+    //     .on_ioready = on_ioready,
+    //     .on_exited  = on_exited,
+    //     .data       = &_chvt,
+    // };
+    //
+    // spawn_with_shell_easy_async(
+    //     "echo bbbbb && sleep 1 && echo aaaaaa 1>&2 && exit 3", info);
 
-    spawn_with_shell_easy_async(
-        "echo bbbbb && sleep 1 && echo aaaaaa 1>&2 && exit 3", info);
+    struct wlr_keyboard *kbd = &server.seat->kbd_group->wlr_kbd_group->keyboard;
+    for (int i = 0; i < xkb_keymap_num_layouts(kbd->keymap); i++) {
+        const char *layout_name = xkb_keymap_layout_get_name(kbd->keymap, i);
+        xkb_layout_index_t bruh = xkb_state_serialize_layout(
+            kbd->xkb_state, XKB_STATE_LAYOUT_EFFECTIVE);
+        printf("aaa %d %s %d %d\n", i, layout_name,
+               xkb_state_layout_index_is_active(kbd->xkb_state, i,
+                                                XKB_STATE_LAYOUT_LOCKED),
+               bruh);
+        fflush(stdout);
+    }
 }
 
 #define WLR_MODIFIER_NONE 0
 void keybind_register_common_key()
 {
-    // keybind_register(server.main_kbd_kmap, WLR_MODIFIER_NONE, XKB_KEY_F11,
-    //                  (struct cwc_keybind_info){
-    //                      .type     = CWC_KEYBIND_TYPE_C,
-    //                      .on_press = _test,
-    //                  });
+    keybind_register(server.main_kbd_kmap, WLR_MODIFIER_NONE, XKB_KEY_F11,
+                     (struct cwc_keybind_info){
+                         .type     = CWC_KEYBIND_TYPE_C,
+                         .on_press = _test,
+                     });
 
     for (size_t i = 1; i <= 12; ++i) {
         char keyname[7];
