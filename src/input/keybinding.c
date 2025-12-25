@@ -366,11 +366,11 @@ static void _test(void *args)
 #define WLR_MODIFIER_NONE 0
 void keybind_register_common_key()
 {
-    keybind_register(server.main_kbd_kmap, WLR_MODIFIER_NONE, XKB_KEY_F11,
-                     (struct cwc_keybind_info){
-                         .type     = CWC_KEYBIND_TYPE_C,
-                         .on_press = _test,
-                     });
+    // keybind_register(server.main_kbd_kmap, WLR_MODIFIER_NONE, XKB_KEY_F11,
+    //                  (struct cwc_keybind_info){
+    //                      .type     = CWC_KEYBIND_TYPE_C,
+    //                      .on_press = _test,
+    //                  });
 
     for (size_t i = 1; i <= 12; ++i) {
         char keyname[7];
