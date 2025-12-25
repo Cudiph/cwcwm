@@ -423,6 +423,23 @@ void cwc_keyboard_group_remove_device(struct cwc_keyboard_group *kbd_group,
     wlr_keyboard_group_remove_keyboard(kbd_group->wlr_kbd_group, wlr_kbd);
 }
 
+static inline void _update_modifiers(struct cwc_keyboard_group *kbd_group,
+                                     uint32_t depressed,
+                                     uint32_t latched,
+                                     uint32_t locked,
+                                     uint32_t group)
+{
+    struct cwc_keyboard *kbd;
+    wl_list_for_each(kbd, &kbd_group->keyboards, link)
+    {
+        wlr_keyboard_notify_modifiers(kbd->wlr_kbd, depressed, latched, locked,
+                                      group);
+    }
+
+    wlr_keyboard_notify_modifiers(&kbd_group->wlr_kbd_group->keyboard,
+                                  depressed, latched, locked, group);
+}
+
 void cwc_keyboard_group_set_xkb_layout(struct cwc_keyboard_group *kbd_group,
                                        int idx)
 {
@@ -431,22 +448,67 @@ void cwc_keyboard_group_set_xkb_layout(struct cwc_keyboard_group *kbd_group,
     int num_layout               = xkb_keymap_num_layouts(wlr_kbd->keymap);
     int new_group                = idx % num_layout;
 
-    uint32_t latched_mods =
-        xkb_state_serialize_mods(state, XKB_STATE_MODS_LATCHED);
     uint32_t depressed_mods =
         xkb_state_serialize_mods(state, XKB_STATE_MODS_DEPRESSED);
+    uint32_t latched_mods =
+        xkb_state_serialize_mods(state, XKB_STATE_MODS_LATCHED);
     uint32_t locked_mods =
         xkb_state_serialize_mods(state, XKB_STATE_MODS_LOCKED);
 
-    struct cwc_keyboard *kbd;
-    wl_list_for_each(kbd, &kbd_group->keyboards, link)
-    {
-        wlr_keyboard_notify_modifiers(kbd->wlr_kbd, depressed_mods,
-                                      latched_mods, locked_mods, new_group);
-    }
+    _update_modifiers(kbd_group, depressed_mods, latched_mods, locked_mods,
+                      new_group);
+}
 
-    wlr_keyboard_notify_modifiers(wlr_kbd, depressed_mods, latched_mods,
-                                  locked_mods, new_group);
+void cwc_keyboard_group_update_modifiers(struct cwc_keyboard_group *kbd_group,
+                                         uint32_t depressed,
+                                         uint32_t latched,
+                                         uint32_t locked)
+{
+    struct xkb_state *state = kbd_group->wlr_kbd_group->keyboard.xkb_state;
+
+    uint32_t group =
+        xkb_state_serialize_layout(state, XKB_STATE_LAYOUT_EFFECTIVE);
+
+    _update_modifiers(kbd_group, depressed, latched, locked, group);
+}
+
+static void __cwc_keyboard_group_send_key(struct cwc_keyboard_group *kbd_group,
+                                          uint32_t keycode,
+                                          enum wl_keyboard_key_state state,
+                                          bool raw)
+{
+    struct timespec now;
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    uint64_t now_msec = timespec_to_msec(&now);
+
+    struct wlr_keyboard_key_event event = {
+        .keycode      = keycode,
+        .state        = state,
+        .time_msec    = now_msec,
+        .update_state = true,
+    };
+
+    wlr_keyboard_notify_key(&kbd_group->wlr_kbd_group->keyboard, &event);
+    if (raw) {
+        wlr_seat_keyboard_notify_key(kbd_group->seat->wlr_seat, now_msec,
+                                     keycode, state);
+    } else {
+        process_key_event(kbd_group, &event);
+    }
+}
+
+void cwc_keyboard_group_send_key(struct cwc_keyboard_group *kbd_group,
+                                 uint32_t keycode,
+                                 enum wl_keyboard_key_state state)
+{
+    __cwc_keyboard_group_send_key(kbd_group, keycode, state, false);
+}
+
+void cwc_keyboard_group_send_key_raw(struct cwc_keyboard_group *kbd_group,
+                                     uint32_t keycode,
+                                     enum wl_keyboard_key_state state)
+{
+    __cwc_keyboard_group_send_key(kbd_group, keycode, state, true);
 }
 
 inline void keyboard_focus_surface(struct cwc_seat *seat,
