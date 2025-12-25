@@ -352,25 +352,25 @@ static void on_exited(struct spawn_obj *spawn_obj, int exit_code, void *data)
 
 static void _test(void *args)
 {
-    struct cwc_process_callback_info info = {
-        .type       = CWC_PROCESS_TYPE_C,
-        .on_ioready = on_ioready,
-        .on_exited  = on_exited,
-        .data       = &_chvt,
-    };
-
-    spawn_with_shell_easy_async(
-        "echo bbbbb && sleep 1 && echo aaaaaa 1>&2 && exit 3", info);
+    // struct cwc_process_callback_info info = {
+    //     .type       = CWC_PROCESS_TYPE_C,
+    //     .on_ioready = on_ioready,
+    //     .on_exited  = on_exited,
+    //     .data       = &_chvt,
+    // };
+    //
+    // spawn_with_shell_easy_async(
+    //     "echo bbbbb && sleep 1 && echo aaaaaa 1>&2 && exit 3", info);
 }
 
 #define WLR_MODIFIER_NONE 0
 void keybind_register_common_key()
 {
-    // keybind_register(server.main_kbd_kmap, WLR_MODIFIER_NONE, XKB_KEY_F11,
-    //                  (struct cwc_keybind_info){
-    //                      .type     = CWC_KEYBIND_TYPE_C,
-    //                      .on_press = _test,
-    //                  });
+    keybind_register(server.main_kbd_kmap, WLR_MODIFIER_NONE, XKB_KEY_F11,
+                     (struct cwc_keybind_info){
+                         .type     = CWC_KEYBIND_TYPE_C,
+                         .on_press = _test,
+                     });
 
     for (size_t i = 1; i <= 12; ++i) {
         char keyname[7];

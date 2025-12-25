@@ -4,6 +4,7 @@ local objname = "cwc_kbd"
 local signal_list = {
     -- "kbd::press",
     -- "kbd::release",
+    "kbd::prop::layout_index",
 }
 
 local triggered_list = {}
@@ -34,6 +35,7 @@ end
 local function ro_test(kbd)
     assert(kbd.seat == "seat0")
     assert(kbd.modifiers == 0)
+    assert(type(kbd.layout_name) == "string")
 end
 
 local function prop_test(kbd)
@@ -46,6 +48,12 @@ local function prop_test(kbd)
     kbd.send_events = false
     assert(not kbd.send_events)
     kbd.send_events = true
+
+    assert(kbd.layout_index == 0)
+    kbd.layout_index = kbd.layout_index + 1
+    assert(kbd.layout_index == 1)
+    kbd.layout_index = 3
+    assert(kbd.layout_index == 0)
 end
 
 local function method_test(kbd)

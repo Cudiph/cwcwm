@@ -16,7 +16,7 @@ local conf = {
     repeat_delay                       = 300,
     -- xkb_variant = "colemak",
     -- xkb_layout  = "us,de,fr",
-    -- xkb_options = "grp:ctrl_shift_toggle",
+    -- xkb_options = "grp:alt_shift_toggle,grp:caps_select",
 
     -- client config --
     default_decoration_mode            = enum.decoration_mode.SERVER_SIDE,
