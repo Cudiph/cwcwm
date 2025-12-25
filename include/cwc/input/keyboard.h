@@ -54,6 +54,17 @@ void cwc_keyboard_update_keymap(struct wlr_keyboard *wlr_kbd);
 void cwc_keyboard_group_set_xkb_layout(struct cwc_keyboard_group *kbd_group,
                                        int idx);
 
+void cwc_keyboard_group_update_modifiers(struct cwc_keyboard_group *kbd_group,
+                                         uint32_t depressed,
+                                         uint32_t latched_mods,
+                                         uint32_t locked);
+void cwc_keyboard_group_send_key(struct cwc_keyboard_group *kbd_group,
+                                 uint32_t keycode,
+                                 enum wl_keyboard_key_state state);
+void cwc_keyboard_group_send_key_raw(struct cwc_keyboard_group *kbd_group,
+                                     uint32_t keycode,
+                                     enum wl_keyboard_key_state state);
+
 struct wlr_surface;
 void keyboard_focus_surface(struct cwc_seat *seat, struct wlr_surface *surface);
 
