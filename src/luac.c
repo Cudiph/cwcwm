@@ -51,6 +51,7 @@
 #include "cwc/input/cursor.h"
 #include "cwc/input/keyboard.h"
 #include "cwc/input/manager.h"
+#include "cwc/input/seat.h"
 #include "cwc/luac.h"
 #include "cwc/luaclass.h"
 #include "cwc/plugin.h"
@@ -124,6 +125,12 @@ static void reregister_lua_object()
     {
         luaC_object_plugin_register(L, plugin);
         cwc_object_emit_signal_simple("plugin::load", L, plugin);
+    }
+
+    struct cwc_seat *seat;
+    wl_list_for_each(seat, &server.input->seats, link)
+    {
+        luaC_object_kbd_register(L, seat->kbd_group);
     }
 }
 

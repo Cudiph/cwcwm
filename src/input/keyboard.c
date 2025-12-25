@@ -18,6 +18,7 @@
 
 #include <wayland-server-core.h>
 #include <wayland-util.h>
+#include <wlr/interfaces/wlr_keyboard.h>
 #include <wlr/types/wlr_foreign_toplevel_management_v1.h>
 #include <wlr/types/wlr_input_method_v2.h>
 #include <wlr/types/wlr_keyboard.h>
@@ -92,6 +93,16 @@ static void on_kbd_group_modifiers(struct wl_listener *listener, void *data)
 {
     struct cwc_keyboard_group *kbd_group =
         wl_container_of(listener, kbd_group, modifiers_l);
+
+    xkb_layout_index_t active_index =
+        xkb_state_serialize_layout(kbd_group->wlr_kbd_group->keyboard.xkb_state,
+                                   XKB_STATE_LAYOUT_EFFECTIVE);
+
+    if (kbd_group->layout_idx != active_index) {
+        cwc_object_emit_signal_simple("kbd::prop::layout_index",
+                                      g_config_get_lua_State(), kbd_group);
+        kbd_group->layout_idx = active_index;
+    }
 
     process_modifier_event(kbd_group);
 }
@@ -356,6 +367,7 @@ cwc_keyboard_group_create(struct cwc_seat *seat,
         kbd_group->config_commit_l.notify = on_config_commit;
         wl_signal_add(&g_config.events.commit, &kbd_group->config_commit_l);
     }
+    wl_list_init(&kbd_group->keyboards);
 
     struct wlr_keyboard *wlr_kbd = &kbd_group->wlr_kbd_group->keyboard;
     wlr_seat_set_keyboard(seat->wlr_seat, wlr_kbd);
@@ -389,9 +401,52 @@ void cwc_keyboard_group_add_device(struct cwc_keyboard_group *kbd_group,
 {
     struct wlr_keyboard *wlr_kbd = wlr_keyboard_from_input_device(device);
 
+    struct cwc_keyboard *kbd = calloc(1, sizeof(*kbd));
+    kbd->wlr_kbd             = wlr_kbd;
+    wlr_kbd->data            = kbd;
+    wl_list_insert(&kbd_group->keyboards, &kbd->link);
+
     cwc_keyboard_update_keymap(wlr_kbd);
 
     wlr_keyboard_group_add_keyboard(kbd_group->wlr_kbd_group, wlr_kbd);
+}
+
+void cwc_keyboard_group_remove_device(struct cwc_keyboard_group *kbd_group,
+                                      struct wlr_input_device *device)
+{
+    struct wlr_keyboard *wlr_kbd = wlr_keyboard_from_input_device(device);
+    struct cwc_keyboard *kbd     = wlr_kbd->data;
+    kbd->wlr_kbd                 = wlr_kbd;
+
+    wl_list_remove(&kbd->link);
+    free(kbd);
+    wlr_keyboard_group_remove_keyboard(kbd_group->wlr_kbd_group, wlr_kbd);
+}
+
+void cwc_keyboard_group_set_xkb_layout(struct cwc_keyboard_group *kbd_group,
+                                       int idx)
+{
+    struct wlr_keyboard *wlr_kbd = &kbd_group->wlr_kbd_group->keyboard;
+    struct xkb_state *state      = wlr_kbd->xkb_state;
+    int num_layout               = xkb_keymap_num_layouts(wlr_kbd->keymap);
+    int new_group                = idx % num_layout;
+
+    uint32_t latched_mods =
+        xkb_state_serialize_mods(state, XKB_STATE_MODS_LATCHED);
+    uint32_t depressed_mods =
+        xkb_state_serialize_mods(state, XKB_STATE_MODS_DEPRESSED);
+    uint32_t locked_mods =
+        xkb_state_serialize_mods(state, XKB_STATE_MODS_LOCKED);
+
+    struct cwc_keyboard *kbd;
+    wl_list_for_each(kbd, &kbd_group->keyboards, link)
+    {
+        wlr_keyboard_notify_modifiers(kbd->wlr_kbd, depressed_mods,
+                                      latched_mods, locked_mods, new_group);
+    }
+
+    wlr_keyboard_notify_modifiers(wlr_kbd, depressed_mods, latched_mods,
+                                  locked_mods, new_group);
 }
 
 inline void keyboard_focus_surface(struct cwc_seat *seat,

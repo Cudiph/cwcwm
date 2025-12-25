@@ -45,7 +45,7 @@ end)
 cwc.connect_signal("screen::new", function(screen)
     -- screen settings
     if screen.name == "DP-1" then
-        screen:set_position(0, 0) -- NOTE: Position(s) MUST be non-negative - based on #49 (https://github.com/Cudiph/cwcwm/issues/49).
+        screen:set_position(0, 0)       -- NOTE: Position(s) MUST be non-negative - based on #49 (https://github.com/Cudiph/cwcwm/issues/49).
 
         screen:set_mode(1920, 1080, 60) -- width, height, refresh rate
         screen:set_adaptive_sync(true)

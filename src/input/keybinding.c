@@ -361,18 +361,6 @@ static void _test(void *args)
     //
     // spawn_with_shell_easy_async(
     //     "echo bbbbb && sleep 1 && echo aaaaaa 1>&2 && exit 3", info);
-
-    struct wlr_keyboard *kbd = &server.seat->kbd_group->wlr_kbd_group->keyboard;
-    for (int i = 0; i < xkb_keymap_num_layouts(kbd->keymap); i++) {
-        const char *layout_name = xkb_keymap_layout_get_name(kbd->keymap, i);
-        xkb_layout_index_t bruh = xkb_state_serialize_layout(
-            kbd->xkb_state, XKB_STATE_LAYOUT_EFFECTIVE);
-        printf("aaa %d %s %d %d\n", i, layout_name,
-               xkb_state_layout_index_is_active(kbd->xkb_state, i,
-                                                XKB_STATE_LAYOUT_LOCKED),
-               bruh);
-        fflush(stdout);
-    }
 }
 
 #define WLR_MODIFIER_NONE 0

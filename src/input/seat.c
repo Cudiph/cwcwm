@@ -216,7 +216,7 @@ void cwc_seat_destroy(struct cwc_seat *seat)
 void cwc_seat_add_keyboard_device(struct cwc_seat *seat,
                                   struct wlr_input_device *dev)
 {
-    cwc_keyboard_group_add_device(server.seat->kbd_group, dev);
+    cwc_keyboard_group_add_device(seat->kbd_group, dev);
 }
 
 static void map_input_device_to_output(struct cwc_seat *seat,

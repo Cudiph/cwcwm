@@ -13,7 +13,7 @@ local signal_list = {
     "screen::prop::selected_tag",
     "screen::focus",
     -- "screen::unfocus",
-    "screen::mouse_enter",
+    -- "screen::mouse_enter",
     -- "screen::mouse_leave",
 }
 

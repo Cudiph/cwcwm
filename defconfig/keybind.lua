@@ -606,7 +606,6 @@ kbd.bind({ MODKEY, mod.CTRL }, "slash", function()
     else
         c.decoration_mode = enum.decoration_mode.CLIENT_SIDE
     end
-    print(mykbd.layout) 
     print(c.decoration_mode)
     print(c, s, c.tag, c.workspace)
     print(pos.x, pos.y)

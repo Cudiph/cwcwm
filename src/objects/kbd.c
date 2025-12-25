@@ -55,6 +55,12 @@
  * @tparam integer keycode The xkb keycode.
  * @tparam string name Name of the key.
  */
+
+/** Emitted when xkb layout has changed.
+ *
+ * @signal kbd::prop::layout_index
+ * @tparam cwc_kbd kbd The keyboard object.
+ */
 //============================ CODE =================================
 
 /** Get all keyboard in the server.
@@ -419,12 +425,14 @@ static int luaC_kbd_get_modifiers(lua_State *L)
     return 1;
 }
 
-/** Get current active layout.
+/** Current active xkb layout name.
  *
- * @property layout
+ * @property layout_name
+ * @tparam string layout_name
+ * @propertydefault default locale layout
  * @readonly
  */
-static int luaC_kbd_get_layout(lua_State *L)
+static int luaC_kbd_get_layout_name(lua_State *L)
 {
     struct cwc_keyboard_group *kbdg = luaC_kbd_checkudata(L, 1);
 
@@ -437,6 +445,33 @@ static int luaC_kbd_get_layout(lua_State *L)
     lua_pushstring(L, keymap_name);
 
     return 1;
+}
+
+/** Current active xkb layout index (0-based).
+ *
+ * @property layout_index
+ * @tparam[opt=0] integer layout_index
+ * @negativeallowed false
+ */
+static int luaC_kbd_get_layout_index(lua_State *L)
+{
+    struct cwc_keyboard_group *kbdg = luaC_kbd_checkudata(L, 1);
+
+    xkb_layout_index_t active_index = xkb_state_serialize_layout(
+        kbdg->wlr_kbd_group->keyboard.xkb_state, XKB_STATE_LAYOUT_EFFECTIVE);
+
+    lua_pushnumber(L, active_index);
+
+    return 1;
+}
+static int luaC_kbd_set_layout_index(lua_State *L)
+{
+    struct cwc_keyboard_group *kbdg = luaC_kbd_checkudata(L, 1);
+    int newidx                      = luaL_checkinteger(L, 2);
+
+    cwc_keyboard_group_set_xkb_layout(kbdg, newidx);
+
+    return 0;
 }
 
 /** Grab the keyboard event and redirect it to signal.
@@ -505,10 +540,11 @@ void luaC_kbd_setup(lua_State *L)
         REG_READ_ONLY(data),
         REG_READ_ONLY(seat),
         REG_READ_ONLY(modifiers),
-        REG_READ_ONLY(layout),
+        REG_READ_ONLY(layout_name),
 
         REG_PROPERTY(grab),
         REG_PROPERTY(send_events),
+        REG_PROPERTY(layout_index),
 
         {NULL, NULL},
     };
