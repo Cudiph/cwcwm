@@ -11,7 +11,7 @@ in {
       enable = lib.mkEnableOption "Enable cwc wayland compositor";
       package = lib.mkOption {
         type = lib.types.package;
-        default = self.packages.${pkgs.system}.cwc;
+        default = self.packages.${pkgs.stdenv.hostPlatform.system}.cwc;
         description = "The cwc package to use";
       };
     };
