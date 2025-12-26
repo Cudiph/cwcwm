@@ -76,6 +76,14 @@ static void on_request_start_drag(struct wl_listener *listener, void *data)
         return;
     }
 
+    struct wlr_touch_point *point;
+    if (wlr_seat_validate_touch_grab_serial(seat->wlr_seat, event->origin,
+                                            event->serial, &point)) {
+        wlr_seat_start_touch_drag(seat->wlr_seat, event->drag, event->serial,
+                                  point);
+        return;
+    }
+
     cwc_log(CWC_DEBUG, "ignoring start_drag request: %u", event->serial);
     wlr_data_source_destroy(event->drag->source);
 }
@@ -90,8 +98,25 @@ static void on_drag_motion(struct wl_listener *listener, void *data)
 static void on_drag_destroy(struct wl_listener *listener, void *data)
 {
     struct cwc_drag *drag = wl_container_of(listener, drag, on_drag_destroy_l);
+    struct cwc_seat *seat = drag->wlr_drag->seat->data;
+
+    struct cwc_toplevel *toplevel = cwc_toplevel_try_from_wlr_surface(
+        seat->wlr_seat->keyboard_state.focused_surface);
+    struct cwc_output *output =
+        cwc_output_at(server.output_layout, seat->cursor->wlr_cursor->x,
+                      seat->cursor->wlr_cursor->y);
+
+    /* restore client focus but since the focus stack is stored per output basis
+     * so it only works if drag and drop between 2 clients are in the same
+     * output. */
+    if (toplevel && output && toplevel->container->output == output)
+        cwc_output_focus_newest_focus_visible_toplevel(output);
+
     wl_list_remove(&drag->on_drag_destroy_l.link);
     wl_list_remove(&drag->on_drag_motion_l.link);
+
+    wlr_scene_node_destroy(&drag->scene_tree->node);
+
     free(drag);
 }
 
