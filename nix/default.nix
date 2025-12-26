@@ -26,7 +26,7 @@
   python3Minimal,
   boost,
   makeWrapper,
-  wrapGAppsHook,
+  wrapGAppsHook3,
   gtk3Support ? false,
   gtk3 ? null,
 }:
@@ -61,7 +61,7 @@ in
       python3Minimal
       boost
       makeWrapper
-      wrapGAppsHook
+      wrapGAppsHook3
       gobject-introspection
     ];
 
