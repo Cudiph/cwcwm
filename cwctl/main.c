@@ -51,10 +51,10 @@ static char *help_txt =
     "  version   Print cwc version\n"
     "\n"
     "Example:\n"
-    "  cwc -s /tmp/cwc.sock -c 'return cwc.client.focused().title'\n"
-    "  cwc -f ./show-all-client.lua\n"
-    "  cwc screen\n"
-    "  cwc -s /tmp/cwc.sock screen --filter 'DP-1' set enabled false";
+    "  cwctl -s /tmp/cwc.sock -c 'return cwc.client.focused().title'\n"
+    "  cwctl -f ./show-all-client.lua\n"
+    "  cwctl screen\n"
+    "  cwctl -s /tmp/cwc.sock screen --filter 'DP-1' set enabled false";
 
 static struct option long_options[] = {
     {"help",    NO_ARG, NULL, 'h'},
