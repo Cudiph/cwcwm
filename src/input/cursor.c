@@ -883,8 +883,11 @@ void stop_interactive(struct cwc_cursor *cursor)
     cursor->state = CWC_CURSOR_STATE_NORMAL;
     if (cursor->name_before_interactive)
         cwc_cursor_set_image_by_name(cursor, cursor->name_before_interactive);
-    else
-        cwc_cursor_set_image_by_name(cursor, "default");
+    else if (cursor->client_surface) {
+        cwc_cursor_set_surface(cursor, cursor->client_surface,
+                               cursor->hotspot_x, cursor->hotspot_y);
+    } else
+        cwc_cursor_set_image_by_name(cursor, NULL);
 
     struct cwc_toplevel **grabbed = &cursor->grabbed_toplevel;
 
@@ -1518,8 +1521,7 @@ void cwc_cursor_set_image_by_name(struct cwc_cursor *cursor, const char *name)
     if (cursor->current_name != NULL && strcmp(cursor->current_name, name) == 0)
         return;
 
-    cursor->current_name   = name;
-    cursor->client_surface = NULL;
+    cursor->current_name = name;
 
     hyprcursor_buffer_fini(cursor);
 
