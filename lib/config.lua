@@ -4,10 +4,11 @@
 -- any write on the config table will automatically be taken care of,
 -- so no need to manually call `cwc.commit`.
 --
--- @usage local config = require("config")
+-- @usage
+--   local config = require("config")
 --
--- config["cursor_size"] = 25
--- config["cursor_edge_snapping_overlay_color"] = { 0.1, 0.2, 0.3, 0.05 }
+--   config["cursor_size"] = 25
+--   config["cursor_edge_snapping_overlay_color"] = { 0.1, 0.2, 0.3, 0.05 }
 --
 -- @author Dwi Asmoro Bangun
 -- @copyright 2025

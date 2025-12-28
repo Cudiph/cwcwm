@@ -21,7 +21,9 @@
  * If a client is in container with more than one client only topfront client
  * that will emit property signal.
  *
- * See also: `cuteful.client`
+ * See also:
+ *
+ * - `cuteful.client`
  *
  * @author Dwi Asmoro Bangun
  * @copyright 2024

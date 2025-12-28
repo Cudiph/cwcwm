@@ -18,6 +18,10 @@
 
 /** Low-level API to manage keyboard behavior
  *
+ * See also:
+ *
+ * - `cuteful.kbd`
+ *
  * @author Dwi Asmoro Bangun
  * @copyright 2024
  * @license GPLv3
@@ -28,6 +32,7 @@
 #include <lua.h>
 #include <wlr/types/wlr_keyboard_group.h>
 #include <wlr/types/wlr_seat.h>
+#include <xkbcommon/xkbcommon-compat.h>
 #include <xkbcommon/xkbcommon.h>
 
 #include "cwc/config.h"
@@ -518,6 +523,104 @@ static int luaC_kbd_set_send_events(lua_State *L)
     return 0;
 }
 
+static void _send_key(lua_State *L, bool raw)
+{
+    struct cwc_keyboard_group *kbdg = luaC_kbd_checkudata(L, 1);
+    uint32_t keycode                = luaL_checkinteger(L, 2);
+    uint32_t state                  = luaL_checkinteger(L, 3);
+
+    if (state >= 3)
+        luaL_error(L, "invalid state for send_key");
+
+    if (raw)
+        cwc_keyboard_group_send_key_raw(kbdg, keycode, state);
+    else
+        cwc_keyboard_group_send_key(kbdg, keycode, state);
+}
+
+/** Emulate a key event.
+ *
+ * @method send_key
+ * @tparam integer keycode Event code from linux `input-event-codes.h`
+ * @tparam enum state State of the key from wayland protocol.
+ * @noreturn
+ * @see cuteful.enum.key_state
+ */
+static int luaC_kbd_send_key(lua_State *L)
+{
+    _send_key(L, false);
+
+    return 0;
+}
+
+/** Send key event to the client without any compositor processing.
+ *
+ * Use this to bypass keybind and send_events property.
+ *
+ * @method send_key_raw
+ * @tparam integer keycode Event code from `input-event-codes.h`
+ * @tparam enum state State of the key from wayland protocol.
+ * @noreturn
+ * @see cuteful.enum.key_state
+ */
+static int luaC_kbd_send_key_raw(lua_State *L)
+{
+    _send_key(L, true);
+
+    return 0;
+}
+
+static xkb_mod_mask_t wlr_modifiers_to_xkb_mod_mask(struct xkb_keymap *keymap,
+                                                    uint32_t wlr_mods)
+{
+    const char *mod_names[WLR_MODIFIER_COUNT] = {
+        XKB_MOD_NAME_SHIFT, XKB_MOD_NAME_CAPS, XKB_MOD_NAME_CTRL,
+        XKB_MOD_NAME_ALT,   XKB_MOD_NAME_NUM,  XKB_MOD_NAME_MOD3,
+        XKB_MOD_NAME_LOGO,  XKB_MOD_NAME_MOD5,
+    };
+
+    xkb_mod_mask_t mods = 0;
+    for (int i = 0; i < WLR_MODIFIER_COUNT; i++) {
+        if (wlr_mods & (1 << i)) {
+            xkb_mod_index_t index = xkb_map_mod_get_index(keymap, mod_names[i]);
+            mods |= 1 << index;
+        }
+    }
+
+    return mods;
+}
+
+/** Update modifiers state of this keyboard change are absolute and not
+ * incremental.
+ *
+ * @method update_modifiers
+ * @tparam bitfield depressed Depressed modifiers (Like CTRL, SHIFT, LOGO).
+ * @tparam bitfield latched Latched modifiers (sticky keys in Windows).
+ * @tparam bitfield locked Locked modifiers (Like Caps lock).
+ * @tparam enum state State of the key from wayland protocol.
+ * @noreturn
+ * @see cuteful.enum.modifier
+ * @see modifiers
+ */
+static int luaC_kbd_update_modifiers(lua_State *L)
+{
+    struct cwc_keyboard_group *kbdg = luaC_kbd_checkudata(L, 1);
+    uint32_t depressed              = luaL_checkinteger(L, 2);
+    uint32_t latched                = luaL_checkinteger(L, 3);
+    uint32_t locked                 = luaL_checkinteger(L, 4);
+
+    depressed = wlr_modifiers_to_xkb_mod_mask(
+        kbdg->wlr_kbd_group->keyboard.keymap, depressed);
+    latched = wlr_modifiers_to_xkb_mod_mask(
+        kbdg->wlr_kbd_group->keyboard.keymap, latched);
+    locked = wlr_modifiers_to_xkb_mod_mask(kbdg->wlr_kbd_group->keyboard.keymap,
+                                           locked);
+
+    cwc_keyboard_group_update_modifiers(kbdg, depressed, latched, locked);
+
+    return 0;
+}
+
 #define REG_METHOD(name)    {#name, luaC_kbd_##name}
 #define REG_READ_ONLY(name) {"get_" #name, luaC_kbd_get_##name}
 #define REG_SETTER(name)    {"set_" #name, luaC_kbd_set_##name}
@@ -537,6 +640,10 @@ void luaC_kbd_setup(lua_State *L)
     };
 
     luaL_Reg kbd_methods[] = {
+        REG_METHOD(send_key),
+        REG_METHOD(send_key_raw),
+        REG_METHOD(update_modifiers),
+
         REG_READ_ONLY(data),
         REG_READ_ONLY(seat),
         REG_READ_ONLY(modifiers),

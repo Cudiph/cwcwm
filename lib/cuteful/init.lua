@@ -13,6 +13,7 @@ local cuteful = {
     client  = require("cuteful.client"),
     screen  = require("cuteful.screen"),
     pointer = require("cuteful.pointer"),
+    kbd     = require("cuteful.kbd"),
 }
 
 return cuteful
