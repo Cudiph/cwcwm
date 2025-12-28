@@ -20,6 +20,7 @@
  *
  * See also:
  *
+ * - `cuteful.screen`
  * - `cuteful.tag`
  * - `cwc_tag`
  *

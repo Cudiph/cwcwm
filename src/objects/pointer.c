@@ -18,6 +18,10 @@
 
 /** Low-level API to manage pointer and pointer device
  *
+ * See also:
+ *
+ * - `cuteful.pointer`
+ *
  * @author Dwi Asmoro Bangun
  * @copyright 2024
  * @license GPLv3

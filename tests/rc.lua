@@ -114,3 +114,11 @@ cwc.kbd.bind({}, "F1", function()
 end)
 
 cwc.kbd.bind({ MODKEY, mod.CTRL }, "r", cwc.reload, { description = "reload configuration" })
+
+-- automatic start
+cwc.timer.new(3, function()
+    cful.kbd.click(cful.kbd.event_code.KEY_F12)
+    cwc.timer.new(3, function()
+        cful.kbd.click(cful.kbd.event_code.KEY_F1)
+    end, { one_shot = true })
+end, { one_shot = true })

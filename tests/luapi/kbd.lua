@@ -1,3 +1,7 @@
+local cful = require("cuteful")
+local bit = require("bit")
+
+local mod = cful.enum.modifier
 local cwc = cwc
 local objname = "cwc_kbd"
 
@@ -57,6 +61,19 @@ local function prop_test(kbd)
 end
 
 local function method_test(kbd)
+    kbd:send_key(cful.kbd.event_code.KEY_1, cful.enum.key_state.PRESSED);
+    kbd:send_key(cful.kbd.event_code.KEY_1, cful.enum.key_state.RELEASED);
+    kbd:send_key_raw(cful.kbd.event_code.KEY_F10, cful.enum.key_state.PRESSED)
+    kbd:send_key_raw(cful.kbd.event_code.KEY_F10, cful.enum.key_state.RELEASED)
+
+    kbd:update_modifiers(0, 0, mod.SHIFT)
+    assert(bit.band(kbd.modifiers, mod.SHIFT))
+    kbd:update_modifiers(0, 0, 0)
+    assert(kbd.modifiers == 0)
+    kbd:send_key(cful.kbd.event_code.KEY_LEFTCTRL, cful.enum.key_state.PRESSED);
+    assert(bit.band(kbd.modifiers, mod.CTRL))
+    kbd:send_key(cful.kbd.event_code.KEY_LEFTCTRL, cful.enum.key_state.RELEASED);
+    assert(kbd.modifiers == 0)
 end
 
 local function test()

@@ -5,6 +5,9 @@
 -- @copyright 2025
 -- @license GPLv3
 -- @module cuteful.pointer
+-- @see cwc.kbd
+-- @see cwc.pointer
+-- @see cuteful.kbd
 -------------------------------------------------------------------------------
 
 local enum_dir = require("cuteful.enum").direction

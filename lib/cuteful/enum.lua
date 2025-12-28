@@ -58,6 +58,15 @@ local enum = {
 
     --- Extracted from `wayland-server-protocol.h`
     --
+    -- @table key_state
+    key_state = {
+        RELEASED = 0,
+        PRESSED  = 1,
+        REPEATED = 2,
+    },
+
+    --- Extracted from `wayland-server-protocol.h`
+    --
     -- @table output_transform
     output_transform = {
         TRANSFORM_NORMAL      = 0,
