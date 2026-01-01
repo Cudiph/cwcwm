@@ -8,7 +8,6 @@ local cwc = cwc
 
 local enum = cful.enum
 local mod = enum.modifier
-local button = enum.mouse_btn
 local direction = enum.direction
 
 local MODKEY = mod.LOGO
@@ -18,19 +17,6 @@ local TERMINAL = "kitty"
 if cwc.is_nested() then
     MODKEY = mod.ALT
 end
-
-------------------- pointer/mouse binding ---------------------
-local pointer = cwc.pointer
-
--- client interactive mode
-pointer.bind(MODKEY, button.LEFT, pointer.move_interactive)
-pointer.bind(MODKEY, button.RIGHT, pointer.resize_interactive)
-pointer.bind(MODKEY, button.SCROLL_UP, function()
-    cful.tag.viewprev()
-end)
-pointer.bind(MODKEY, button.SCROLL_DOWN, function()
-    cful.tag.viewnext()
-end)
 
 ------------------- keyboard binding --------------------
 local kbd = cwc.kbd
@@ -614,20 +600,3 @@ kbd.bind({ MODKEY, mod.CTRL }, "slash", function()
     print(gears.debug.dump(c.geometry))
     print(s.active_tag, s.active_workspace)
 end, { description = "this just for debugging", group = "dev", exclusive = true, repeated = true })
-
-
------------------- Swipe Gestures ---------------------
-local prev_active_tag = 1
-cful.pointer.bind_swipe(3, direction.RIGHT, function()
-    prev_active_tag = cwc.screen.focused().active_tag
-    cful.tag.viewnext()
-end, function()
-    cwc.screen.focused().active_tag = prev_active_tag
-end, { skip_events = true, threshold = 250, cancel_threshold = 60 })
-
-cful.pointer.bind_swipe(3, direction.LEFT, function()
-    prev_active_tag = cwc.screen.focused().active_tag
-    cful.tag.viewprev()
-end, function()
-    cwc.screen.focused().active_tag = prev_active_tag
-end)

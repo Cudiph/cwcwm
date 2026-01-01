@@ -23,6 +23,7 @@ end
 
 -- execute keybind script
 gears.protected_call(require, "keybind")
+gears.protected_call(require, "mousebind")
 
 -- use core implementation
 impl.use_core()
