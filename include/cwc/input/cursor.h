@@ -116,6 +116,12 @@ void process_cursor_motion(struct cwc_cursor *cursor,
                            double dx_unaccel,
                            double dy_unaccel);
 
+void process_cursor_axis(struct cwc_cursor *cursor,
+                         struct wlr_pointer_axis_event *event);
+
+void process_cursor_button(struct cwc_cursor *cursor,
+                           struct wlr_pointer_button_event *event);
+
 struct cwc_cursor *cwc_cursor_create(struct wlr_seat *seat);
 
 void cwc_cursor_destroy(struct cwc_cursor *cursor);
@@ -138,6 +144,24 @@ void cwc_cursor_update_scale(struct cwc_cursor *cursor);
  */
 bool cwc_cursor_hyprcursor_change_style(
     struct cwc_cursor *cursor, struct hyprcursor_cursor_style_info info);
+
+void cwc_cursor_send_axis(struct cwc_cursor *cursor,
+                          double delta,
+                          int delta_discrete,
+                          bool horizontal,
+                          bool inverse);
+void cwc_cursor_send_axis_raw(struct cwc_cursor *cursor,
+                              double delta,
+                              int delta_discrete,
+                              bool horizontal,
+                              bool inverse);
+
+void cwc_cursor_send_key(struct cwc_cursor *cursor,
+                         uint32_t button,
+                         enum wl_pointer_button_state state);
+void cwc_cursor_send_key_raw(struct cwc_cursor *cursor,
+                             uint32_t button,
+                             enum wl_pointer_button_state state);
 
 struct cwc_pointer_constraint {
     struct wlr_pointer_constraint_v1 *constraint;

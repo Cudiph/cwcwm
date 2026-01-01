@@ -561,6 +561,98 @@ static int luaC_pointer_move_to(lua_State *L)
     return 0;
 }
 
+static int __send_key(lua_State *L, bool raw)
+{
+    struct cwc_cursor *cursor = luaC_pointer_checkudata(L, 1);
+    uint32_t button           = luaL_checkinteger(L, 2);
+    bool pressed              = luaL_checkinteger(L, 3);
+
+    if (raw)
+        cwc_cursor_send_key_raw(cursor, button, pressed);
+    else
+        cwc_cursor_send_key(cursor, button, pressed);
+
+    return 0;
+}
+
+/** Send pointer key to client.
+ *
+ * @method send_key
+ * @tparam enum keycode Event code from `input-event-codes.h`
+ * @tparam enum state Whether key is pressed (true) or released (false).
+ * @noreturn
+ * @see cuteful.enum.mouse_btn
+ * @see cuteful.enum.key_state
+ */
+static int luaC_pointer_send_key(lua_State *L)
+{
+    return __send_key(L, false);
+}
+
+/** Send pointer key to client without any compositor processing.
+ *
+ * @method send_key_raw
+ * @tparam enum keycode Event code from `input-event-codes.h`
+ * @tparam enum state Whether key is pressed (true) or released (false).
+ * @noreturn
+ * @see cuteful.enum.mouse_btn
+ * @see cuteful.enum.key_state
+ */
+static int luaC_pointer_send_key_raw(lua_State *L)
+{
+    return __send_key(L, true);
+}
+
+static int __send_axis(lua_State *L, bool raw)
+{
+    struct cwc_cursor *cursor = luaC_pointer_checkudata(L, 1);
+    double delta              = luaL_checknumber(L, 2);
+    int delta_discrete        = luaL_checkinteger(L, 3);
+    bool horizontal           = lua_toboolean(L, 4);
+    bool inverse              = lua_toboolean(L, 5);
+
+    if (raw)
+        cwc_cursor_send_axis(cursor, delta, delta_discrete, horizontal,
+                             inverse);
+    else
+        cwc_cursor_send_axis_raw(cursor, delta, delta_discrete, horizontal,
+                                 inverse);
+
+    return 0;
+}
+
+/** Send axis event.
+ *
+ * @method send_axis
+ * @tparam number delta The length of vector.
+ * @tparam integer delta_discrete Discrete step information with each multiple
+ * of 120 representing one logical scroll step.
+ * @tparam[opt=false] boolean horizontal Perform horizontal (x) axis instead of
+ * vertical (y) axis.
+ * @tparam[opt=false] boolean inverse Flip the direction of axis
+ * @noreturn
+ */
+static int luaC_pointer_send_axis(lua_State *L)
+{
+    return __send_axis(L, false);
+}
+
+/** Send axis event without any compositor processing.
+ *
+ * @method send_axis_raw
+ * @tparam number delta The length of vector.
+ * @tparam number delta_discrete Discrete step information with each multiple of
+ * 120 representing one logical scroll step.
+ * @tparam[opt=false] boolean horizontal Perform horizontal (x) axis instead of
+ * vertical (y) axis.
+ * @tparam[opt=false] boolean inverse Flip the direction of axis
+ * @noreturn
+ */
+static int luaC_pointer_send_axis_raw(lua_State *L)
+{
+    return __send_axis(L, true);
+}
+
 #define REG_METHOD(name)    {#name, luaC_pointer_##name}
 #define REG_READ_ONLY(name) {"get_" #name, luaC_pointer_get_##name}
 #define REG_SETTER(name)    {"set_" #name, luaC_pointer_set_##name}
@@ -579,11 +671,19 @@ void luaC_pointer_setup(lua_State *L)
     };
 
     luaL_Reg pointer_methods[] = {
-        REG_METHOD(move),       REG_METHOD(move_to),
+        REG_METHOD(move),
+        REG_METHOD(move_to),
+        REG_METHOD(send_key),
+        REG_METHOD(send_key_raw),
+        REG_METHOD(send_axis),
+        REG_METHOD(send_axis_raw),
 
-        REG_READ_ONLY(data),    REG_READ_ONLY(seat),
+        REG_READ_ONLY(data),
+        REG_READ_ONLY(seat),
 
-        REG_PROPERTY(position), REG_PROPERTY(grab),  REG_PROPERTY(send_events),
+        REG_PROPERTY(position),
+        REG_PROPERTY(grab),
+        REG_PROPERTY(send_events),
 
         {NULL, NULL},
     };

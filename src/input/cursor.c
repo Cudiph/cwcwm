@@ -21,6 +21,7 @@
 #include <lauxlib.h>
 #include <linux/input-event-codes.h>
 #include <lua.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -549,13 +550,10 @@ static bool _process_axis_bind(struct cwc_cursor *cursor,
                                  true);
 }
 
-/* scroll wheel */
-static void on_cursor_axis(struct wl_listener *listener, void *data)
+void process_cursor_axis(struct cwc_cursor *cursor,
+                         struct wlr_pointer_axis_event *event)
 {
-    struct cwc_cursor *cursor =
-        wl_container_of(listener, cursor, cursor_axis_l);
 
-    struct wlr_pointer_axis_event *event = data;
     wlr_idle_notifier_v1_notify_activity(server.idle->idle_notifier,
                                          cursor->seat);
 
@@ -569,6 +567,16 @@ static void on_cursor_axis(struct wl_listener *listener, void *data)
 
     if (cursor->grab)
         _send_pointer_axis_signal(cursor, event);
+}
+
+/* scroll wheel */
+static void on_cursor_axis(struct wl_listener *listener, void *data)
+{
+    struct cwc_cursor *cursor =
+        wl_container_of(listener, cursor, cursor_axis_l);
+
+    struct wlr_pointer_axis_event *event = data;
+    process_cursor_axis(cursor, event);
 }
 
 void start_interactive_move(struct cwc_toplevel *toplevel)
@@ -917,13 +925,9 @@ _send_pointer_button_signal(struct cwc_cursor *cursor,
     cwc_signal_emit("pointer::button", &cwc_event, L, 4);
 }
 
-/* mouse click */
-static void on_cursor_button(struct wl_listener *listener, void *data)
+void process_cursor_button(struct cwc_cursor *cursor,
+                           struct wlr_pointer_button_event *event)
 {
-    struct cwc_cursor *cursor =
-        wl_container_of(listener, cursor, cursor_button_l);
-    struct wlr_pointer_button_event *event = data;
-
     double cx = cursor->wlr_cursor->x;
     double cy = cursor->wlr_cursor->y;
     double sx, sy;
@@ -966,6 +970,16 @@ static void on_cursor_button(struct wl_listener *listener, void *data)
     if (cursor->grab)
         _send_pointer_button_signal(cursor, event,
                                     WL_POINTER_BUTTON_STATE_PRESSED);
+}
+
+/* mouse click */
+static void on_cursor_button(struct wl_listener *listener, void *data)
+{
+    struct cwc_cursor *cursor =
+        wl_container_of(listener, cursor, cursor_button_l);
+    struct wlr_pointer_button_event *event = data;
+
+    process_cursor_button(cursor, event);
 }
 
 /* cursor render */
@@ -1640,6 +1654,96 @@ bool cwc_cursor_hyprcursor_change_style(
     }
 
     return false;
+}
+
+static void __cwc_cursor_send_axis(struct cwc_cursor *cursor,
+                                   double delta,
+                                   int delta_discrete,
+                                   bool horizontal,
+                                   bool inverse,
+                                   bool raw)
+{
+    struct timespec now;
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    uint64_t now_msec = timespec_to_msec(&now);
+
+    struct wlr_pointer_axis_event event = {
+        .time_msec          = now_msec,
+        .pointer            = NULL,
+        .delta              = delta,
+        .orientation        = horizontal,
+        .relative_direction = inverse,
+        .delta_discrete     = delta_discrete,
+        .source             = WL_POINTER_AXIS_SOURCE_WHEEL,
+    };
+
+    if (raw)
+        wlr_seat_pointer_notify_axis(
+            cursor->seat, event.time_msec, event.orientation, event.delta,
+            event.delta_discrete, event.source, event.relative_direction);
+    else
+        process_cursor_axis(cursor, &event);
+
+    wlr_seat_pointer_notify_frame(cursor->seat);
+}
+
+void cwc_cursor_send_axis(struct cwc_cursor *cursor,
+                          double delta,
+                          int delta_discrete,
+                          bool horizontal,
+                          bool inverse)
+{
+    __cwc_cursor_send_axis(cursor, delta, delta_discrete, horizontal, inverse,
+                           false);
+}
+
+void cwc_cursor_send_axis_raw(struct cwc_cursor *cursor,
+                              double delta,
+                              int delta_discrete,
+                              bool horizontal,
+                              bool inverse)
+{
+    __cwc_cursor_send_axis(cursor, delta, delta_discrete, horizontal, inverse,
+                           true);
+}
+
+static void __cwc_cursor_send_key(struct cwc_cursor *cursor,
+                                  uint32_t button,
+                                  enum wl_pointer_button_state state,
+                                  bool raw)
+{
+    struct timespec now;
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    uint64_t now_msec = timespec_to_msec(&now);
+    if (state == 0)
+        now_msec += 1;
+
+    struct wlr_pointer_button_event event = {
+        .button    = button,
+        .time_msec = now_msec,
+        .state     = state,
+        .pointer   = NULL,
+    };
+
+    if (raw)
+        process_cursor_button(cursor, &event);
+    else
+        wlr_seat_pointer_notify_button(cursor->seat, event.time_msec,
+                                       event.button, event.state);
+}
+
+void cwc_cursor_send_key(struct cwc_cursor *cursor,
+                         uint32_t button,
+                         enum wl_pointer_button_state state)
+{
+    __cwc_cursor_send_key(cursor, button, state, false);
+}
+
+void cwc_cursor_send_key_raw(struct cwc_cursor *cursor,
+                             uint32_t button,
+                             enum wl_pointer_button_state state)
+{
+    __cwc_cursor_send_key(cursor, button, state, false);
 }
 
 /* set shape protocol */
