@@ -1,3 +1,4 @@
+local enum = require("cuteful.enum")
 local cwc = cwc
 local objname = "cwc_pointer"
 
@@ -68,6 +69,19 @@ local function method_test(pointer)
 
     pointer:move_to(300, 300)
     pointer:move_to(1e9, 1e9, true)
+
+    pointer:send_key(enum.mouse_btn.LEFT, enum.key_state.PRESSED)
+    pointer:send_key(enum.mouse_btn.LEFT, enum.key_state.RELEASED)
+
+    pointer:send_key_raw(enum.mouse_btn.RIGHT, enum.key_state.PRESSED)
+    pointer:send_key_raw(enum.mouse_btn.RIGHT, enum.key_state.RELEASED)
+
+    pointer:send_axis(15, 120)
+    pointer:send_axis(15, 120, true)
+    pointer:send_axis(-15, 120, true, true)
+
+    pointer:send_axis_raw(enum.mouse_btn.RIGHT, enum.key_state.RELEASED)
+    pointer:send_axis_raw(enum.mouse_btn.RIGHT, enum.key_state.RELEASED)
 end
 
 local function test()
