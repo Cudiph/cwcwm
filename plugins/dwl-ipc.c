@@ -423,7 +423,7 @@ plugin_init(dwl_ipc_setup);
 plugin_exit(dwl_ipc_cleanup);
 
 PLUGIN_NAME("dwl-ipc");
-PLUGIN_VERSION("0.3.0");
+PLUGIN_VERSION("0.4.0-dev");
 PLUGIN_DESCRIPTION("dwl IPC plugin");
 PLUGIN_LICENSE("GPLv3");
 PLUGIN_AUTHOR("Dwi Asmoro Bangun <dwiaceromo@gmail.com>");
