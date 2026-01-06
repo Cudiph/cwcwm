@@ -660,7 +660,7 @@ static void cwc_container_insert_toplevel_silence(struct cwc_container *c,
     _cwc_container_insert_toplevel(c, toplevel, false);
 }
 
-static void _destroy_container(struct cwc_container *container)
+static void cwc_container_fini(struct cwc_container *container)
 {
     lua_State *L = g_config_get_lua_State();
     cwc_object_emit_signal_simple("container::destroy", L, container);
@@ -722,7 +722,7 @@ void cwc_container_remove_toplevel(struct cwc_toplevel *toplevel)
     if (wl_list_length(&cont->toplevels))
         return;
 
-    _destroy_container(cont);
+    cwc_container_fini(cont);
 }
 
 void cwc_container_remove_toplevel_but_dont_destroy_container_when_empty(

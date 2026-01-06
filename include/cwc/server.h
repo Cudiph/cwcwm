@@ -72,6 +72,10 @@ struct cwc_server {
     struct wlr_ext_foreign_toplevel_list_v1 *foreign_toplevel_list;
     struct wlr_foreign_toplevel_manager_v1 *foreign_toplevel_manager;
 
+    struct wlr_ext_foreign_toplevel_image_capture_source_manager_v1
+        *foreign_toplevel_image_capture_source_manager;
+    struct wl_listener new_capture_source_request_l;
+
     struct wlr_scene_tree *main_tree;
     struct wlr_scene_tree *temporary_tree;
     // sorted from back to front
