@@ -225,6 +225,7 @@ server_init(struct cwc_server *s, char *config_path, char *library_path)
     wlr_fractional_scale_manager_v1_create(dpy, 1);
     wlr_presentation_create(dpy, s->backend, 2);
     wlr_alpha_modifier_v1_create(dpy);
+    wlr_ext_output_image_capture_source_manager_v1_create(dpy, 1);
 
     s->content_type_manager     = wlr_content_type_manager_v1_create(dpy, 1);
     s->security_context_manager = wlr_security_context_manager_v1_create(dpy);
@@ -232,7 +233,6 @@ server_init(struct cwc_server *s, char *config_path, char *library_path)
     s->screencopy_manager       = wlr_screencopy_manager_v1_create(dpy);
     s->copy_capture_manager =
         wlr_ext_image_copy_capture_manager_v1_create(dpy, 1);
-    wlr_ext_output_image_capture_source_manager_v1_create(dpy, 1);
     s->wlr_data_control_manager = wlr_data_control_manager_v1_create(dpy);
     s->ext_data_control_manager =
         wlr_ext_data_control_manager_v1_create(dpy, 1);
