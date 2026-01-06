@@ -237,6 +237,7 @@ static void _decide_should_tiled_part2(struct cwc_toplevel *toplevel)
     }
 }
 
+#ifdef CWC_XWAYLAND
 static void on_unmanaged_set_geometry(struct wl_listener *listener, void *data)
 {
     struct cwc_toplevel *toplevel =
@@ -279,6 +280,10 @@ static void _fini_unmap_unmanaged_toplevel(struct cwc_toplevel *toplevel)
 
     wl_list_remove(&toplevel->set_geometry_l.link);
 }
+#else
+static void _init_mapped_unmanaged_toplevel(struct cwc_toplevel *toplevel) {}
+static void _fini_unmap_unmanaged_toplevel(struct cwc_toplevel *toplevel) {}
+#endif /* ifdef CWC_XWAYLAND */
 
 static void on_surface_map(struct wl_listener *listener, void *data)
 {
