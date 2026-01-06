@@ -256,9 +256,7 @@ static void _init_mapped_unmanaged_toplevel(struct cwc_toplevel *toplevel)
                   &toplevel->set_geometry_l);
 
     struct wlr_xwayland_surface *parent = toplevel->xwsurface->parent;
-    puts("aaaaaa");
     if (parent) {
-        puts("bbbbb");
         struct cwc_toplevel *parent_toplevel = parent->data;
         if (parent_toplevel->capture_scene_tree) {
             toplevel->capture_scene_tree = wlr_scene_subsurface_tree_create(
