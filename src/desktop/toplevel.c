@@ -836,7 +836,7 @@ static void on_xdg_toplevel_set_description(struct wl_listener *listener,
 
 void setup_xdg_shell(struct cwc_server *s)
 {
-    s->xdg_shell                 = wlr_xdg_shell_create(s->wl_display, 6);
+    s->xdg_shell                 = wlr_xdg_shell_create(s->wl_display, 7);
     s->new_xdg_toplevel_l.notify = on_new_xdg_toplevel;
     s->new_xdg_popup_l.notify    = on_new_xdg_popup;
     wl_signal_add(&s->xdg_shell->events.new_toplevel, &s->new_xdg_toplevel_l);
