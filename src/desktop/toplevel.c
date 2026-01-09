@@ -118,7 +118,8 @@ static void on_foreign_destroy(struct wl_listener *listener, void *data)
 
 static void _init_capture_scene(struct cwc_toplevel *toplevel)
 {
-    toplevel->capture_scene = wlr_scene_create();
+    toplevel->capture_scene                            = wlr_scene_create();
+    toplevel->capture_scene->restack_xwayland_surfaces = false;
 
 #ifdef CWC_XWAYLAND
     if (cwc_toplevel_is_x11(toplevel)) {
@@ -145,8 +146,9 @@ static inline void _init_mapped_managed_toplevel(struct cwc_toplevel *toplevel)
 
     wl_list_insert(&server.focused_output->state->toplevels,
                    &toplevel->link_output_toplevels);
-    cwc_toplevel_set_tiled(toplevel, WLR_EDGE_TOP | WLR_EDGE_BOTTOM
-                                         | WLR_EDGE_LEFT | WLR_EDGE_RIGHT);
+    if (!cwc_toplevel_is_floating(toplevel))
+        cwc_toplevel_set_tiled(toplevel, WLR_EDGE_TOP | WLR_EDGE_BOTTOM
+                                             | WLR_EDGE_LEFT | WLR_EDGE_RIGHT);
 
     struct wlr_ext_foreign_toplevel_handle_v1_state state = {
         .title  = cwc_toplevel_get_title(toplevel),
@@ -343,7 +345,7 @@ static void _surface_initial_commit(struct cwc_toplevel *toplevel)
     wlr_xdg_toplevel_set_wm_capabilities(
         toplevel->xdg_toplevel,
         WLR_XDG_TOPLEVEL_WM_CAPABILITIES_MAXIMIZE
-            // | WLR_XDG_TOPLEVEL_WM_CAPABILITIES_MINIMIZE
+            | WLR_XDG_TOPLEVEL_WM_CAPABILITIES_MINIMIZE
             | WLR_XDG_TOPLEVEL_WM_CAPABILITIES_FULLSCREEN);
 
     cwc_toplevel_set_decoration_mode(toplevel,
@@ -354,6 +356,7 @@ static void on_surface_commit(struct wl_listener *listener, void *data)
 {
     struct cwc_toplevel *toplevel =
         wl_container_of(listener, toplevel, commit_l);
+    struct cwc_container *container = toplevel->container;
 
     if (toplevel->xdg_toplevel->base->initial_commit) {
         _surface_initial_commit(toplevel);
@@ -367,28 +370,29 @@ static void on_surface_commit(struct wl_listener *listener, void *data)
         toplevel->resize_serial = 0;
     }
 
-    if (!toplevel->container || toplevel->xdg_toplevel->current.resizing
-        || cwc_container_get_front_toplevel(toplevel->container) != toplevel
-        || !cwc_output_is_exist(toplevel->container->output)
+    if (!container || toplevel->xdg_toplevel->current.resizing
+        || cwc_container_get_front_toplevel(container) != toplevel
+        || !cwc_output_is_exist(container->output)
         || !cwc_toplevel_is_mapped(toplevel))
         return;
 
     struct wlr_box geom = cwc_toplevel_get_geometry(toplevel);
-    int thickness = cwc_border_get_thickness(&toplevel->container->border);
+    int thickness       = cwc_border_get_thickness(&container->border);
 
     // adjust clipping to follow the tiled size
     if (!cwc_toplevel_is_floating(toplevel)) {
-        int gaps = cwc_output_get_current_tag_info(toplevel->container->output)
-                       ->useless_gaps;
+        int gaps =
+            cwc_output_get_current_tag_info(container->output)->useless_gaps;
         int outside_width = (thickness + gaps) * 2;
-        geom.width        = toplevel->container->width - outside_width;
-        geom.height       = toplevel->container->height - outside_width;
+        geom.width        = container->width - outside_width;
+        geom.height       = container->height - outside_width;
         wlr_scene_subsurface_tree_set_clip(&toplevel->surf_tree->node, &geom);
         return;
     }
 
+    cwc_toplevel_set_size_surface(toplevel, geom.width, geom.height);
     wlr_scene_subsurface_tree_set_clip(&toplevel->surf_tree->node, &geom);
-    cwc_border_resize(&toplevel->container->border, geom.width + thickness * 2,
+    cwc_border_resize(&container->border, geom.width + thickness * 2,
                       geom.height + thickness * 2);
 }
 

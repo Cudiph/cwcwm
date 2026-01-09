@@ -19,6 +19,7 @@
 #include <drm_fourcc.h>
 #include <hyprcursor/hyprcursor.h>
 #include <lauxlib.h>
+#include <limits.h>
 #include <linux/input-event-codes.h>
 #include <lua.h>
 #include <stdint.h>
@@ -663,7 +664,8 @@ static void start_interactive_resize_floating(struct cwc_cursor *cursor,
     struct cwc_toplevel *toplevel = cursor->grabbed_toplevel;
     struct wlr_box geo_box        = cwc_container_get_box(toplevel->container);
 
-    cursor->grab_float = geo_box;
+    cursor->grab_float  = geo_box;
+    cursor->pending_box = geo_box;
 
     double border_x =
         geo_box.x + ((edges & WLR_EDGE_RIGHT) ? geo_box.width : 0);
@@ -673,6 +675,8 @@ static void start_interactive_resize_floating(struct cwc_cursor *cursor,
     cursor->grab_y = cy - border_y;
 
     cursor->state = CWC_CURSOR_STATE_RESIZE;
+
+    process_cursor_resize(cursor);
 }
 
 static void start_interactive_resize_bsp(struct cwc_cursor *cursor,
