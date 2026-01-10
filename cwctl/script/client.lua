@@ -24,6 +24,8 @@ local function c_list()
             "\tPID: %s\n" ..
             "\tXwayland: %s\n" ..
             "\tUnmanaged: %s\n" ..
+            "\tXDG Tag: %s\n" ..
+            "\tXDG Description: %s\n" ..
             "\tVisible: %s\n" ..
             "\tMapped: %s\n" ..
             "\tFullscreen: %s\n" ..
@@ -55,6 +57,8 @@ local function c_list()
             c.pid,
             c.x11,
             c.unmanaged,
+            c.xdg_tag,
+            c.xdg_desc,
             c.visible,
             c.mapped,
             c.fullscreen,

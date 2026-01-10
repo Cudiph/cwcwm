@@ -76,6 +76,10 @@ struct cwc_server {
         *foreign_toplevel_image_capture_source_manager;
     struct wl_listener new_capture_source_request_l;
 
+    struct wlr_xdg_toplevel_tag_manager_v1 *xdg_toplevel_tag_manager;
+    struct wl_listener xdg_toplevel_set_tag_l;
+    struct wl_listener xdg_toplevel_set_desc_l;
+
     struct wlr_scene_tree *main_tree;
     struct wlr_scene_tree *temporary_tree;
     // sorted from back to front

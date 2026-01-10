@@ -66,6 +66,9 @@ struct cwc_toplevel {
     bool urgent;
     uint32_t resize_serial;
 
+    char *xdg_tag;
+    char *xdg_description;
+
     struct wl_list link_output_toplevels; // cwc_output.toplevels
     struct wl_list link_container;        // cwc_container.toplevels
 

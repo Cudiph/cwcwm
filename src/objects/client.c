@@ -184,6 +184,18 @@
  * @tparam cwc_client c The client object.
  */
 
+/** Property signal.
+ *
+ * @signal client::prop::xdg_tag
+ * @tparam cwc_client c The client object.
+ */
+
+/** Property signal.
+ *
+ * @signal client::prop::xdg_desc
+ * @tparam cwc_client c The client object.
+ */
+
 //============================ CODE =================================
 
 /** Resize client relative to current size.
@@ -1055,6 +1067,32 @@ static int luaC_client_get_content_type(lua_State *L)
     return 1;
 }
 
+/** The tag of this toplevel.
+ *
+ * @property xdg_tag
+ * @tparam[opt=""] string|nil xdg_tag
+ * @readonly
+ */
+static int luaC_client_get_xdg_tag(lua_State *L)
+{
+    struct cwc_toplevel *toplevel = luaC_client_checkudata(L, 1);
+    lua_pushstring(L, toplevel->xdg_tag);
+    return 1;
+}
+
+/** The description of this toplevel.
+ *
+ * @property xdg_desc
+ * @tparam[opt=""] string|nil xdg_desc
+ * @readonly
+ */
+static int luaC_client_get_xdg_desc(lua_State *L)
+{
+    struct cwc_toplevel *toplevel = luaC_client_checkudata(L, 1);
+    lua_pushstring(L, toplevel->xdg_description);
+    return 1;
+}
+
 /** Toggle vsplit to hsplit or otherwise for bsp layout.
  *
  * @method toggle_split
@@ -1209,6 +1247,8 @@ void luaC_client_setup(lua_State *L)
         REG_READ_ONLY(unmanaged),
         REG_READ_ONLY(container),
         REG_READ_ONLY(content_type),
+        REG_READ_ONLY(xdg_tag),
+        REG_READ_ONLY(xdg_desc),
 
         // properties
         REG_PROPERTY(geometry),

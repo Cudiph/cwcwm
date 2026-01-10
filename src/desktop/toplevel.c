@@ -32,6 +32,7 @@
 #include <wlr/types/wlr_xcursor_manager.h>
 #include <wlr/types/wlr_xdg_activation_v1.h>
 #include <wlr/types/wlr_xdg_decoration_v1.h>
+#include <wlr/types/wlr_xdg_toplevel_tag_v1.h>
 #include <wlr/util/box.h>
 
 #ifdef CWC_XWAYLAND
@@ -491,6 +492,8 @@ static void on_toplevel_destroy(struct wl_listener *listener, void *data)
         wl_list_remove(&toplevel->map_l.link);
         wl_list_remove(&toplevel->unmap_l.link);
         wl_list_remove(&toplevel->commit_l.link);
+        free(toplevel->xdg_tag);
+        free(toplevel->xdg_description);
     }
 
     luaC_object_unregister(L, toplevel);
@@ -781,6 +784,31 @@ static void on_toplevel_capture_source_new_request(struct wl_listener *listener,
         req, toplevel->wlr_capture_source);
 }
 
+static void on_xdg_toplevel_set_tag(struct wl_listener *listener, void *data)
+{
+    struct wlr_xdg_toplevel_tag_manager_v1_set_tag_event *event = data;
+    struct cwc_toplevel *toplevel = event->toplevel->base->data;
+
+    free(toplevel->xdg_tag);
+    toplevel->xdg_tag = strdup(event->tag);
+
+    cwc_object_emit_signal_simple("client::prop::xdg_tag",
+                                  g_config_get_lua_State(), toplevel);
+}
+
+static void on_xdg_toplevel_set_description(struct wl_listener *listener,
+                                            void *data)
+{
+    struct wlr_xdg_toplevel_tag_manager_v1_set_description_event *event = data;
+    struct cwc_toplevel *toplevel = event->toplevel->base->data;
+
+    free(toplevel->xdg_description);
+    toplevel->xdg_description = strdup(event->description);
+
+    cwc_object_emit_signal_simple("client::prop::xdg_desc",
+                                  g_config_get_lua_State(), toplevel);
+}
+
 void setup_xdg_shell(struct cwc_server *s)
 {
     s->xdg_shell                 = wlr_xdg_shell_create(s->wl_display, 6);
@@ -802,6 +830,15 @@ void setup_xdg_shell(struct cwc_server *s)
     wl_signal_add(
         &s->foreign_toplevel_image_capture_source_manager->events.new_request,
         &s->new_capture_source_request_l);
+
+    s->xdg_toplevel_tag_manager =
+        wlr_xdg_toplevel_tag_manager_v1_create(s->wl_display, 1);
+    s->xdg_toplevel_set_tag_l.notify  = on_xdg_toplevel_set_tag;
+    s->xdg_toplevel_set_desc_l.notify = on_xdg_toplevel_set_description;
+    wl_signal_add(&s->xdg_toplevel_tag_manager->events.set_tag,
+                  &s->xdg_toplevel_set_tag_l);
+    wl_signal_add(&s->xdg_toplevel_tag_manager->events.set_description,
+                  &s->xdg_toplevel_set_desc_l);
 }
 
 void cleanup_xdg_shell(struct cwc_server *s)
@@ -812,6 +849,9 @@ void cleanup_xdg_shell(struct cwc_server *s)
     wl_list_remove(&s->request_activate_l.link);
 
     wl_list_remove(&s->new_capture_source_request_l.link);
+
+    wl_list_remove(&s->xdg_toplevel_set_tag_l.link);
+    wl_list_remove(&s->xdg_toplevel_set_desc_l.link);
 }
 
 void cwc_toplevel_focus(struct cwc_toplevel *toplevel, bool raise)
