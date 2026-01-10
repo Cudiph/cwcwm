@@ -71,7 +71,7 @@ end
 -- @staticfct gears.debug.print_warning
 -- @noreturn
 function debug.print_warning(message)
-    io.stderr:write(os.date("%Y-%m-%d %T W: awesome: ") .. tostring(message) .. "\n")
+    io.stderr:write(os.date("%Y-%m-%d %T [WARN] [cwc] ") .. tostring(message) .. "\n")
 end
 
 --- Print an error message
@@ -79,7 +79,7 @@ end
 -- @staticfct gears.debug.print_error
 -- @noreturn
 function debug.print_error(message)
-    io.stderr:write(os.date("%Y-%m-%d %T E: awesome: ") .. tostring(message) .. "\n")
+    io.stderr:write(os.date("%Y-%m-%d %T [ERROR] [cwc] ") .. tostring(message) .. "\n")
 end
 
 local displayed_deprecations = {}

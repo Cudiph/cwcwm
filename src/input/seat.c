@@ -31,6 +31,7 @@
 #include <wlr/types/wlr_touch.h>
 #include <wlr/types/wlr_transient_seat_v1.h>
 
+#include "cwc/config.h"
 #include "cwc/desktop/output.h"
 #include "cwc/desktop/toplevel.h"
 #include "cwc/input/cursor.h"
@@ -60,8 +61,9 @@ static void on_request_primary_selection(struct wl_listener *listener,
         wl_container_of(listener, seat, request_primary_selection_l);
     struct wlr_seat_request_set_primary_selection_event *device = data;
 
-    wlr_seat_set_primary_selection(seat->wlr_seat, device->source,
-                                   device->serial);
+    if (g_config.middle_click_paste)
+        wlr_seat_set_primary_selection(seat->wlr_seat, device->source,
+                                       device->serial);
 }
 
 static void on_request_start_drag(struct wl_listener *listener, void *data)

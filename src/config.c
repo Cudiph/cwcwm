@@ -22,15 +22,31 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
+#include <wayland-server-core.h>
+#include <wayland-util.h>
+#include <wlr/types/wlr_primary_selection.h>
 
 #include "cwc/config.h"
 #include "cwc/desktop/toplevel.h"
 #include "cwc/input/keyboard.h"
+#include "cwc/input/manager.h"
+#include "cwc/input/seat.h"
 #include "cwc/luac.h"
+#include "cwc/server.h"
 #include "cwc/util.h"
 #include "lauxlib.h"
 
 static struct wl_listener on_commit_l;
+
+static void _clear_all_primary_selection()
+{
+    struct cwc_seat *seat;
+    wl_list_for_each(seat, &server.input->seats, link)
+    {
+        wlr_seat_set_primary_selection(
+            seat->wlr_seat, NULL, wl_display_next_serial(server.wl_display));
+    }
+}
 
 #define UPDATE_XKB_OPTIONS(opt_name)                               \
     if (luaC_config_get(L, "xkb_" #opt_name)) {                    \
@@ -45,6 +61,11 @@ static void on_commit(struct wl_listener *listener, void *data)
 
     if (luaC_config_get(L, "tasklist_show_all"))
         g_config.tasklist_show_all = lua_toboolean(L, -1);
+    if (luaC_config_get(L, "middle_click_paste")) {
+        g_config.middle_click_paste = lua_toboolean(L, -1);
+        if (!g_config.middle_click_paste)
+            _clear_all_primary_selection();
+    }
 
     if (luaC_config_get(L, "border_color_rotation"))
         g_config.border_color_rotation = lua_tointeger(L, -1);
@@ -103,7 +124,8 @@ void cwc_config_commit()
 
 void cwc_config_set_default()
 {
-    g_config.tasklist_show_all = true;
+    g_config.tasklist_show_all  = true;
+    g_config.middle_click_paste = true;
 
     g_config.border_color_rotation   = 0;
     g_config.useless_gaps            = 0;
