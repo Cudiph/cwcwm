@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <wayland-server-core.h>
 #include <wayland-util.h>
+#include <wlr/interfaces/wlr_output.h>
 #include <wlr/types/wlr_ext_foreign_toplevel_list_v1.h>
 #include <wlr/types/wlr_ext_image_capture_source_v1.h>
 #include <wlr/types/wlr_ext_image_copy_capture_v1.h>
@@ -353,6 +354,19 @@ static void _surface_initial_commit(struct cwc_toplevel *toplevel)
                                      g_config.default_decoration_mode);
 }
 
+static void send_capture_frame(struct cwc_toplevel *toplevel)
+{
+    if (!toplevel->capture_scene)
+        return;
+
+    struct wlr_scene_output *capture_scene_output;
+    wl_list_for_each(capture_scene_output, &toplevel->capture_scene->outputs,
+                     link)
+    {
+        wlr_output_send_frame(capture_scene_output->output);
+    }
+}
+
 static void on_surface_commit(struct wl_listener *listener, void *data)
 {
     struct cwc_toplevel *toplevel =
@@ -370,6 +384,8 @@ static void on_surface_commit(struct wl_listener *listener, void *data)
         server.resize_count--;
         toplevel->resize_serial = 0;
     }
+
+    send_capture_frame(toplevel);
 
     if (!container || toplevel->xdg_toplevel->current.resizing
         || cwc_container_get_front_toplevel(container) != toplevel
@@ -640,10 +656,18 @@ static void on_popup_destroy(struct wl_listener *listener, void *data)
     free(popup);
 }
 
+static struct cwc_toplevel *
+wlr_xdg_popup_get_cwc_toplevel(struct wlr_xdg_popup *popup);
+
 static void on_popup_commit(struct wl_listener *listener, void *data)
 {
     struct cwc_popup *popup = wl_container_of(listener, popup, popup_commit_l);
     struct wlr_xdg_popup *xdg_popup = popup->xdg_popup;
+
+    struct cwc_toplevel *closest_toplevel_parent =
+        wlr_xdg_popup_get_cwc_toplevel(xdg_popup);
+    if (closest_toplevel_parent)
+        send_capture_frame(closest_toplevel_parent);
 
     if (!xdg_popup->base->initial_commit)
         return;
@@ -729,7 +753,8 @@ void on_new_xdg_popup(struct wl_listener *listener, void *data)
                   &popup->popup_commit_l);
 }
 
-struct cwc_toplevel *wlr_xdg_popup_get_cwc_toplevel(struct wlr_xdg_popup *popup)
+static struct cwc_toplevel *
+wlr_xdg_popup_get_cwc_toplevel(struct wlr_xdg_popup *popup)
 {
     struct wlr_surface *parent = popup->parent;
     struct wlr_xdg_surface *xdg_surface;
@@ -1077,14 +1102,24 @@ static void on_request_activate(struct wl_listener *listener, void *data)
         wlr_xwayland_surface_activate(toplevel->xwsurface, true);
 }
 
+static void on_xsurface_commit(struct wl_listener *listener, void *data)
+{
+    struct cwc_toplevel *toplevel =
+        wl_container_of(listener, toplevel, commit_l);
+    send_capture_frame(toplevel);
+}
+
 static void on_associate(struct wl_listener *listener, void *data)
 {
     struct xwayland_props *props =
         wl_container_of(listener, props, associate_l);
     struct cwc_toplevel *toplevel = props->toplevel;
 
-    toplevel->map_l.notify   = on_surface_map;
-    toplevel->unmap_l.notify = on_surface_unmap;
+    toplevel->commit_l.notify = on_xsurface_commit;
+    toplevel->map_l.notify    = on_surface_map;
+    toplevel->unmap_l.notify  = on_surface_unmap;
+    wl_signal_add(&toplevel->xwsurface->surface->events.commit,
+                  &toplevel->commit_l);
     wl_signal_add(&toplevel->xwsurface->surface->events.map, &toplevel->map_l);
     wl_signal_add(&toplevel->xwsurface->surface->events.unmap,
                   &toplevel->unmap_l);
@@ -1096,6 +1131,7 @@ static void on_dissociate(struct wl_listener *listener, void *data)
         wl_container_of(listener, props, dissociate_l);
     struct cwc_toplevel *toplevel = props->toplevel;
 
+    wl_list_remove(&toplevel->commit_l.link);
     wl_list_remove(&toplevel->map_l.link);
     wl_list_remove(&toplevel->unmap_l.link);
 }
