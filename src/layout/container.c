@@ -1332,6 +1332,13 @@ static void all_toplevel_set_size(struct cwc_toplevel *toplevel, void *data)
     int surf_w = box->width;
     int surf_h = box->height;
 
+    if (cwc_toplevel_is_floating(toplevel)) {
+        cwc_toplevel_set_tiled(toplevel, 0);
+    } else {
+        cwc_toplevel_set_tiled(toplevel, WLR_EDGE_TOP | WLR_EDGE_BOTTOM
+                                             | WLR_EDGE_LEFT | WLR_EDGE_RIGHT);
+    }
+
     /* this prevent unnecessary frame synchronization */
     if (!cwc_toplevel_is_x11(toplevel) && geom.width == surf_w
         && geom.height == surf_h)
