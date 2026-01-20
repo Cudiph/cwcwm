@@ -33,7 +33,9 @@
 
 #include <lauxlib.h>
 #include <lua.h>
+#include <stdlib.h>
 #include <wayland-util.h>
+#include <wlr/types/wlr_ext_workspace_v1.h>
 
 #include "cwc/desktop/output.h"
 #include "cwc/desktop/transaction.h"
@@ -41,6 +43,20 @@
 #include "cwc/luaclass.h"
 #include "cwc/luaobject.h"
 #include "cwc/util.h"
+
+/** Property signal.
+ *
+ * @signal tag::prop::label
+ * @tparam cwc_tag tag The tag object.
+ */
+
+/** Property signal.
+ *
+ * @signal tag::prop::hidden
+ * @tparam cwc_tag tag The tag object.
+ */
+
+//============================ CODE =================================
 
 /** Index of the tag in the screen.
  *
@@ -77,7 +93,28 @@ static int luaC_tag_get_screen(lua_State *L)
     return 1;
 }
 
-/** True if the tag is selected to be viewed.
+/** The label or name of the tag.
+ *
+ * @property label
+ * @tparam[opt=""] string label
+ */
+static int luaC_tag_get_label(lua_State *L)
+{
+    struct cwc_tag_info *tag = luaC_tag_checkudata(L, 1);
+    lua_pushstring(L, tag->label);
+    return 1;
+}
+static int luaC_tag_set_label(lua_State *L)
+{
+    struct cwc_tag_info *tag = luaC_tag_checkudata(L, 1);
+    const char *newlabel     = luaL_checkstring(L, 2);
+
+    cwc_tag_info_set_label(tag, newlabel);
+
+    return 0;
+}
+
+/** True if the tag is selected to be viewed (active tag).
  *
  * @property selected
  * @tparam[opt=false] boolean selected
@@ -106,6 +143,32 @@ static int luaC_tag_set_selected(lua_State *L)
 
     transaction_schedule_output(output);
     transaction_schedule_tag(cwc_output_get_current_tag_info(output));
+
+    return 0;
+}
+
+/** Hide the tag from the visual indicator.
+ *
+ * @property hidden
+ * @tparam boolean hidden
+ * @propertydefault `false` for general workspace.
+ */
+static int luaC_tag_get_hidden(lua_State *L)
+{
+    struct cwc_tag_info *tag = luaC_tag_checkudata(L, 1);
+
+    lua_pushboolean(L, tag->hidden);
+
+    return 1;
+}
+static int luaC_tag_set_hidden(lua_State *L)
+{
+    struct cwc_tag_info *tag = luaC_tag_checkudata(L, 1);
+    bool set                 = lua_toboolean(L, 2);
+
+    tag->hidden = set;
+    if (tag->ext_workspace)
+        wlr_ext_workspace_handle_v1_set_hidden(tag->ext_workspace, set);
 
     return 0;
 }
@@ -319,7 +382,9 @@ void luaC_tag_setup(lua_State *L)
         REG_READ_ONLY(screen),
 
         // properties
+        REG_PROPERTY(label),
         REG_PROPERTY(selected),
+        REG_PROPERTY(hidden),
         REG_PROPERTY(gap),
         REG_PROPERTY(mwfact),
         REG_PROPERTY(layout_mode),

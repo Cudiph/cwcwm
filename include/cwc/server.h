@@ -89,6 +89,9 @@ struct cwc_server {
     struct wl_listener xdg_toplevel_set_tag_l;
     struct wl_listener xdg_toplevel_set_desc_l;
 
+    struct wlr_ext_workspace_manager_v1 *ext_workspace_manager;
+    struct wl_listener ext_workspace_mgr_commit_l;
+
     struct wlr_scene_tree *main_tree;
     struct wlr_scene_tree *temporary_tree;
     // sorted from back to front

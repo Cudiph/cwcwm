@@ -26,6 +26,7 @@
 #include <wlr/types/wlr_ext_foreign_toplevel_list_v1.h>
 #include <wlr/types/wlr_ext_image_capture_source_v1.h>
 #include <wlr/types/wlr_ext_image_copy_capture_v1.h>
+#include <wlr/types/wlr_ext_workspace_v1.h>
 #include <wlr/types/wlr_foreign_toplevel_management_v1.h>
 #include <wlr/types/wlr_output.h>
 #include <wlr/types/wlr_server_decoration.h>
@@ -1546,6 +1547,13 @@ void cwc_toplevel_set_urgent(struct cwc_toplevel *toplevel, bool set)
 {
     if (toplevel->urgent == set)
         return;
+
+    struct cwc_tag_info *tag =
+        cwc_output_get_tag(toplevel->container->output,
+                           cwc_tag_find_first_tag(toplevel->container->tag));
+
+    if (tag->ext_workspace)
+        wlr_ext_workspace_handle_v1_set_urgent(tag->ext_workspace, set);
 
     toplevel->urgent = set;
     cwc_object_emit_signal_simple("client::prop::urgent",

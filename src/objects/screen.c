@@ -33,6 +33,7 @@
 #include <lauxlib.h>
 #include <lua.h>
 #include <wayland-util.h>
+#include <wlr/types/wlr_ext_workspace_v1.h>
 
 #include "cwc/config.h"
 #include "cwc/desktop/layer_shell.h"
@@ -605,6 +606,24 @@ static int luaC_screen_set_max_general_workspace(lua_State *L)
     newmax                    = MAX(MIN(newmax, MAX_WORKSPACE), 1);
 
     output->state->max_general_workspace = newmax;
+
+    for (int i = 1; i < MAX_WORKSPACE; i++) {
+        struct cwc_tag_info *tag_info = &output->state->tag_info[i];
+        if (i > newmax) {
+            if (tag_info->ext_workspace) {
+                wlr_ext_workspace_handle_v1_destroy(tag_info->ext_workspace);
+                tag_info->ext_workspace = NULL;
+            }
+            continue;
+        }
+
+        if (tag_info->ext_workspace)
+            continue;
+
+        cwc_tag_info_create_ext_workspace_handle(
+            tag_info, output->wlr_output->name,
+            output->state->ext_workspace_group);
+    }
 
     return 0;
 }

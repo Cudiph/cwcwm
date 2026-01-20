@@ -23,6 +23,8 @@ struct cwc_output_state {
     struct cwc_output *output;
     struct cwc_output *old_output;
 
+    struct wlr_ext_workspace_group_handle_v1 *ext_workspace_group;
+
     /* the tag used to decide if client visible */
     tag_bitfield_t active_tag;
     /* act as tag info index cuz multiple tag can be active */
@@ -163,6 +165,14 @@ void cwc_output_set_strategy_idx(struct cwc_output *output, int idx);
 
 /* return the workspace number, 0 if not found */
 int cwc_tag_find_first_tag(tag_bitfield_t tag);
+
+void cwc_tag_info_create_ext_workspace_handle(
+    struct cwc_tag_info *tag_info,
+    const char *output_name,
+    struct wlr_ext_workspace_group_handle_v1 *ext_workspace_group);
+
+void cwc_tag_info_set_label(struct cwc_tag_info *tag_info, const char *name);
+void cwc_tag_info_set_hidden(struct cwc_tag_info *tag_info, bool set);
 
 //================== MACRO ==================
 

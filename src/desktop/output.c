@@ -27,6 +27,7 @@
 #include <wlr/backend.h>
 #include <wlr/backend/headless.h>
 #include <wlr/types/wlr_alpha_modifier_v1.h>
+#include <wlr/types/wlr_ext_workspace_v1.h>
 #include <wlr/types/wlr_foreign_toplevel_management_v1.h>
 #include <wlr/types/wlr_layer_shell_v1.h>
 #include <wlr/types/wlr_output_management_v1.h>
@@ -116,23 +117,35 @@ cwc_output_state_create(struct cwc_output *output)
     state->active_tag            = 1;
     state->active_workspace      = 1;
     state->max_general_workspace = 9;
+    state->ext_workspace_group   = wlr_ext_workspace_group_handle_v1_create(
+        server.ext_workspace_manager, 0);
+    state->ext_workspace_group->data = output;
+
     wl_list_init(&state->focus_stack);
     wl_list_init(&state->toplevels);
     wl_list_init(&state->containers);
     wl_list_init(&state->minimized);
 
+    wlr_ext_workspace_group_handle_v1_output_enter(state->ext_workspace_group,
+                                                   output->wlr_output);
+
     lua_State *L = g_config_get_lua_State();
-    for (int i = 0; i < MAX_WORKSPACE; i++) {
+    for (int i = 1; i < MAX_WORKSPACE; i++) {
         struct cwc_tag_info *tag_info = &state->tag_info[i];
 
         tag_info->index                       = i;
         tag_info->useless_gaps                = g_config.useless_gaps;
         tag_info->layout_mode                 = CWC_LAYOUT_FLOATING;
-        tag_info->pending_transaction         = false;
         tag_info->master_state.master_count   = 1;
         tag_info->master_state.column_count   = 1;
         tag_info->master_state.mwfact         = 0.5;
         tag_info->master_state.current_layout = get_default_master_layout();
+
+        if (i <= state->max_general_workspace)
+            cwc_tag_info_create_ext_workspace_handle(
+                tag_info, output->wlr_output->name, state->ext_workspace_group);
+        else
+            tag_info->hidden = true;
 
         luaC_object_tag_register(L, tag_info);
     }
@@ -212,6 +225,9 @@ static bool cwc_output_state_try_restore(struct cwc_output *output)
     cwc_hhmap_remove(server.output_state_cache, output->wlr_output->name);
     free(old_output);
     output->state->old_output = NULL;
+
+    wlr_ext_workspace_group_handle_v1_output_enter(
+        output->state->ext_workspace_group, output->wlr_output);
 
     return true;
 }
@@ -482,6 +498,8 @@ static void on_output_destroy(struct wl_listener *listener, void *data)
             wlr_layer_surface_v1_destroy(lsurf->wlr_layer_surface);
     }
 
+    wlr_ext_workspace_group_handle_v1_output_leave(
+        output->state->ext_workspace_group, output->wlr_output);
     wlr_output_state_finish(&output->pending);
     output_layers_fini(output);
     wlr_scene_output_destroy(output->scene_output);
@@ -655,6 +673,7 @@ static void output_layers_fini(struct cwc_output *output)
     wlr_scene_node_destroy(&output->layers.session_lock->node);
 }
 
+static void cwc_output_update_ext_workspace_state(struct cwc_output *output);
 static struct cwc_output *cwc_output_create(struct wlr_output *wlr_output)
 {
     struct cwc_output *output = calloc(1, sizeof(*output));
@@ -675,6 +694,7 @@ static struct cwc_output *cwc_output_create(struct wlr_output *wlr_output)
         output->state = cwc_output_state_create(output);
 
     output_layers_init(output);
+    cwc_output_update_ext_workspace_state(output);
 
     return output;
 }
@@ -888,13 +908,60 @@ static void on_output_layout_change(struct wl_listener *listener, void *data)
     wl_event_loop_add_idle(server.wl_event_loop, _sort_output_index, NULL);
 }
 
+static void _handle_request_activate(struct wlr_ext_workspace_v1_request *req)
+{
+    struct cwc_tag_info *tag  = req->activate.workspace->data;
+    struct cwc_output *output = req->deactivate.workspace->group->data;
+
+    tag_bitfield_t newtag = output->state->active_tag | (1 << (tag->index - 1));
+    cwc_output_set_active_tag(output, newtag);
+}
+
+static void _handle_request_deactivate(struct wlr_ext_workspace_v1_request *req)
+{
+    struct cwc_tag_info *tag  = req->deactivate.workspace->data;
+    struct cwc_output *output = req->deactivate.workspace->group->data;
+
+    tag_bitfield_t newtag =
+        output->state->active_tag & ~(1 << (tag->index - 1));
+    cwc_output_set_active_tag(output, newtag);
+}
+
+static void _handle_request_remove(struct wlr_ext_workspace_v1_request *req)
+{
+    struct cwc_tag_info *tag = req->remove.workspace->data;
+    wlr_ext_workspace_handle_v1_destroy(tag->ext_workspace);
+    tag->ext_workspace = NULL;
+}
+
+static void on_ext_workspace_manager_commit(struct wl_listener *listener,
+                                            void *data)
+{
+    struct wlr_ext_workspace_v1_commit_event *event = data;
+    struct wlr_ext_workspace_v1_request *req;
+    wl_list_for_each(req, event->requests, link)
+    {
+        switch (req->type) {
+        case WLR_EXT_WORKSPACE_V1_REQUEST_ACTIVATE:
+            _handle_request_activate(req);
+            break;
+        case WLR_EXT_WORKSPACE_V1_REQUEST_DEACTIVATE:
+            _handle_request_deactivate(req);
+            break;
+        case WLR_EXT_WORKSPACE_V1_REQUEST_REMOVE:
+            _handle_request_remove(req);
+            break;
+        case WLR_EXT_WORKSPACE_V1_REQUEST_ASSIGN:
+        case WLR_EXT_WORKSPACE_V1_REQUEST_CREATE_WORKSPACE:
+        default:
+            return;
+            break;
+        }
+    }
+}
+
 void setup_output(struct cwc_server *s)
 {
-    struct wlr_output *headless =
-        wlr_headless_add_output(s->headless_backend, 1920, 1080);
-    wlr_output_set_name(headless, "FALLBACK");
-    s->fallback_output = cwc_output_create(headless);
-
     // wlr output layout
     s->output_layout                 = wlr_output_layout_create(s->wl_display);
     s->output_layout_change_l.notify = on_output_layout_change;
@@ -926,6 +993,18 @@ void setup_output(struct cwc_server *s)
     // xdg output
     s->xdg_output_manager =
         wlr_xdg_output_manager_v1_create(s->wl_display, s->output_layout);
+
+    // ext workspace
+    s->ext_workspace_manager =
+        wlr_ext_workspace_manager_v1_create(s->wl_display, 1);
+    s->ext_workspace_mgr_commit_l.notify = on_ext_workspace_manager_commit;
+    wl_signal_add(&s->ext_workspace_manager->events.commit,
+                  &s->ext_workspace_mgr_commit_l);
+
+    struct wlr_output *headless =
+        wlr_headless_add_output(s->headless_backend, 1920, 1080);
+    wlr_output_set_name(headless, "FALLBACK");
+    s->fallback_output = cwc_output_create(headless);
 }
 
 void cleanup_output(struct cwc_server *s)
@@ -940,6 +1019,8 @@ void cleanup_output(struct cwc_server *s)
     wl_list_remove(&s->opm_set_mode_l.link);
 
     wl_list_remove(&s->new_tearing_object_l.link);
+
+    wl_list_remove(&s->ext_workspace_mgr_commit_l.link);
 }
 
 static void
@@ -1191,6 +1272,19 @@ static inline void insert_tiled_toplevel_to_bsp_tree(struct cwc_output *output,
     }
 }
 
+static void cwc_output_update_ext_workspace_state(struct cwc_output *output)
+{
+    for (int i = 1; i < MAX_WORKSPACE; i++) {
+        struct cwc_tag_info *tag_info = &output->state->tag_info[i];
+        if (!tag_info->ext_workspace)
+            continue;
+
+        bool is_selected = output->state->active_tag & 1 << (i - 1);
+        wlr_ext_workspace_handle_v1_set_active(tag_info->ext_workspace,
+                                               is_selected);
+    }
+}
+
 void cwc_output_set_view_only(struct cwc_output *output, int workspace)
 {
     int single_tag = 1 << (workspace - 1);
@@ -1206,6 +1300,7 @@ void cwc_output_set_view_only(struct cwc_output *output, int workspace)
 
     transaction_schedule_tag(cwc_output_get_current_tag_info(output));
     transaction_schedule_output(output);
+    cwc_output_update_ext_workspace_state(output);
 
     lua_State *L = g_config_get_lua_State();
     cwc_object_emit_signal_simple("screen::prop::active_tag", L, output);
@@ -1225,6 +1320,7 @@ void cwc_output_set_active_tag(struct cwc_output *output, tag_bitfield_t newtag)
     output->state->active_tag = newtag;
     transaction_schedule_output(output);
     transaction_schedule_tag(cwc_output_get_current_tag_info(output));
+    cwc_output_update_ext_workspace_state(output);
 
     cwc_object_emit_signal_simple("screen::prop::active_tag",
                                   g_config_get_lua_State(), output);
@@ -1332,4 +1428,58 @@ int cwc_tag_find_first_tag(tag_bitfield_t tag)
     }
 
     return 0;
+}
+
+void cwc_tag_info_create_ext_workspace_handle(
+    struct cwc_tag_info *tag_info,
+    const char *output_name,
+    struct wlr_ext_workspace_group_handle_v1 *ext_workspace_group)
+{
+    int idx       = tag_info->index;
+    uint32_t caps = EXT_WORKSPACE_HANDLE_V1_WORKSPACE_CAPABILITIES_ACTIVATE
+                    | EXT_WORKSPACE_HANDLE_V1_WORKSPACE_CAPABILITIES_DEACTIVATE
+                    | EXT_WORKSPACE_HANDLE_V1_WORKSPACE_CAPABILITIES_REMOVE;
+    char id[200];
+    snprintf(id, sizeof(id), "%s-T%02d", output_name, idx + 1);
+    tag_info->ext_workspace = wlr_ext_workspace_handle_v1_create(
+        server.ext_workspace_manager, id, caps);
+    wlr_ext_workspace_handle_v1_set_group(tag_info->ext_workspace,
+                                          ext_workspace_group);
+    char name[4];
+    snprintf(name, sizeof(name), "%d", idx);
+    wlr_ext_workspace_handle_v1_set_name(tag_info->ext_workspace, name);
+    tag_info->ext_workspace->data = tag_info;
+    tag_info->label               = strdup(name);
+
+    uint32_t coord[] = {idx};
+    wlr_ext_workspace_handle_v1_set_coordinates(tag_info->ext_workspace, coord,
+                                                sizeof(coord) / sizeof(*coord));
+}
+
+void cwc_tag_info_set_label(struct cwc_tag_info *tag, const char *label)
+{
+    if (strcmp(tag->label, label) == 0)
+        return;
+
+    free(tag->label);
+    tag->label = strdup(label);
+
+    if (tag->ext_workspace)
+        wlr_ext_workspace_handle_v1_set_name(tag->ext_workspace, label);
+
+    cwc_object_emit_signal_simple("tag::prop::label", g_config_get_lua_State(),
+                                  tag);
+}
+
+void cwc_tag_info_set_hidden(struct cwc_tag_info *tag, bool set)
+{
+    if (tag->hidden == set)
+        return;
+
+    tag->hidden = set;
+    if (tag->ext_workspace)
+        wlr_ext_workspace_handle_v1_set_hidden(tag->ext_workspace, set);
+
+    cwc_object_emit_signal_simple("tag::prop::hidden", g_config_get_lua_State(),
+                                  tag);
 }
