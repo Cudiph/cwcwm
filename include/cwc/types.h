@@ -92,6 +92,8 @@ struct cwc_tag_info {
     int useless_gaps;
     struct bsp_root_entry bsp_root_entry;
     struct master_state master_state;
+
+    struct wlr_ext_workspace_handle_v1 *ext_workspace;
 };
 
 #endif // !_CWC_TYPES_H

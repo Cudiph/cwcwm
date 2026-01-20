@@ -33,7 +33,9 @@
 
 #include <lauxlib.h>
 #include <lua.h>
+#include <stdlib.h>
 #include <wayland-util.h>
+#include <wlr/types/wlr_ext_workspace_v1.h>
 
 #include "cwc/desktop/output.h"
 #include "cwc/desktop/transaction.h"
@@ -77,7 +79,32 @@ static int luaC_tag_get_screen(lua_State *L)
     return 1;
 }
 
-/** True if the tag is selected to be viewed.
+/** The label or name of the tag.
+ *
+ * @property label
+ * @tparam[opt=""] string label
+ */
+static int luaC_tag_get_label(lua_State *L)
+{
+    struct cwc_tag_info *tag = luaC_tag_checkudata(L, 1);
+    lua_pushstring(L, tag->label);
+    return 1;
+}
+static int luaC_tag_set_label(lua_State *L)
+{
+    struct cwc_tag_info *tag = luaC_tag_checkudata(L, 1);
+    const char *newlabel     = luaL_checkstring(L, 2);
+
+    free(tag->label);
+    tag->label = strdup(newlabel);
+
+    if (tag->ext_workspace)
+        wlr_ext_workspace_handle_v1_set_name(tag->ext_workspace, newlabel);
+
+    return 0;
+}
+
+/** True if the tag is selected to be viewed (active tag).
  *
  * @property selected
  * @tparam[opt=false] boolean selected
@@ -319,6 +346,7 @@ void luaC_tag_setup(lua_State *L)
         REG_READ_ONLY(screen),
 
         // properties
+        REG_PROPERTY(label),
         REG_PROPERTY(selected),
         REG_PROPERTY(gap),
         REG_PROPERTY(mwfact),
