@@ -1344,6 +1344,7 @@ static void all_toplevel_set_size(struct cwc_toplevel *toplevel, void *data)
         .height = surf_h,
     };
 
+    bool visible = cwc_toplevel_is_visible(toplevel);
     if (!cwc_toplevel_is_x11(toplevel)) {
         // when floating we respect the min width
         if (cwc_toplevel_is_floating(toplevel)) {
@@ -1356,11 +1357,14 @@ static void all_toplevel_set_size(struct cwc_toplevel *toplevel, void *data)
         clip.x = geom.x;
         clip.y = geom.y;
 
-        if (cwc_toplevel_is_visible(toplevel) && !toplevel->resize_serial)
+        if (visible && !toplevel->resize_serial)
             server.resize_count = MAX(1, server.resize_count + 1);
     }
 
-    toplevel->resize_serial = cwc_toplevel_set_size(toplevel, surf_w, surf_h);
+    uint32_t resize_serial = cwc_toplevel_set_size(toplevel, surf_w, surf_h);
+    if (visible)
+        toplevel->resize_serial = resize_serial;
+
     wlr_scene_subsurface_tree_set_clip(&toplevel->surf_tree->node, &clip);
     box->width  = surf_w;
     box->height = surf_h;
