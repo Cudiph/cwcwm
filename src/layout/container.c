@@ -1594,6 +1594,7 @@ void cwc_container_move_to_tag(struct cwc_container *container, int workspace)
     transaction_schedule_tag(tag_info);
     transaction_schedule_tag(
         cwc_output_get_current_tag_info(container->output));
+    cwc_container_set_enabled(container, cwc_container_is_visible(container));
 
     lua_State *L = g_config_get_lua_State();
     cwc_object_emit_signal_simple("client::prop::workspace", L,
@@ -1613,6 +1614,7 @@ void cwc_container_set_tag(struct cwc_container *container, tag_bitfield_t tag)
     bool changed   = container->tag != tag;
     container->tag = tag;
     transaction_schedule_output(container->output);
+    cwc_container_set_enabled(container, cwc_container_is_visible(container));
 
     lua_State *L = g_config_get_lua_State();
     if (changed)
