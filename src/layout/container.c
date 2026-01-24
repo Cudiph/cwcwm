@@ -1337,6 +1337,13 @@ static void all_toplevel_set_size(struct cwc_toplevel *toplevel, void *data)
         && geom.height == surf_h)
         return;
 
+    if (cwc_toplevel_is_floating(toplevel)) {
+        cwc_toplevel_set_tiled(toplevel, 0);
+    } else {
+        cwc_toplevel_set_tiled(toplevel, WLR_EDGE_TOP | WLR_EDGE_BOTTOM
+                                             | WLR_EDGE_LEFT | WLR_EDGE_RIGHT);
+    }
+
     struct wlr_box clip = {
         .x      = 0,
         .y      = 0,
