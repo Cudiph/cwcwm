@@ -14,6 +14,7 @@ local cuteful = {
     screen  = require("cuteful.screen"),
     pointer = require("cuteful.pointer"),
     kbd     = require("cuteful.kbd"),
+    rules   = require("cuteful.rules"),
 }
 
 return cuteful

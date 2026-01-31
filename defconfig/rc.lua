@@ -9,6 +9,7 @@ local enum = require("cuteful.enum")
 local tag = require("cuteful.tag")
 local impl = require("impl")
 local config = require("config")
+local crules = require("cuteful.rules")
 
 -- make it local so the `undefined global` lsp error stop yapping on every cwc access
 local cwc = cwc
@@ -89,6 +90,22 @@ end)
 -- end)
 
 ------------------------ CLIENT BEHAVIOR -----------------------------
+crules.add_client_rule {
+    where = { appid = "^firefox$" },
+    set = { workspace = 2 },
+    run = function(client)
+        client.screen.active_workspace = 2
+    end,
+}
+
+crules.add_client_rule {
+    where = { appid = "pcmanfm" },
+    set = { floating = true },
+    run = function(client)
+        client:center()
+    end,
+}
+
 cwc.connect_signal("client::map", function(client)
     -- unmanaged client is a popup/tooltip client in xwayland so lets skip it.
     if client.unmanaged then return end
@@ -107,7 +124,9 @@ cwc.connect_signal("client::map", function(client)
     client:raise()
     client:focus()
 
-    -- the declarative rules isn't implemented yet so here is an example to do ruling.
+    --[[ you could use the rules approach above or do it imperative way like so.
+    -- Both approach is equivalent.
+
     -- It'll move any firefox app to the workspace 2 and maximize it also we moving to tag 2.
     if client.appid == "firefox" then
         client:move_to_tag(2)
@@ -118,6 +137,7 @@ cwc.connect_signal("client::map", function(client)
         client.floating = true
         client:center()
     end
+    --]]
 end)
 
 cwc.connect_signal("client::unmap", function(client)
