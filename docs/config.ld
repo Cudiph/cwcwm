@@ -61,6 +61,8 @@ file                                          = {
         "../lib/gears/shape.lua",
         "../lib/gears/matcher.lua",
         "../lib/gears/surface.lua",
+
+        "../lib/impl/default_keybind.lua",
     },
 }
 -- Rather han copy paste this hundreds of time, unify these special type

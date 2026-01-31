@@ -1,0 +1,1 @@
+../../defconfig/mousebind.lua

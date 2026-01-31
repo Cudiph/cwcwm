@@ -1,0 +1,1 @@
+../../defconfig/keybind.lua
