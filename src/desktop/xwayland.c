@@ -18,7 +18,7 @@
 #include "private/server.h"
 
 static int on_x11_socket_fd(int fd, uint32_t mask, void *data);
-static int on_xwayland_s_exit(int fd, uint32_t mask, void *data);
+static int on_xwayland_satellite_exit(int fd, uint32_t mask, void *data);
 
 static int xwayland_satellite_binary_exists(void)
 {
@@ -136,7 +136,7 @@ static int on_x11_socket_fd(int fd, uint32_t mask, void *data)
 {
     struct cwc_server *server = data;
 
-    if (server->xwayland_s_pid)
+    if (server->xwayland_satellite_pid)
         return 0;
 
     // lazy spawn: received a connection on the X11 sockets, so start the satellite
@@ -165,8 +165,8 @@ static int on_x11_socket_fd(int fd, uint32_t mask, void *data)
         _exit(1); /* exec failed */
     } else {
         // --- PARENT ---
-        server->xwayland_s_pid = pid;
-        server->xwayland_s_pidfd = syscall(SYS_pidfd_open, pid, 0);
+        server->xwayland_satellite_pid = pid;
+        server->xwayland_satellite_pidfd = syscall(SYS_pidfd_open, pid, 0);
 
         // stop listening to the sockets after starting satellite
         if (server->x11_fd_source) {
@@ -178,24 +178,25 @@ static int on_x11_socket_fd(int fd, uint32_t mask, void *data)
             server->x11_abs_fd_source = NULL;
         }
 
-        if (server->xwayland_s_pidfd != -1) {
-            server->xwayland_s_exit_source = wl_event_loop_add_fd(server->wl_event_loop, server->xwayland_s_pidfd,
-                                                WL_EVENT_READABLE, on_xwayland_s_exit, server);
+        if (server->xwayland_satellite_pidfd != -1) {
+            server->xwayland_satellite_exit_source = wl_event_loop_add_fd(server->wl_event_loop,
+                                                server->xwayland_satellite_pidfd,
+                                                WL_EVENT_READABLE, on_xwayland_satellite_exit, server);
         } else {
             cwc_log(CWC_ERROR, "pidfd_open failed. xwayland-satellite integration requires kernel 5.3 or later");
             kill(pid, SIGKILL);
             waitpid(pid, NULL, 0);
-            server->xwayland_s_pid = 0;
+            server->xwayland_satellite_pid = 0;
             return 0;
         }
 
-        if (!server->xwayland_s_exit_source) {
+        if (!server->xwayland_satellite_exit_source) {
             cwc_log(CWC_ERROR, "failed to add pidfd event source for satellite process");
-            close(server->xwayland_s_pidfd);
-            server->xwayland_s_pidfd = -1;
+            close(server->xwayland_satellite_pidfd);
+            server->xwayland_satellite_pidfd = -1;
             kill(pid, SIGKILL);
             waitpid(pid, NULL, 0);
-            server->xwayland_s_pid = 0;
+            server->xwayland_satellite_pid = 0;
             return 0;
         }
     }
@@ -203,26 +204,26 @@ static int on_x11_socket_fd(int fd, uint32_t mask, void *data)
     return 0;
 }
 
-static int on_xwayland_s_exit(int fd, uint32_t mask, void *data)
+static int on_xwayland_satellite_exit(int fd, uint32_t mask, void *data)
 {
     int status;
 
     struct cwc_server *server = data;
-    pid_t saved_pid = server->xwayland_s_pid;
+    pid_t saved_pid = server->xwayland_satellite_pid;
 
     waitpid(saved_pid, &status, WNOHANG);
     cwc_log(CWC_INFO, "xwayland-satellite (pid %d) exited with status %d", saved_pid, status);
 
-    if (server->xwayland_s_exit_source) {
-        wl_event_source_remove(server->xwayland_s_exit_source);
-        server->xwayland_s_exit_source = NULL;
+    if (server->xwayland_satellite_exit_source) {
+        wl_event_source_remove(server->xwayland_satellite_exit_source);
+        server->xwayland_satellite_exit_source = NULL;
     }
-    if (server->xwayland_s_pidfd != -1) {
-        close(server->xwayland_s_pidfd);
-        server->xwayland_s_pidfd = -1;
+    if (server->xwayland_satellite_pidfd != -1) {
+        close(server->xwayland_satellite_pidfd);
+        server->xwayland_satellite_pidfd = -1;
     }
 
-    server->xwayland_s_pid = 0;
+    server->xwayland_satellite_pid = 0;
 
     // re-register the listeners so cwc can catch the next X11 app
     server->x11_fd_source = wl_event_loop_add_fd(server->wl_event_loop, server->x11_socket_fd,
@@ -233,14 +234,14 @@ static int on_xwayland_s_exit(int fd, uint32_t mask, void *data)
     return 0;
 }
 
-void xwayland_s_init(struct cwc_server *server)
+void xwayland_satellite_init(struct cwc_server *server)
 {
     server->x11_display = -1;
     server->x11_socket_fd = -1;
     server->x11_abs_socket_fd = -1;
-    server->xwayland_s_pid = 0;
-    server->xwayland_s_pidfd = -1;
-    server->xwayland_s_exit_source = NULL;
+    server->xwayland_satellite_pid = 0;
+    server->xwayland_satellite_pidfd = -1;
+    server->xwayland_satellite_exit_source = NULL;
     server->x11_fd_source = NULL;
     server->x11_abs_fd_source = NULL;
 
@@ -269,7 +270,7 @@ void xwayland_s_init(struct cwc_server *server)
                                         WL_EVENT_READABLE, on_x11_socket_fd, server);
 }
 
-void xwayland_s_fini(struct cwc_server *server)
+void xwayland_satellite_fini(struct cwc_server *server)
 {
     char path[128];
 
@@ -282,14 +283,14 @@ void xwayland_s_fini(struct cwc_server *server)
         wl_event_source_remove(server->x11_abs_fd_source);
         server->x11_abs_fd_source = NULL;
     }
-    if (server->xwayland_s_exit_source) {
-        wl_event_source_remove(server->xwayland_s_exit_source);
-        server->xwayland_s_exit_source = NULL;
+    if (server->xwayland_satellite_exit_source) {
+        wl_event_source_remove(server->xwayland_satellite_exit_source);
+        server->xwayland_satellite_exit_source = NULL;
     }
 
     /* try to reap the child if present. */
-    if (server->xwayland_s_pid > 0) {
-        pid_t saved_pid = server->xwayland_s_pid;
+    if (server->xwayland_satellite_pid > 0) {
+        pid_t saved_pid = server->xwayland_satellite_pid;
         int status = 0;
         pid_t r;
 
@@ -305,13 +306,13 @@ void xwayland_s_fini(struct cwc_server *server)
                 r = waitpid(saved_pid, &status, 0);
             } while (r == -1 && errno == EINTR);
         }
-        server->xwayland_s_pid = 0;
+        server->xwayland_satellite_pid = 0;
     }
 
     /* close pidfd */
-    if (server->xwayland_s_pidfd != -1) {
-        close(server->xwayland_s_pidfd);
-        server->xwayland_s_pidfd = -1;
+    if (server->xwayland_satellite_pidfd != -1) {
+        close(server->xwayland_satellite_pidfd);
+        server->xwayland_satellite_pidfd = -1;
     }
 
     /* close the listening sockets */
