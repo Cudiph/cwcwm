@@ -58,9 +58,34 @@ Dev dependencies:
 - ninja
 - wayland-protocols
 - clang-format & EmmyLuaCodeStyle (formatting)
-## Installation
 
-<summary>Packaging status</summary>
+### Manual
+
+```console
+$ git clone https://github.com/Cudiph/cwcwm/
+$ cd cwcwm
+$ make
+$ sudo make install
+```
+
+CwC now should be available in your display manager or execute `cwc` in a tty.
+
+To clear the installation and build artifacts, you can execute:
+
+```
+$ sudo make uninstall
+$ make clean
+```
+
+
+
+<div align="center">
+  <h2>Screenshot</h2>
+  <img src="https://github.com/user-attachments/assets/99c3681a-e68c-4936-84be-586d8b2f04ad" alt="screenshot" />
+</div>
+
+
+### Packaging status
 <a href="https://repology.org/project/cwc-misnamed/versions">
     <img src="https://repology.org/badge/vertical-allrepos/cwc-misnamed.svg?columns=3" alt="Packaging status">
 </a>
@@ -94,30 +119,6 @@ nix-env -iA nixos.cwc
 ```
 </details>
 
-### Manual
-
-```console
-$ git clone https://github.com/Cudiph/cwcwm/
-$ cd cwcwm
-$ make
-$ sudo make install
-```
-
-CwC now should be available in your display manager or execute `cwc` in a tty.
-
-To clear the installation and build artifacts, you can execute:
-
-```
-$ sudo make uninstall
-$ make clean
-```
-
-
-
-<div align="center">
-  <h2>Screenshot</h2>
-  <img src="https://github.com/user-attachments/assets/99c3681a-e68c-4936-84be-586d8b2f04ad" alt="screenshot" />
-</div>
 
 ## Credits
 
