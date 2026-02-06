@@ -46,7 +46,7 @@ plugin_init(init);
 plugin_exit(fini);
 
 PLUGIN_NAME("flayout");
-PLUGIN_VERSION("1.0.0");
+PLUGIN_VERSION("0.4.0-dev");
 PLUGIN_DESCRIPTION("f layout we go f screen");
 PLUGIN_LICENSE("MIT");
 PLUGIN_AUTHOR("Dwi Asmoro Bangun <dwiaceromo@gmail.com>");

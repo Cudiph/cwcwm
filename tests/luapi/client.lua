@@ -17,15 +17,17 @@ local signal_list = {
     -- "client::mouse_leave", -- require interaction
     "client::raised",
     "client::lowered",
-    "client::property::fullscreen",
-    "client::property::maximized",
-    "client::property::minimized",
-    "client::property::floating",
-    -- "client::property::urgent",
-    "client::property::tag",
-    "client::property::workspace",
+    "client::prop::fullscreen",
+    "client::prop::maximized",
+    "client::prop::minimized",
+    "client::prop::floating",
+    -- "client::prop::urgent",
+    "client::prop::tag",
+    "client::prop::workspace",
     "client::prop::title",
     "client::prop::appid",
+    -- "client::prop::xdg_tag",
+    -- "client::prop::xdg_desc",
 }
 
 local triggered_list = {}
@@ -146,6 +148,9 @@ local function property_test(c)
     end, { one_shot = true })
 
     assert(type(c.content_type) == "number")
+
+    -- assert(type(c.xdg_tag) == "string")
+    -- assert(type(c.xdg_desc) == "string")
 end
 
 local function method_test(c)

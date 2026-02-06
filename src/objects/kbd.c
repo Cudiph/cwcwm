@@ -18,6 +18,10 @@
 
 /** Low-level API to manage keyboard behavior
  *
+ * See also:
+ *
+ * - `cuteful.kbd`
+ *
  * @author Dwi Asmoro Bangun
  * @copyright 2024
  * @license GPLv3
@@ -28,6 +32,8 @@
 #include <lua.h>
 #include <wlr/types/wlr_keyboard_group.h>
 #include <wlr/types/wlr_seat.h>
+#include <xkbcommon/xkbcommon-compat.h>
+#include <xkbcommon/xkbcommon.h>
 
 #include "cwc/config.h"
 #include "cwc/input/keyboard.h"
@@ -53,6 +59,12 @@
  * @tparam integer time_msec The event time in milliseconds.
  * @tparam integer keycode The xkb keycode.
  * @tparam string name Name of the key.
+ */
+
+/** Emitted when xkb layout has changed.
+ *
+ * @signal kbd::prop::layout_index
+ * @tparam cwc_kbd kbd The keyboard object.
  */
 //============================ CODE =================================
 
@@ -132,13 +144,11 @@ int cwc_keybind_map_register_bind_from_lua(lua_State *L,
         info.luaref_press = luaL_ref(L, LUA_REGISTRYINDEX);
     }
 
-    int data_index;
+    int data_index = 4;
     if (on_release_is_function) {
         lua_pushvalue(L, 4);
         info.luaref_release = luaL_ref(L, LUA_REGISTRYINDEX);
-        data_index          = 5;
-    } else {
-        data_index = 4;
+        data_index++;
     }
 
     // save the keybind data
@@ -162,7 +172,7 @@ int cwc_keybind_map_register_bind_from_lua(lua_State *L,
     }
 
     // ready for register
-    keybind_kbd_register(kmap, modifiers, keysym, info);
+    keybind_register(kmap, modifiers, keysym, info);
 
     return 0;
 }
@@ -183,6 +193,7 @@ int cwc_keybind_map_register_bind_from_lua(lua_State *L,
  * lockscreen and shortcut inhibit
  * @tparam[opt] string data.repeated Repeat keybind when hold (only on_press
  * will be executed)
+ * @tparam[opt] boolean data.pass Keypress will still pass through the client
  * @noreturn
  * @see cuteful.enum.modifier
  * @see cwc.pointer.bind
@@ -419,6 +430,55 @@ static int luaC_kbd_get_modifiers(lua_State *L)
     return 1;
 }
 
+/** Current active xkb layout name.
+ *
+ * @property layout_name
+ * @tparam string layout_name
+ * @propertydefault default locale layout
+ * @readonly
+ */
+static int luaC_kbd_get_layout_name(lua_State *L)
+{
+    struct cwc_keyboard_group *kbdg = luaC_kbd_checkudata(L, 1);
+
+    xkb_layout_index_t active_index = xkb_state_serialize_layout(
+        kbdg->wlr_kbd_group->keyboard.xkb_state, XKB_STATE_LAYOUT_EFFECTIVE);
+
+    const char *keymap_name = xkb_keymap_layout_get_name(
+        kbdg->wlr_kbd_group->keyboard.keymap, active_index);
+
+    lua_pushstring(L, keymap_name);
+
+    return 1;
+}
+
+/** Current active xkb layout index (0-based).
+ *
+ * @property layout_index
+ * @tparam[opt=0] integer layout_index
+ * @negativeallowed false
+ */
+static int luaC_kbd_get_layout_index(lua_State *L)
+{
+    struct cwc_keyboard_group *kbdg = luaC_kbd_checkudata(L, 1);
+
+    xkb_layout_index_t active_index = xkb_state_serialize_layout(
+        kbdg->wlr_kbd_group->keyboard.xkb_state, XKB_STATE_LAYOUT_EFFECTIVE);
+
+    lua_pushnumber(L, active_index);
+
+    return 1;
+}
+static int luaC_kbd_set_layout_index(lua_State *L)
+{
+    struct cwc_keyboard_group *kbdg = luaC_kbd_checkudata(L, 1);
+    int newidx                      = luaL_checkinteger(L, 2);
+
+    cwc_keyboard_group_set_xkb_layout(kbdg, newidx);
+
+    return 0;
+}
+
 /** Grab the keyboard event and redirect it to signal.
  *
  * @property grab
@@ -463,6 +523,104 @@ static int luaC_kbd_set_send_events(lua_State *L)
     return 0;
 }
 
+static void _send_key(lua_State *L, bool raw)
+{
+    struct cwc_keyboard_group *kbdg = luaC_kbd_checkudata(L, 1);
+    uint32_t keycode                = luaL_checkinteger(L, 2);
+    uint32_t state                  = luaL_checkinteger(L, 3);
+
+    if (state >= 3)
+        luaL_error(L, "invalid state for send_key");
+
+    if (raw)
+        cwc_keyboard_group_send_key_raw(kbdg, keycode, state);
+    else
+        cwc_keyboard_group_send_key(kbdg, keycode, state);
+}
+
+/** Emulate a key event.
+ *
+ * @method send_key
+ * @tparam integer keycode Event code from linux `input-event-codes.h`
+ * @tparam enum state State of the key from wayland protocol.
+ * @noreturn
+ * @see cuteful.enum.key_state
+ */
+static int luaC_kbd_send_key(lua_State *L)
+{
+    _send_key(L, false);
+
+    return 0;
+}
+
+/** Send key event to the client without any compositor processing.
+ *
+ * Use this to bypass keybind and send_events property.
+ *
+ * @method send_key_raw
+ * @tparam integer keycode Event code from `input-event-codes.h`
+ * @tparam enum state State of the key from wayland protocol.
+ * @noreturn
+ * @see cuteful.enum.key_state
+ */
+static int luaC_kbd_send_key_raw(lua_State *L)
+{
+    _send_key(L, true);
+
+    return 0;
+}
+
+static xkb_mod_mask_t wlr_modifiers_to_xkb_mod_mask(struct xkb_keymap *keymap,
+                                                    uint32_t wlr_mods)
+{
+    const char *mod_names[WLR_MODIFIER_COUNT] = {
+        XKB_MOD_NAME_SHIFT, XKB_MOD_NAME_CAPS, XKB_MOD_NAME_CTRL,
+        XKB_MOD_NAME_ALT,   XKB_MOD_NAME_NUM,  XKB_MOD_NAME_MOD3,
+        XKB_MOD_NAME_LOGO,  XKB_MOD_NAME_MOD5,
+    };
+
+    xkb_mod_mask_t mods = 0;
+    for (int i = 0; i < WLR_MODIFIER_COUNT; i++) {
+        if (wlr_mods & (1 << i)) {
+            xkb_mod_index_t index = xkb_map_mod_get_index(keymap, mod_names[i]);
+            mods |= 1 << index;
+        }
+    }
+
+    return mods;
+}
+
+/** Update modifiers state of this keyboard change are absolute and not
+ * incremental.
+ *
+ * @method update_modifiers
+ * @tparam bitfield depressed Depressed modifiers (Like CTRL, SHIFT, LOGO).
+ * @tparam bitfield latched Latched modifiers (sticky keys in Windows).
+ * @tparam bitfield locked Locked modifiers (Like Caps lock).
+ * @tparam enum state State of the key from wayland protocol.
+ * @noreturn
+ * @see cuteful.enum.modifier
+ * @see modifiers
+ */
+static int luaC_kbd_update_modifiers(lua_State *L)
+{
+    struct cwc_keyboard_group *kbdg = luaC_kbd_checkudata(L, 1);
+    uint32_t depressed              = luaL_checkinteger(L, 2);
+    uint32_t latched                = luaL_checkinteger(L, 3);
+    uint32_t locked                 = luaL_checkinteger(L, 4);
+
+    depressed = wlr_modifiers_to_xkb_mod_mask(
+        kbdg->wlr_kbd_group->keyboard.keymap, depressed);
+    latched = wlr_modifiers_to_xkb_mod_mask(
+        kbdg->wlr_kbd_group->keyboard.keymap, latched);
+    locked = wlr_modifiers_to_xkb_mod_mask(kbdg->wlr_kbd_group->keyboard.keymap,
+                                           locked);
+
+    cwc_keyboard_group_update_modifiers(kbdg, depressed, latched, locked);
+
+    return 0;
+}
+
 #define REG_METHOD(name)    {#name, luaC_kbd_##name}
 #define REG_READ_ONLY(name) {"get_" #name, luaC_kbd_get_##name}
 #define REG_SETTER(name)    {"set_" #name, luaC_kbd_set_##name}
@@ -482,12 +640,18 @@ void luaC_kbd_setup(lua_State *L)
     };
 
     luaL_Reg kbd_methods[] = {
+        REG_METHOD(send_key),
+        REG_METHOD(send_key_raw),
+        REG_METHOD(update_modifiers),
+
         REG_READ_ONLY(data),
         REG_READ_ONLY(seat),
         REG_READ_ONLY(modifiers),
+        REG_READ_ONLY(layout_name),
 
         REG_PROPERTY(grab),
         REG_PROPERTY(send_events),
+        REG_PROPERTY(layout_index),
 
         {NULL, NULL},
     };

@@ -6,7 +6,7 @@ add_project_arguments([
   '-DHHMAP_AUTOMATIC_REHASH',
   '-DCWC_PRIVATE=',
 
-  '-DCWC_VERSION="v0.2.0"',
+  '-DCWC_VERSION="v0.4.0-dev"',
 ], language: 'c')
 
 git_version_hash = run_command(['git', 'rev-parse', '--short', 'HEAD'], capture: true).stdout().strip()
@@ -32,14 +32,14 @@ libm = cc.find_library('m', required : true)
 libdl = cc.find_library('dl', required : true)
 
 # wlroots as subproject, if any
-wlroots_version = ['>=0.19.0', '<0.20.0']
+wlroots_version = ['>=0.20.0', '<0.21.0']
 subproject(
 	'wlroots',
 	default_options: ['examples=false'],
 	required: false,
 	version: wlroots_version,
 )
-wlr = dependency('wlroots-0.19', version: wlroots_version, fallback: 'wlroots')
+wlr = dependency('wlroots-0.20', version: wlroots_version, fallback: 'wlroots')
 
 all_deps = [
   wayland_server,

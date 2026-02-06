@@ -142,14 +142,14 @@ static void on_new_text_input(struct wl_listener *listener, void *data)
 
 static void on_input_method_commit(struct wl_listener *listener, void *data)
 {
-    struct cwc_input_method *im    = wl_container_of(listener, im, commit_l);
-    struct cwc_seat *seat          = im->wlr->seat->data;
-    struct cwc_text_input *focused = seat->focused_text_input;
+    struct cwc_input_method *im     = wl_container_of(listener, im, commit_l);
+    struct wlr_input_method_v2 *ctx = im->wlr;
+    struct cwc_seat *seat           = im->wlr->seat->data;
+    struct cwc_text_input *focused  = seat->focused_text_input;
 
     if (!focused)
         return;
 
-    struct wlr_input_method_v2 *ctx = data;
     if (ctx->current.preedit.text)
         wlr_text_input_v3_send_preedit_string(
             focused->wlr, ctx->current.preedit.text,
@@ -332,12 +332,12 @@ void setup_text_input(struct cwc_server *s)
 {
     s->text_input_manager = wlr_text_input_manager_v3_create(s->wl_display);
     s->new_text_input_l.notify = on_new_text_input;
-    wl_signal_add(&s->text_input_manager->events.text_input,
+    wl_signal_add(&s->text_input_manager->events.new_text_input,
                   &s->new_text_input_l);
 
     s->input_method_manager = wlr_input_method_manager_v2_create(s->wl_display);
     s->new_input_method_l.notify = on_new_input_method;
-    wl_signal_add(&s->input_method_manager->events.input_method,
+    wl_signal_add(&s->input_method_manager->events.new_input_method,
                   &s->new_input_method_l);
 }
 

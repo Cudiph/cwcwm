@@ -1,6 +1,7 @@
 {
   lib,
   stdenv,
+  stdenvAdapters,
   wayland,
   wlroots_0_19,
   hyprcursor,
@@ -24,13 +25,16 @@
   git,
   libdrm,
   python3Minimal,
-  boost,
   makeWrapper,
-  wrapGAppsHook,
+  wrapGAppsHook3,
+  debug ? false,
   gtk3Support ? false,
   gtk3 ? null,
 }:
 assert gtk3Support -> gtk3 != null; let
+  inherit (lib.lists) flatten concatLists optional optionals;
+  inherit (builtins) foldl' readFile;
+
   luaEnv = luajit.withPackages (ps: [
     ps.lgi
   ]);
@@ -41,8 +45,15 @@ assert gtk3Support -> gtk3 != null; let
       glib
     ]
     ++ lib.optional gtk3Support gtk3;
+
+  adapters = flatten [
+    stdenvAdapters.useMoldLinker
+    (lib.optional debug stdenvAdapters.keepDebugInfo)
+  ];
+
+  customStdenv = foldl' (acc: adapter: adapter acc) stdenv adapters;
 in
-  stdenv.mkDerivation {
+  customStdenv.mkDerivation {
     pname = "cwc";
     version = "nightly";
 
@@ -59,9 +70,8 @@ in
       wayland-scanner
       git
       python3Minimal
-      boost
       makeWrapper
-      wrapGAppsHook
+      wrapGAppsHook3
       gobject-introspection
     ];
 
@@ -88,7 +98,7 @@ in
 
     GI_TYPELIB_PATH = "${pango.out}/lib/girepository-1.0";
 
-    mesonFlags = ["-Dplugins=true" "-Dtests=true"];
+    mesonFlags = ["-Dplugins=true" "-Dtests=false"];
 
     LUA_CPATH = "${luaEnv}/lib/lua/${luajit.luaversion}/?.so";
     LUA_PATH = "${luaEnv}/share/lua/${luajit.luaversion}/?.lua;;";

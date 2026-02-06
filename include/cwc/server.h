@@ -72,6 +72,14 @@ struct cwc_server {
     struct wlr_ext_foreign_toplevel_list_v1 *foreign_toplevel_list;
     struct wlr_foreign_toplevel_manager_v1 *foreign_toplevel_manager;
 
+    struct wlr_ext_foreign_toplevel_image_capture_source_manager_v1
+        *foreign_toplevel_image_capture_source_manager;
+    struct wl_listener new_capture_source_request_l;
+
+    struct wlr_xdg_toplevel_tag_manager_v1 *xdg_toplevel_tag_manager;
+    struct wl_listener xdg_toplevel_set_tag_l;
+    struct wl_listener xdg_toplevel_set_desc_l;
+
     struct wlr_scene_tree *main_tree;
     struct wlr_scene_tree *temporary_tree;
     // sorted from back to front
@@ -129,8 +137,5 @@ extern struct cwc_server server;
 enum server_init_return_code
 server_init(struct cwc_server *s, char *config_path, char *library_path);
 void server_fini(struct cwc_server *s);
-
-void spawn(char **argv);
-void spawn_with_shell(const char *const command);
 
 #endif // !_CWC_SERVER_H

@@ -19,8 +19,10 @@
 #include <drm_fourcc.h>
 #include <hyprcursor/hyprcursor.h>
 #include <lauxlib.h>
+#include <limits.h>
 #include <linux/input-event-codes.h>
 #include <lua.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -266,13 +268,13 @@ static void cwc_cursor_unhide(struct cwc_cursor *cursor)
     cursor->hidden = false;
 }
 
-static void _send_pointer_move_signal(struct cwc_cursor *cursor,
-                                      uint32_t time_msec,
-                                      struct wlr_input_device *device,
-                                      double dx,
-                                      double dy,
-                                      double dx_unaccel,
-                                      double dy_unaccel)
+static inline void _send_pointer_move_signal(struct cwc_cursor *cursor,
+                                             uint32_t time_msec,
+                                             struct wlr_input_device *device,
+                                             double dx,
+                                             double dy,
+                                             double dx_unaccel,
+                                             double dy_unaccel)
 {
     struct cwc_pointer_move_event event = {
         .cursor     = cursor,
@@ -302,8 +304,6 @@ void process_cursor_motion(struct cwc_cursor *cursor,
 {
     struct wlr_seat *wlr_seat     = cursor->seat;
     struct wlr_cursor *wlr_cursor = cursor->wlr_cursor;
-    struct wlr_pointer_constraint_v1 *active_constraint =
-        cursor->active_constraint;
 
     cwc_cursor_unhide(cursor);
     wl_event_source_timer_update(cursor->inactive_timer,
@@ -335,10 +335,20 @@ void process_cursor_motion(struct cwc_cursor *cursor,
         break;
     }
 
+    double cx = wlr_cursor->x;
+    double cy = wlr_cursor->y;
+    double sx, sy;
+    struct wlr_surface *surface = scene_surface_at(cx, cy, &sx, &sy);
+    struct cwc_output *output   = cwc_output_at(server.output_layout, cx, cy);
+    struct wlr_pointer_constraint_v1 *surf_constraint =
+        wlr_pointer_constraints_v1_constraint_for_surface(
+            server.input->pointer_constraints, surface, cursor->seat);
+
     if (!time_msec) {
         struct timespec now;
         clock_gettime(CLOCK_MONOTONIC, &now);
         time_msec = timespec_to_msec(&now);
+        goto notify;
     }
 
     if (!cursor->send_events)
@@ -347,12 +357,6 @@ void process_cursor_motion(struct cwc_cursor *cursor,
     wlr_relative_pointer_manager_v1_send_relative_motion(
         server.input->relative_pointer_manager, wlr_seat,
         (uint64_t)time_msec * 1000, dx, dy, dx_unaccel, dy_unaccel);
-
-    double cx = wlr_cursor->x;
-    double cy = wlr_cursor->y;
-    double sx, sy;
-    struct wlr_surface *surface = scene_surface_at(cx, cy, &sx, &sy);
-    struct cwc_output *output   = cwc_output_at(server.output_layout, cx, cy);
 
     if (cursor->last_output != output) {
         lua_State *L = g_config_get_lua_State();
@@ -366,23 +370,25 @@ void process_cursor_motion(struct cwc_cursor *cursor,
     }
 
     // sway + dwl implementation in very simplified way, may contain bugs
-    if (active_constraint && device
-        && device->type == WLR_INPUT_DEVICE_POINTER) {
-        if (active_constraint->surface != surface)
-            return;
+    if (surf_constraint && device && device->type == WLR_INPUT_DEVICE_POINTER
+        && surf_constraint->surface
+               == cursor->seat->pointer_state.focused_surface
+        && surf_constraint->surface
+               == cursor->seat->keyboard_state.focused_surface) {
 
         double sx_confined, sy_confined;
-        if (!wlr_region_confine(&cursor->active_constraint->region, sx, sy,
-                                sx + dx, sy + dy, &sx_confined, &sy_confined))
+        if (!wlr_region_confine(&surf_constraint->region, sx, sy, sx + dx,
+                                sy + dy, &sx_confined, &sy_confined))
             return;
 
-        if (active_constraint->type == WLR_POINTER_CONSTRAINT_V1_LOCKED)
+        if (surf_constraint->type == WLR_POINTER_CONSTRAINT_V1_LOCKED)
             return;
 
         dx = sx_confined - sx;
         dy = sy_confined - sy;
     }
 
+notify:
     if (surface) {
         wlr_seat_pointer_notify_enter(wlr_seat, surface, sx, sy);
         wlr_seat_pointer_notify_motion(wlr_seat, time_msec, sx, sy);
@@ -424,7 +430,7 @@ void on_request_set_cursor(struct wl_listener *listener, void *data)
     struct wlr_seat_client *focused_client =
         cursor->seat->pointer_state.focused_client;
 
-    if (event->seat_client != focused_client)
+    if (!focused_client || event->seat_client != focused_client)
         return;
 
     cwc_cursor_set_surface(cursor, event->surface, event->hotspot_x,
@@ -455,11 +461,8 @@ void on_pointer_focus_change(struct wl_listener *listener, void *data)
     struct cwc_cursor *cursor                         = seat->cursor;
     struct wlr_seat_pointer_focus_change_event *event = data;
 
-    if (cursor->active_constraint
-        && cursor->active_constraint->surface != event->new_surface) {
-        wlr_pointer_constraint_v1_send_deactivated(cursor->active_constraint);
-        cursor->active_constraint = NULL;
-    }
+    if (event->new_surface == NULL)
+        cwc_cursor_set_image_by_name(cursor, "default");
 
     if (!cursor->dont_emit_signal) {
         _notify_mouse_signal(event->old_surface, event->new_surface);
@@ -498,8 +501,9 @@ static void on_cursor_motion_absolute(struct wl_listener *listener, void *data)
     process_cursor_motion(cursor, event->time_msec, device, dx, dy, dx, dy);
 }
 
-static void _send_pointer_axis_signal(struct cwc_cursor *cursor,
-                                      struct wlr_pointer_axis_event *event)
+static inline void
+_send_pointer_axis_signal(struct cwc_cursor *cursor,
+                          struct wlr_pointer_axis_event *event)
 {
     struct cwc_pointer_axis_event cwc_event = {
         .cursor = cursor,
@@ -516,15 +520,46 @@ static void _send_pointer_axis_signal(struct cwc_cursor *cursor,
     cwc_signal_emit("pointer::axis", &cwc_event, L, 5);
 }
 
-/* scroll wheel */
-static void on_cursor_axis(struct wl_listener *listener, void *data)
+/* true means client shouldn't get notified */
+static bool _process_axis_bind(struct cwc_cursor *cursor,
+                               struct wlr_pointer_axis_event *event)
 {
-    struct cwc_cursor *cursor =
-        wl_container_of(listener, cursor, cursor_axis_l);
+    struct wlr_keyboard *kbd = wlr_seat_get_keyboard(cursor->seat);
+    uint32_t modifiers       = kbd ? wlr_keyboard_get_modifiers(kbd) : 0;
 
-    struct wlr_pointer_axis_event *event = data;
+    if (event->source != WL_POINTER_AXIS_SOURCE_WHEEL)
+        return false;
+
+    enum cwc_cursor_pseudo_btn button = 0;
+
+    if (event->orientation == WL_POINTER_AXIS_VERTICAL_SCROLL) {
+        if (event->delta >= 0)
+            button = SCROLL_DOWN;
+        else if (event->delta <= 0)
+            button = SCROLL_UP;
+    } else if (event->orientation == WL_POINTER_AXIS_HORIZONTAL_SCROLL) {
+        if (event->delta >= 0)
+            button = SCROLL_LEFT;
+        else if (event->delta <= 0)
+            button = SCROLL_RIGHT;
+    }
+
+    if (!button)
+        return false;
+
+    return keybind_mouse_execute(server.main_mouse_kmap, modifiers, button,
+                                 true);
+}
+
+void process_cursor_axis(struct cwc_cursor *cursor,
+                         struct wlr_pointer_axis_event *event)
+{
+
     wlr_idle_notifier_v1_notify_activity(server.idle->idle_notifier,
                                          cursor->seat);
+
+    if (_process_axis_bind(cursor, event))
+        return;
 
     if (cursor->send_events)
         wlr_seat_pointer_notify_axis(
@@ -533,6 +568,16 @@ static void on_cursor_axis(struct wl_listener *listener, void *data)
 
     if (cursor->grab)
         _send_pointer_axis_signal(cursor, event);
+}
+
+/* scroll wheel */
+static void on_cursor_axis(struct wl_listener *listener, void *data)
+{
+    struct cwc_cursor *cursor =
+        wl_container_of(listener, cursor, cursor_axis_l);
+
+    struct wlr_pointer_axis_event *event = data;
+    process_cursor_axis(cursor, event);
 }
 
 void start_interactive_move(struct cwc_toplevel *toplevel)
@@ -619,7 +664,8 @@ static void start_interactive_resize_floating(struct cwc_cursor *cursor,
     struct cwc_toplevel *toplevel = cursor->grabbed_toplevel;
     struct wlr_box geo_box        = cwc_container_get_box(toplevel->container);
 
-    cursor->grab_float = geo_box;
+    cursor->grab_float  = geo_box;
+    cursor->pending_box = geo_box;
 
     double border_x =
         geo_box.x + ((edges & WLR_EDGE_RIGHT) ? geo_box.width : 0);
@@ -629,6 +675,8 @@ static void start_interactive_resize_floating(struct cwc_cursor *cursor,
     cursor->grab_y = cy - border_y;
 
     cursor->state = CWC_CURSOR_STATE_RESIZE;
+
+    process_cursor_resize(cursor);
 }
 
 static void start_interactive_resize_bsp(struct cwc_cursor *cursor,
@@ -847,8 +895,11 @@ void stop_interactive(struct cwc_cursor *cursor)
     cursor->state = CWC_CURSOR_STATE_NORMAL;
     if (cursor->name_before_interactive)
         cwc_cursor_set_image_by_name(cursor, cursor->name_before_interactive);
-    else
-        cwc_cursor_set_image_by_name(cursor, "default");
+    else if (cursor->client_surface) {
+        cwc_cursor_set_surface(cursor, cursor->client_surface,
+                               cursor->hotspot_x, cursor->hotspot_y);
+    } else
+        cwc_cursor_set_image_by_name(cursor, NULL);
 
     struct cwc_toplevel **grabbed = &cursor->grabbed_toplevel;
 
@@ -860,9 +911,10 @@ void stop_interactive(struct cwc_cursor *cursor)
     *grabbed = NULL;
 }
 
-static void _send_pointer_button_signal(struct cwc_cursor *cursor,
-                                        struct wlr_pointer_button_event *event,
-                                        bool press)
+static inline void
+_send_pointer_button_signal(struct cwc_cursor *cursor,
+                            struct wlr_pointer_button_event *event,
+                            bool press)
 {
     struct cwc_pointer_button_event cwc_event = {
         .cursor = cursor,
@@ -877,13 +929,9 @@ static void _send_pointer_button_signal(struct cwc_cursor *cursor,
     cwc_signal_emit("pointer::button", &cwc_event, L, 4);
 }
 
-/* mouse click */
-static void on_cursor_button(struct wl_listener *listener, void *data)
+void process_cursor_button(struct cwc_cursor *cursor,
+                           struct wlr_pointer_button_event *event)
 {
-    struct cwc_cursor *cursor =
-        wl_container_of(listener, cursor, cursor_button_l);
-    struct wlr_pointer_button_event *event = data;
-
     double cx = cursor->wlr_cursor->x;
     double cy = cursor->wlr_cursor->y;
     double sx, sy;
@@ -928,6 +976,16 @@ static void on_cursor_button(struct wl_listener *listener, void *data)
                                     WL_POINTER_BUTTON_STATE_PRESSED);
 }
 
+/* mouse click */
+static void on_cursor_button(struct wl_listener *listener, void *data)
+{
+    struct cwc_cursor *cursor =
+        wl_container_of(listener, cursor, cursor_button_l);
+    struct wlr_pointer_button_event *event = data;
+
+    process_cursor_button(cursor, event);
+}
+
 /* cursor render */
 static void on_cursor_frame(struct wl_listener *listener, void *data)
 {
@@ -937,15 +995,54 @@ static void on_cursor_frame(struct wl_listener *listener, void *data)
     wlr_seat_pointer_notify_frame(cursor->seat);
 }
 
+static inline void
+_send_pointer_swipe_begin_signal(struct cwc_cursor *cursor,
+                                 struct wlr_pointer_swipe_begin_event *event)
+{
+    struct cwc_pointer_swipe_begin_event signal_data = {
+        .cursor = cursor,
+        .event  = event,
+    };
+
+    lua_State *L = g_config_get_lua_State();
+    luaC_object_push(L, cursor);
+    lua_pushnumber(L, event->time_msec);
+    lua_pushnumber(L, event->fingers);
+
+    cwc_signal_emit("pointer::swipe::begin", &signal_data, L, 3);
+}
+
 static void on_swipe_begin(struct wl_listener *listener, void *data)
 {
     struct cwc_cursor *cursor =
         wl_container_of(listener, cursor, swipe_begin_l);
     struct wlr_pointer_swipe_begin_event *event = data;
 
-    wlr_pointer_gestures_v1_send_swipe_begin(server.input->pointer_gestures,
-                                             cursor->seat, event->time_msec,
-                                             event->fingers);
+    _send_pointer_swipe_begin_signal(cursor, event);
+
+    if (cursor->send_events)
+        wlr_pointer_gestures_v1_send_swipe_begin(server.input->pointer_gestures,
+                                                 cursor->seat, event->time_msec,
+                                                 event->fingers);
+}
+
+static inline void
+_send_pointer_swipe_update_signal(struct cwc_cursor *cursor,
+                                  struct wlr_pointer_swipe_update_event *event)
+{
+    struct cwc_pointer_swipe_update_event signal_data = {
+        .cursor = cursor,
+        .event  = event,
+    };
+
+    lua_State *L = g_config_get_lua_State();
+    luaC_object_push(L, cursor);
+    lua_pushnumber(L, event->time_msec);
+    lua_pushnumber(L, event->fingers);
+    lua_pushnumber(L, event->dx);
+    lua_pushnumber(L, event->dy);
+
+    cwc_signal_emit("pointer::swipe::update", &signal_data, L, 5);
 }
 
 static void on_swipe_update(struct wl_listener *listener, void *data)
@@ -954,9 +1051,29 @@ static void on_swipe_update(struct wl_listener *listener, void *data)
         wl_container_of(listener, cursor, swipe_update_l);
     struct wlr_pointer_swipe_update_event *event = data;
 
-    wlr_pointer_gestures_v1_send_swipe_update(server.input->pointer_gestures,
-                                              cursor->seat, event->time_msec,
-                                              event->dx, event->dy);
+    _send_pointer_swipe_update_signal(cursor, event);
+
+    if (cursor->send_events)
+        wlr_pointer_gestures_v1_send_swipe_update(
+            server.input->pointer_gestures, cursor->seat, event->time_msec,
+            event->dx, event->dy);
+}
+
+static inline void
+_send_pointer_swipe_end_signal(struct cwc_cursor *cursor,
+                               struct wlr_pointer_swipe_end_event *event)
+{
+    struct cwc_pointer_swipe_end_event signal_data = {
+        .cursor = cursor,
+        .event  = event,
+    };
+
+    lua_State *L = g_config_get_lua_State();
+    luaC_object_push(L, cursor);
+    lua_pushnumber(L, event->time_msec);
+    lua_pushboolean(L, event->cancelled);
+
+    cwc_signal_emit("pointer::swipe::end", &signal_data, L, 3);
 }
 
 static void on_swipe_end(struct wl_listener *listener, void *data)
@@ -964,9 +1081,29 @@ static void on_swipe_end(struct wl_listener *listener, void *data)
     struct cwc_cursor *cursor = wl_container_of(listener, cursor, swipe_end_l);
     struct wlr_pointer_swipe_end_event *event = data;
 
-    wlr_pointer_gestures_v1_send_swipe_end(server.input->pointer_gestures,
-                                           cursor->seat, event->time_msec,
-                                           event->cancelled);
+    _send_pointer_swipe_end_signal(cursor, event);
+
+    if (cursor->send_events)
+        wlr_pointer_gestures_v1_send_swipe_end(server.input->pointer_gestures,
+                                               cursor->seat, event->time_msec,
+                                               event->cancelled);
+}
+
+static inline void
+_send_pointer_pinch_begin_signal(struct cwc_cursor *cursor,
+                                 struct wlr_pointer_pinch_begin_event *event)
+{
+    struct cwc_pointer_pinch_begin_event signal_data = {
+        .cursor = cursor,
+        .event  = event,
+    };
+
+    lua_State *L = g_config_get_lua_State();
+    luaC_object_push(L, cursor);
+    lua_pushnumber(L, event->time_msec);
+    lua_pushnumber(L, event->fingers);
+
+    cwc_signal_emit("pointer::pinch::begin", &signal_data, L, 3);
 }
 
 static void on_pinch_begin(struct wl_listener *listener, void *data)
@@ -975,9 +1112,33 @@ static void on_pinch_begin(struct wl_listener *listener, void *data)
         wl_container_of(listener, cursor, pinch_begin_l);
     struct wlr_pointer_pinch_begin_event *event = data;
 
-    wlr_pointer_gestures_v1_send_pinch_begin(server.input->pointer_gestures,
-                                             cursor->seat, event->time_msec,
-                                             event->fingers);
+    _send_pointer_pinch_begin_signal(cursor, event);
+
+    if (cursor->send_events)
+        wlr_pointer_gestures_v1_send_pinch_begin(server.input->pointer_gestures,
+                                                 cursor->seat, event->time_msec,
+                                                 event->fingers);
+}
+
+static inline void
+_send_pointer_pinch_update_signal(struct cwc_cursor *cursor,
+                                  struct wlr_pointer_pinch_update_event *event)
+{
+    struct cwc_pointer_pinch_update_event signal_data = {
+        .cursor = cursor,
+        .event  = event,
+    };
+
+    lua_State *L = g_config_get_lua_State();
+    luaC_object_push(L, cursor);
+    lua_pushnumber(L, event->time_msec);
+    lua_pushnumber(L, event->fingers);
+    lua_pushnumber(L, event->dx);
+    lua_pushnumber(L, event->dy);
+    lua_pushnumber(L, event->scale);
+    lua_pushnumber(L, event->rotation);
+
+    cwc_signal_emit("pointer::pinch::update", &signal_data, L, 7);
 }
 
 static void on_pinch_update(struct wl_listener *listener, void *data)
@@ -986,9 +1147,29 @@ static void on_pinch_update(struct wl_listener *listener, void *data)
         wl_container_of(listener, cursor, pinch_update_l);
     struct wlr_pointer_pinch_update_event *event = data;
 
-    wlr_pointer_gestures_v1_send_pinch_update(
-        server.input->pointer_gestures, cursor->seat, event->time_msec,
-        event->dx, event->dy, event->scale, event->rotation);
+    _send_pointer_pinch_update_signal(cursor, event);
+
+    if (cursor->send_events)
+        wlr_pointer_gestures_v1_send_pinch_update(
+            server.input->pointer_gestures, cursor->seat, event->time_msec,
+            event->dx, event->dy, event->scale, event->rotation);
+}
+
+static inline void
+_send_pointer_pinch_end_signal(struct cwc_cursor *cursor,
+                               struct wlr_pointer_pinch_end_event *event)
+{
+    struct cwc_pointer_pinch_end_event signal_data = {
+        .cursor = cursor,
+        .event  = event,
+    };
+
+    lua_State *L = g_config_get_lua_State();
+    luaC_object_push(L, cursor);
+    lua_pushnumber(L, event->time_msec);
+    lua_pushboolean(L, event->cancelled);
+
+    cwc_signal_emit("pointer::pinch::end", &signal_data, L, 3);
 }
 
 static void on_pinch_end(struct wl_listener *listener, void *data)
@@ -996,9 +1177,29 @@ static void on_pinch_end(struct wl_listener *listener, void *data)
     struct cwc_cursor *cursor = wl_container_of(listener, cursor, pinch_end_l);
     struct wlr_pointer_pinch_end_event *event = data;
 
-    wlr_pointer_gestures_v1_send_pinch_end(server.input->pointer_gestures,
-                                           cursor->seat, event->time_msec,
-                                           event->cancelled);
+    _send_pointer_pinch_end_signal(cursor, event);
+
+    if (cursor->send_events)
+        wlr_pointer_gestures_v1_send_pinch_end(server.input->pointer_gestures,
+                                               cursor->seat, event->time_msec,
+                                               event->cancelled);
+}
+
+static inline void
+_send_pointer_hold_begin_signal(struct cwc_cursor *cursor,
+                                struct wlr_pointer_hold_begin_event *event)
+{
+    struct cwc_pointer_hold_begin_event signal_data = {
+        .cursor = cursor,
+        .event  = event,
+    };
+
+    lua_State *L = g_config_get_lua_State();
+    luaC_object_push(L, cursor);
+    lua_pushnumber(L, event->time_msec);
+    lua_pushnumber(L, event->fingers);
+
+    cwc_signal_emit("pointer::hold::begin", &signal_data, L, 3);
 }
 
 static void on_hold_begin(struct wl_listener *listener, void *data)
@@ -1006,9 +1207,29 @@ static void on_hold_begin(struct wl_listener *listener, void *data)
     struct cwc_cursor *cursor = wl_container_of(listener, cursor, hold_begin_l);
     struct wlr_pointer_hold_begin_event *event = data;
 
-    wlr_pointer_gestures_v1_send_hold_begin(server.input->pointer_gestures,
-                                            cursor->seat, event->time_msec,
-                                            event->fingers);
+    _send_pointer_hold_begin_signal(cursor, event);
+
+    if (cursor->send_events)
+        wlr_pointer_gestures_v1_send_hold_begin(server.input->pointer_gestures,
+                                                cursor->seat, event->time_msec,
+                                                event->fingers);
+}
+
+static inline void
+_send_pointer_hold_end_signal(struct cwc_cursor *cursor,
+                              struct wlr_pointer_hold_end_event *event)
+{
+    struct cwc_pointer_hold_end_event signal_data = {
+        .cursor = cursor,
+        .event  = event,
+    };
+
+    lua_State *L = g_config_get_lua_State();
+    luaC_object_push(L, cursor);
+    lua_pushnumber(L, event->time_msec);
+    lua_pushboolean(L, event->cancelled);
+
+    cwc_signal_emit("pointer::hold::end", &signal_data, L, 3);
 }
 
 static void on_hold_end(struct wl_listener *listener, void *data)
@@ -1016,9 +1237,12 @@ static void on_hold_end(struct wl_listener *listener, void *data)
     struct cwc_cursor *cursor = wl_container_of(listener, cursor, hold_end_l);
     struct wlr_pointer_hold_end_event *event = data;
 
-    wlr_pointer_gestures_v1_send_hold_end(server.input->pointer_gestures,
-                                          cursor->seat, event->time_msec,
-                                          event->cancelled);
+    _send_pointer_hold_end_signal(cursor, event);
+
+    if (cursor->send_events)
+        wlr_pointer_gestures_v1_send_hold_end(server.input->pointer_gestures,
+                                              cursor->seat, event->time_msec,
+                                              event->cancelled);
 }
 
 /* stuff for creating wlr_buffer from cair surface mainly from hypcursor */
@@ -1315,8 +1539,7 @@ void cwc_cursor_set_image_by_name(struct cwc_cursor *cursor, const char *name)
     if (cursor->current_name != NULL && strcmp(cursor->current_name, name) == 0)
         return;
 
-    cursor->current_name   = name;
-    cursor->client_surface = NULL;
+    cursor->current_name = name;
 
     hyprcursor_buffer_fini(cursor);
 
@@ -1437,21 +1660,121 @@ bool cwc_cursor_hyprcursor_change_style(
     return false;
 }
 
+static void __cwc_cursor_send_axis(struct cwc_cursor *cursor,
+                                   double delta,
+                                   int delta_discrete,
+                                   bool horizontal,
+                                   bool inverse,
+                                   bool raw)
+{
+    struct timespec now;
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    uint64_t now_msec = timespec_to_msec(&now);
+
+    struct wlr_pointer_axis_event event = {
+        .time_msec          = now_msec,
+        .pointer            = NULL,
+        .delta              = delta,
+        .orientation        = horizontal,
+        .relative_direction = inverse,
+        .delta_discrete     = delta_discrete,
+        .source             = WL_POINTER_AXIS_SOURCE_WHEEL,
+    };
+
+    if (raw)
+        wlr_seat_pointer_notify_axis(
+            cursor->seat, event.time_msec, event.orientation, event.delta,
+            event.delta_discrete, event.source, event.relative_direction);
+    else
+        process_cursor_axis(cursor, &event);
+
+    wlr_seat_pointer_notify_frame(cursor->seat);
+}
+
+void cwc_cursor_send_axis(struct cwc_cursor *cursor,
+                          double delta,
+                          int delta_discrete,
+                          bool horizontal,
+                          bool inverse)
+{
+    __cwc_cursor_send_axis(cursor, delta, delta_discrete, horizontal, inverse,
+                           false);
+}
+
+void cwc_cursor_send_axis_raw(struct cwc_cursor *cursor,
+                              double delta,
+                              int delta_discrete,
+                              bool horizontal,
+                              bool inverse)
+{
+    __cwc_cursor_send_axis(cursor, delta, delta_discrete, horizontal, inverse,
+                           true);
+}
+
+static void __cwc_cursor_send_key(struct cwc_cursor *cursor,
+                                  uint32_t button,
+                                  enum wl_pointer_button_state state,
+                                  bool raw)
+{
+    struct timespec now;
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    uint64_t now_msec = timespec_to_msec(&now);
+    if (state == 0)
+        now_msec += 1;
+
+    struct wlr_pointer_button_event event = {
+        .button    = button,
+        .time_msec = now_msec,
+        .state     = state,
+        .pointer   = NULL,
+    };
+
+    if (raw)
+        process_cursor_button(cursor, &event);
+    else
+        wlr_seat_pointer_notify_button(cursor->seat, event.time_msec,
+                                       event.button, event.state);
+}
+
+void cwc_cursor_send_key(struct cwc_cursor *cursor,
+                         uint32_t button,
+                         enum wl_pointer_button_state state)
+{
+    __cwc_cursor_send_key(cursor, button, state, false);
+}
+
+void cwc_cursor_send_key_raw(struct cwc_cursor *cursor,
+                             uint32_t button,
+                             enum wl_pointer_button_state state)
+{
+    __cwc_cursor_send_key(cursor, button, state, false);
+}
+
 /* set shape protocol */
 static void on_request_set_shape(struct wl_listener *listener, void *data)
 {
     struct wlr_cursor_shape_manager_v1_request_set_shape_event *event = data;
-    cwc_cursor_set_image_by_name(server.seat->cursor,
+    struct cwc_seat *seat = event->seat_client->seat->data;
+    struct wlr_seat_client *focused_client =
+        seat->wlr_seat->pointer_state.focused_client;
+
+    if (!focused_client || event->seat_client != focused_client)
+        return;
+
+    cwc_cursor_set_image_by_name(seat->cursor,
                                  wlr_cursor_shape_v1_name(event->shape));
 }
 
-static void warp_to_cursor_hint(struct cwc_cursor *cursor)
+static void warp_to_cursor_hint(struct cwc_cursor *cursor,
+                                struct wlr_pointer_constraint_v1 *constraint)
 {
-    struct wlr_pointer_constraint_v1 *constraint = cursor->active_constraint;
+    if (cursor->seat->pointer_state.focused_surface != constraint->surface)
+        return;
+
     double sx = constraint->current.cursor_hint.x;
     double sy = constraint->current.cursor_hint.y;
     struct cwc_toplevel *toplevel =
-        cwc_toplevel_try_from_wlr_surface(cursor->active_constraint->surface);
+        cwc_toplevel_try_from_wlr_surface(constraint->surface);
 
     if (!toplevel || !constraint->current.cursor_hint.enabled)
         return;
@@ -1471,10 +1794,7 @@ static void on_constraint_destroy(struct wl_listener *listener, void *data)
     cwc_log(CWC_DEBUG, "destroying pointer constraint: %p", constraint);
 
     // warp back to initial position
-    if (cursor->active_constraint == constraint->constraint) {
-        warp_to_cursor_hint(cursor);
-        cursor->active_constraint = NULL;
-    }
+    warp_to_cursor_hint(cursor, constraint->constraint);
 
     wl_list_remove(&constraint->destroy_l.link);
     free(constraint);
@@ -1495,18 +1815,9 @@ static void on_new_pointer_constraint(struct wl_listener *listener, void *data)
 
     cwc_log(CWC_DEBUG, "new pointer constraint: %p", constraint);
 
-    // sway implementation
-    if (cursor->active_constraint == wlr_constraint)
-        return;
+    if (wlr_constraint == NULL)
+        warp_to_cursor_hint(cursor, wlr_constraint);
 
-    if (cursor->active_constraint) {
-        if (wlr_constraint == NULL)
-            warp_to_cursor_hint(cursor);
-
-        wlr_pointer_constraint_v1_send_deactivated(cursor->active_constraint);
-    }
-
-    cursor->active_constraint = wlr_constraint;
     wlr_pointer_constraint_v1_send_activated(wlr_constraint);
 }
 

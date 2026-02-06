@@ -660,7 +660,7 @@ static void cwc_container_insert_toplevel_silence(struct cwc_container *c,
     _cwc_container_insert_toplevel(c, toplevel, false);
 }
 
-static void _destroy_container(struct cwc_container *container)
+static void cwc_container_fini(struct cwc_container *container)
 {
     lua_State *L = g_config_get_lua_State();
     cwc_object_emit_signal_simple("container::destroy", L, container);
@@ -722,7 +722,7 @@ void cwc_container_remove_toplevel(struct cwc_toplevel *toplevel)
     if (wl_list_length(&cont->toplevels))
         return;
 
-    _destroy_container(cont);
+    cwc_container_fini(cont);
 }
 
 void cwc_container_remove_toplevel_but_dont_destroy_container_when_empty(
@@ -1101,10 +1101,23 @@ void cwc_container_set_enabled(struct cwc_container *container, bool set)
     }
 }
 
-#define EMIT_PROP_SIGNAL_FOR_FRONT_TOPLEVEL(propname, container)  \
-    cwc_object_emit_signal_simple("client::property::" #propname, \
-                                  g_config_get_lua_State(),       \
+#define EMIT_PROP_SIGNAL_FOR_FRONT_TOPLEVEL(propname, container) \
+    cwc_object_emit_signal_simple("client::prop::" #propname,    \
+                                  g_config_get_lua_State(),      \
                                   cwc_container_get_front_toplevel(container))
+
+static void all_toplevel_set_floating(struct cwc_toplevel *toplevel, void *data)
+{
+    bool set = data;
+
+    if (set) {
+        cwc_toplevel_set_tiled(toplevel, 0);
+        return;
+    }
+
+    cwc_toplevel_set_tiled(toplevel, WLR_EDGE_TOP | WLR_EDGE_BOTTOM
+                                         | WLR_EDGE_LEFT | WLR_EDGE_RIGHT);
+}
 
 void cwc_container_set_floating(struct cwc_container *container, bool set)
 {
@@ -1129,6 +1142,9 @@ void cwc_container_set_floating(struct cwc_container *container, bool set)
             bsp_insert_container(container, container->workspace);
         }
     }
+
+    cwc_container_for_each_toplevel(container, all_toplevel_set_floating,
+                                    (void *)set);
 
     transaction_schedule_tag(
         cwc_output_get_current_tag_info(container->output));
@@ -1317,9 +1333,16 @@ static void all_toplevel_set_size(struct cwc_toplevel *toplevel, void *data)
     int surf_h = box->height;
 
     /* this prevent unnecessary frame synchronization */
-    if (geom.width == surf_w && geom.height == surf_h
-        && !cwc_toplevel_is_x11(toplevel))
+    if (!cwc_toplevel_is_x11(toplevel) && geom.width == surf_w
+        && geom.height == surf_h)
         return;
+
+    if (cwc_toplevel_is_floating(toplevel)) {
+        cwc_toplevel_set_tiled(toplevel, 0);
+    } else {
+        cwc_toplevel_set_tiled(toplevel, WLR_EDGE_TOP | WLR_EDGE_BOTTOM
+                                             | WLR_EDGE_LEFT | WLR_EDGE_RIGHT);
+    }
 
     struct wlr_box clip = {
         .x      = 0,
@@ -1328,6 +1351,7 @@ static void all_toplevel_set_size(struct cwc_toplevel *toplevel, void *data)
         .height = surf_h,
     };
 
+    bool visible = cwc_toplevel_is_visible(toplevel);
     if (!cwc_toplevel_is_x11(toplevel)) {
         // when floating we respect the min width
         if (cwc_toplevel_is_floating(toplevel)) {
@@ -1340,11 +1364,14 @@ static void all_toplevel_set_size(struct cwc_toplevel *toplevel, void *data)
         clip.x = geom.x;
         clip.y = geom.y;
 
-        if (cwc_toplevel_is_visible(toplevel) && !toplevel->resize_serial)
+        if (visible && !toplevel->resize_serial)
             server.resize_count = MAX(1, server.resize_count + 1);
     }
 
-    toplevel->resize_serial = cwc_toplevel_set_size(toplevel, surf_w, surf_h);
+    uint32_t resize_serial = cwc_toplevel_set_size(toplevel, surf_w, surf_h);
+    if (visible)
+        toplevel->resize_serial = resize_serial;
+
     wlr_scene_subsurface_tree_set_clip(&toplevel->surf_tree->node, &clip);
     box->width  = surf_w;
     box->height = surf_h;
@@ -1571,14 +1598,15 @@ void cwc_container_move_to_tag(struct cwc_container *container, int workspace)
     transaction_schedule_tag(tag_info);
     transaction_schedule_tag(
         cwc_output_get_current_tag_info(container->output));
+    cwc_container_set_enabled(container, cwc_container_is_visible(container));
 
     lua_State *L = g_config_get_lua_State();
-    cwc_object_emit_signal_simple("client::property::workspace", L,
+    cwc_object_emit_signal_simple("client::prop::workspace", L,
                                   cwc_container_get_front_toplevel(container));
 
     if (tag_changed)
         cwc_object_emit_signal_simple(
-            "client::property::tag", L,
+            "client::prop::tag", L,
             cwc_container_get_front_toplevel(container));
 }
 
@@ -1590,11 +1618,12 @@ void cwc_container_set_tag(struct cwc_container *container, tag_bitfield_t tag)
     bool changed   = container->tag != tag;
     container->tag = tag;
     transaction_schedule_output(container->output);
+    cwc_container_set_enabled(container, cwc_container_is_visible(container));
 
     lua_State *L = g_config_get_lua_State();
     if (changed)
         cwc_object_emit_signal_simple(
-            "client::property::tag", L,
+            "client::prop::tag", L,
             cwc_container_get_front_toplevel(container));
 }
 

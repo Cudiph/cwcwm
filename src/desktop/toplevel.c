@@ -24,12 +24,15 @@
 #include <wayland-server-core.h>
 #include <wayland-util.h>
 #include <wlr/types/wlr_ext_foreign_toplevel_list_v1.h>
+#include <wlr/types/wlr_ext_image_capture_source_v1.h>
+#include <wlr/types/wlr_ext_image_copy_capture_v1.h>
 #include <wlr/types/wlr_foreign_toplevel_management_v1.h>
 #include <wlr/types/wlr_output.h>
 #include <wlr/types/wlr_server_decoration.h>
 #include <wlr/types/wlr_xcursor_manager.h>
 #include <wlr/types/wlr_xdg_activation_v1.h>
 #include <wlr/types/wlr_xdg_decoration_v1.h>
+#include <wlr/types/wlr_xdg_toplevel_tag_v1.h>
 #include <wlr/util/box.h>
 
 #ifdef CWC_XWAYLAND
@@ -114,6 +117,29 @@ static void on_foreign_destroy(struct wl_listener *listener, void *data)
     wl_list_remove(&toplevel->foreign_destroy_l.link);
 }
 
+static void _init_capture_scene(struct cwc_toplevel *toplevel)
+{
+    toplevel->capture_scene                            = wlr_scene_create();
+    toplevel->capture_scene->restack_xwayland_surfaces = false;
+
+#ifdef CWC_XWAYLAND
+    if (cwc_toplevel_is_x11(toplevel)) {
+        toplevel->capture_scene_tree = wlr_scene_subsurface_tree_create(
+            &toplevel->capture_scene->tree, toplevel->xwsurface->surface);
+    } else {
+#else
+    {
+#endif /* ifdef CWC_XWAYLAND */
+        toplevel->capture_scene_tree = wlr_scene_xdg_surface_create(
+            &toplevel->capture_scene->tree, toplevel->xdg_toplevel->base);
+    }
+}
+
+static void _fini_capture_scene(struct cwc_toplevel *toplevel)
+{
+    wlr_scene_node_destroy(&toplevel->capture_scene->tree.node);
+}
+
 static inline void _init_mapped_managed_toplevel(struct cwc_toplevel *toplevel)
 {
     if (cwc_toplevel_is_unmanaged(toplevel))
@@ -121,8 +147,9 @@ static inline void _init_mapped_managed_toplevel(struct cwc_toplevel *toplevel)
 
     wl_list_insert(&server.focused_output->state->toplevels,
                    &toplevel->link_output_toplevels);
-    cwc_toplevel_set_tiled(toplevel, WLR_EDGE_TOP | WLR_EDGE_BOTTOM
-                                         | WLR_EDGE_LEFT | WLR_EDGE_RIGHT);
+    if (!cwc_toplevel_is_floating(toplevel))
+        cwc_toplevel_set_tiled(toplevel, WLR_EDGE_TOP | WLR_EDGE_BOTTOM
+                                             | WLR_EDGE_LEFT | WLR_EDGE_RIGHT);
 
     struct wlr_ext_foreign_toplevel_handle_v1_state state = {
         .title  = cwc_toplevel_get_title(toplevel),
@@ -165,6 +192,8 @@ static inline void _init_mapped_managed_toplevel(struct cwc_toplevel *toplevel)
                   &toplevel->foreign_request_close_l);
     wl_signal_add(&toplevel->wlr_foreign_handle->events.destroy,
                   &toplevel->foreign_destroy_l);
+
+    _init_capture_scene(toplevel);
 }
 
 static inline void _fini_unmap_managed_toplevel(struct cwc_toplevel *toplevel)
@@ -184,6 +213,8 @@ static inline void _fini_unmap_managed_toplevel(struct cwc_toplevel *toplevel)
             toplevel->ext_foreign_handle);
         toplevel->ext_foreign_handle = NULL;
     }
+
+    _fini_capture_scene(toplevel);
 }
 
 static void _decide_should_tiled_part2(struct cwc_toplevel *toplevel)
@@ -209,6 +240,54 @@ static void _decide_should_tiled_part2(struct cwc_toplevel *toplevel)
     }
 }
 
+#ifdef CWC_XWAYLAND
+static void on_unmanaged_set_geometry(struct wl_listener *listener, void *data)
+{
+    struct cwc_toplevel *toplevel =
+        wl_container_of(listener, toplevel, set_geometry_l);
+
+    wlr_scene_node_set_position(&toplevel->container->tree->node,
+                                toplevel->xwsurface->x, toplevel->xwsurface->y);
+}
+
+static void _init_mapped_unmanaged_toplevel(struct cwc_toplevel *toplevel)
+{
+    if (!cwc_toplevel_is_unmanaged(toplevel))
+        return;
+
+    toplevel->set_geometry_l.notify = on_unmanaged_set_geometry;
+    wl_signal_add(&toplevel->xwsurface->events.set_geometry,
+                  &toplevel->set_geometry_l);
+
+    struct wlr_xwayland_surface *parent = toplevel->xwsurface->parent;
+    if (parent) {
+        struct cwc_toplevel *parent_toplevel = parent->data;
+        if (parent_toplevel->capture_scene_tree) {
+            toplevel->capture_scene_tree = wlr_scene_subsurface_tree_create(
+                parent_toplevel->capture_scene_tree,
+                toplevel->xwsurface->surface);
+            wlr_scene_node_set_position(
+                &toplevel->capture_scene_tree->node,
+                toplevel->container->tree->node.x
+                    - parent_toplevel->container->tree->node.x,
+                toplevel->container->tree->node.y
+                    - parent_toplevel->container->tree->node.y);
+        }
+    }
+}
+
+static void _fini_unmap_unmanaged_toplevel(struct cwc_toplevel *toplevel)
+{
+    if (!cwc_toplevel_is_unmanaged(toplevel))
+        return;
+
+    wl_list_remove(&toplevel->set_geometry_l.link);
+}
+#else
+static void _init_mapped_unmanaged_toplevel(struct cwc_toplevel *toplevel) {}
+static void _fini_unmap_unmanaged_toplevel(struct cwc_toplevel *toplevel) {}
+#endif /* ifdef CWC_XWAYLAND */
+
 static void on_surface_map(struct wl_listener *listener, void *data)
 {
     struct cwc_toplevel *toplevel = wl_container_of(listener, toplevel, map_l);
@@ -226,10 +305,11 @@ static void on_surface_map(struct wl_listener *listener, void *data)
     }
 
     _init_mapped_managed_toplevel(toplevel);
+    _init_mapped_unmanaged_toplevel(toplevel);
 
     lua_State *L = g_config_get_lua_State();
     if (toplevel->urgent)
-        cwc_object_emit_signal_simple("client::property::urgent", L, toplevel);
+        cwc_object_emit_signal_simple("client::prop::urgent", L, toplevel);
 
     cwc_object_emit_signal_simple("client::map", L, toplevel);
 
@@ -250,6 +330,7 @@ static void on_surface_unmap(struct wl_listener *listener, void *data)
         stop_interactive(cursor);
 
     _fini_unmap_managed_toplevel(toplevel);
+    _fini_unmap_unmanaged_toplevel(toplevel);
 
     toplevel->mapped = false;
     cwc_object_emit_signal_simple("client::unmap", g_config_get_lua_State(),
@@ -265,7 +346,7 @@ static void _surface_initial_commit(struct cwc_toplevel *toplevel)
     wlr_xdg_toplevel_set_wm_capabilities(
         toplevel->xdg_toplevel,
         WLR_XDG_TOPLEVEL_WM_CAPABILITIES_MAXIMIZE
-            // | WLR_XDG_TOPLEVEL_WM_CAPABILITIES_MINIMIZE
+            | WLR_XDG_TOPLEVEL_WM_CAPABILITIES_MINIMIZE
             | WLR_XDG_TOPLEVEL_WM_CAPABILITIES_FULLSCREEN);
 
     cwc_toplevel_set_decoration_mode(toplevel,
@@ -276,6 +357,7 @@ static void on_surface_commit(struct wl_listener *listener, void *data)
 {
     struct cwc_toplevel *toplevel =
         wl_container_of(listener, toplevel, commit_l);
+    struct cwc_container *container = toplevel->container;
 
     if (toplevel->xdg_toplevel->base->initial_commit) {
         _surface_initial_commit(toplevel);
@@ -289,28 +371,29 @@ static void on_surface_commit(struct wl_listener *listener, void *data)
         toplevel->resize_serial = 0;
     }
 
-    if (!toplevel->container || toplevel->xdg_toplevel->current.resizing
-        || cwc_container_get_front_toplevel(toplevel->container) != toplevel
-        || !cwc_output_is_exist(toplevel->container->output)
+    if (!container || toplevel->xdg_toplevel->current.resizing
+        || cwc_container_get_front_toplevel(container) != toplevel
+        || !cwc_output_is_exist(container->output)
         || !cwc_toplevel_is_mapped(toplevel))
         return;
 
     struct wlr_box geom = cwc_toplevel_get_geometry(toplevel);
-    int thickness = cwc_border_get_thickness(&toplevel->container->border);
+    int thickness       = cwc_border_get_thickness(&container->border);
 
     // adjust clipping to follow the tiled size
     if (!cwc_toplevel_is_floating(toplevel)) {
-        int gaps = cwc_output_get_current_tag_info(toplevel->container->output)
-                       ->useless_gaps;
+        int gaps =
+            cwc_output_get_current_tag_info(container->output)->useless_gaps;
         int outside_width = (thickness + gaps) * 2;
-        geom.width        = toplevel->container->width - outside_width;
-        geom.height       = toplevel->container->height - outside_width;
+        geom.width        = container->width - outside_width;
+        geom.height       = container->height - outside_width;
         wlr_scene_subsurface_tree_set_clip(&toplevel->surf_tree->node, &geom);
         return;
     }
 
+    cwc_toplevel_set_size_surface(toplevel, geom.width, geom.height);
     wlr_scene_subsurface_tree_set_clip(&toplevel->surf_tree->node, &geom);
-    cwc_border_resize(&toplevel->container->border, geom.width + thickness * 2,
+    cwc_border_resize(&container->border, geom.width + thickness * 2,
                       geom.height + thickness * 2);
 }
 
@@ -409,6 +492,8 @@ static void on_toplevel_destroy(struct wl_listener *listener, void *data)
         wl_list_remove(&toplevel->map_l.link);
         wl_list_remove(&toplevel->unmap_l.link);
         wl_list_remove(&toplevel->commit_l.link);
+        free(toplevel->xdg_tag);
+        free(toplevel->xdg_description);
     }
 
     luaC_object_unregister(L, toplevel);
@@ -577,9 +662,11 @@ static void on_popup_commit(struct wl_listener *listener, void *data)
 
     // TODO: also unconstraint if parent is the popup
     struct wlr_scene_tree *parent_stree;
+    struct wlr_scene_tree *parent_stree_capture = NULL;
     if (parent_popup) {
         struct cwc_popup *parent_popup_cwc = parent_popup->base->data;
         parent_stree                       = parent_popup_cwc->scene_tree;
+        parent_stree_capture = parent_popup_cwc->capture_scene_tree;
 
         goto create_popup;
     }
@@ -590,9 +677,10 @@ static void on_popup_commit(struct wl_listener *listener, void *data)
     struct wlr_box box = {0};
     struct wlr_scene_node *node;
     if (toplevel) {
-        parent_stree = toplevel->container->popup_tree;
-        box          = toplevel->container->output->output_layout_box;
-        node         = &toplevel->container->tree->node;
+        parent_stree         = toplevel->container->popup_tree;
+        parent_stree_capture = toplevel->capture_scene_tree;
+        box                  = toplevel->container->output->output_layout_box;
+        node                 = &toplevel->container->tree->node;
     } else if (layersurf) {
         struct cwc_layer_surface *l = layersurf->data;
         node                        = &l->scene_layer->tree->node;
@@ -613,6 +701,11 @@ create_popup:
     popup->scene_tree =
         wlr_scene_xdg_surface_create(parent_stree, xdg_popup->base);
     popup->scene_tree->node.data = popup;
+
+    if (parent_stree_capture)
+        popup->capture_scene_tree =
+            wlr_scene_xdg_surface_create(parent_stree_capture, xdg_popup->base);
+
     wlr_scene_node_raise_to_top(&popup->scene_tree->node);
     wlr_xdg_surface_schedule_configure(xdg_popup->base);
 }
@@ -671,9 +764,54 @@ static void on_activation_request_activate(struct wl_listener *listener,
     }
 }
 
+static void on_toplevel_capture_source_new_request(struct wl_listener *listener,
+                                                   void *data)
+{
+    struct wlr_ext_foreign_toplevel_image_capture_source_manager_v1_request
+        *req                      = data;
+    struct cwc_toplevel *toplevel = req->toplevel_handle->data;
+
+    if (!toplevel->wlr_capture_source) {
+        toplevel->wlr_capture_source =
+            wlr_ext_image_capture_source_v1_create_with_scene_node(
+                &toplevel->capture_scene->tree.node, server.wl_event_loop,
+                server.allocator, server.renderer);
+        if (!toplevel->wlr_capture_source)
+            return;
+    }
+
+    wlr_ext_foreign_toplevel_image_capture_source_manager_v1_request_accept(
+        req, toplevel->wlr_capture_source);
+}
+
+static void on_xdg_toplevel_set_tag(struct wl_listener *listener, void *data)
+{
+    struct wlr_xdg_toplevel_tag_manager_v1_set_tag_event *event = data;
+    struct cwc_toplevel *toplevel = event->toplevel->base->data;
+
+    free(toplevel->xdg_tag);
+    toplevel->xdg_tag = strdup(event->tag);
+
+    cwc_object_emit_signal_simple("client::prop::xdg_tag",
+                                  g_config_get_lua_State(), toplevel);
+}
+
+static void on_xdg_toplevel_set_description(struct wl_listener *listener,
+                                            void *data)
+{
+    struct wlr_xdg_toplevel_tag_manager_v1_set_description_event *event = data;
+    struct cwc_toplevel *toplevel = event->toplevel->base->data;
+
+    free(toplevel->xdg_description);
+    toplevel->xdg_description = strdup(event->description);
+
+    cwc_object_emit_signal_simple("client::prop::xdg_desc",
+                                  g_config_get_lua_State(), toplevel);
+}
+
 void setup_xdg_shell(struct cwc_server *s)
 {
-    s->xdg_shell                 = wlr_xdg_shell_create(s->wl_display, 6);
+    s->xdg_shell                 = wlr_xdg_shell_create(s->wl_display, 7);
     s->new_xdg_toplevel_l.notify = on_new_xdg_toplevel;
     s->new_xdg_popup_l.notify    = on_new_xdg_popup;
     wl_signal_add(&s->xdg_shell->events.new_toplevel, &s->new_xdg_toplevel_l);
@@ -683,6 +821,24 @@ void setup_xdg_shell(struct cwc_server *s)
     s->request_activate_l.notify = on_activation_request_activate;
     wl_signal_add(&s->xdg_activation->events.request_activate,
                   &s->request_activate_l);
+
+    s->foreign_toplevel_image_capture_source_manager =
+        wlr_ext_foreign_toplevel_image_capture_source_manager_v1_create(
+            s->wl_display, 1);
+    s->new_capture_source_request_l.notify =
+        on_toplevel_capture_source_new_request;
+    wl_signal_add(
+        &s->foreign_toplevel_image_capture_source_manager->events.new_request,
+        &s->new_capture_source_request_l);
+
+    s->xdg_toplevel_tag_manager =
+        wlr_xdg_toplevel_tag_manager_v1_create(s->wl_display, 1);
+    s->xdg_toplevel_set_tag_l.notify  = on_xdg_toplevel_set_tag;
+    s->xdg_toplevel_set_desc_l.notify = on_xdg_toplevel_set_description;
+    wl_signal_add(&s->xdg_toplevel_tag_manager->events.set_tag,
+                  &s->xdg_toplevel_set_tag_l);
+    wl_signal_add(&s->xdg_toplevel_tag_manager->events.set_description,
+                  &s->xdg_toplevel_set_desc_l);
 }
 
 void cleanup_xdg_shell(struct cwc_server *s)
@@ -691,6 +847,11 @@ void cleanup_xdg_shell(struct cwc_server *s)
     wl_list_remove(&s->new_xdg_popup_l.link);
 
     wl_list_remove(&s->request_activate_l.link);
+
+    wl_list_remove(&s->new_capture_source_request_l.link);
+
+    wl_list_remove(&s->xdg_toplevel_set_tag_l.link);
+    wl_list_remove(&s->xdg_toplevel_set_desc_l.link);
 }
 
 void cwc_toplevel_focus(struct cwc_toplevel *toplevel, bool raise)
@@ -704,16 +865,16 @@ void cwc_toplevel_focus(struct cwc_toplevel *toplevel, bool raise)
     struct wlr_surface *wlr_surface  = cwc_toplevel_get_wlr_surface(toplevel);
     struct wlr_surface *prev_surface = seat->keyboard_state.focused_surface;
 
-    if (wlr_surface == prev_surface)
-        return;
-
     if (!cwc_toplevel_is_unmanaged(toplevel))
         wl_list_reattach(&toplevel->container->output->state->focus_stack,
                          &toplevel->container->link_output_fstack);
 
+    if (wlr_surface == prev_surface)
+        return;
+
     /* don't emit signal in process cursor motion called from this function
-     * because it'll ruin the focus stack as it notify enter any random surface
-     * under the cursor. */
+     * because it'll ruin the focus stack as it notify enter any random
+     * surface under the cursor. */
     struct cwc_cursor *cursor = server.seat->cursor;
     cursor->dont_emit_signal  = true;
 
@@ -890,7 +1051,6 @@ void cleanup_decoration_manager(struct cwc_server *s)
 
 #ifdef CWC_XWAYLAND
 
-/* - */
 static void on_request_configure(struct wl_listener *listener, void *data)
 {
     struct xwayland_props *props =
@@ -976,12 +1136,15 @@ static void on_xwayland_ready(struct wl_listener *listener, void *data)
 
     struct wlr_xcursor *xcursor;
     if ((xcursor = wlr_xcursor_manager_get_xcursor(
-             server.seat->cursor->xcursor_mgr, "default", 1)))
-        wlr_xwayland_set_cursor(
-            server.xwayland, xcursor->images[0]->buffer,
-            xcursor->images[0]->width * 4, xcursor->images[0]->width,
-            xcursor->images[0]->height, xcursor->images[0]->hotspot_x,
-            xcursor->images[0]->hotspot_y);
+             server.seat->cursor->xcursor_mgr, "default", 1))) {
+        if (xcursor->image_count == 0)
+            return;
+
+        struct wlr_xcursor_image *curr = xcursor->images[0];
+        struct wlr_buffer *buff        = wlr_xcursor_image_get_buffer(curr);
+        wlr_xwayland_set_cursor(server.xwayland, buff, curr->hotspot_x,
+                                curr->hotspot_y);
+    }
 }
 
 void xwayland_init(struct cwc_server *s)
@@ -1385,7 +1548,7 @@ void cwc_toplevel_set_urgent(struct cwc_toplevel *toplevel, bool set)
         return;
 
     toplevel->urgent = set;
-    cwc_object_emit_signal_simple("client::property::urgent",
+    cwc_object_emit_signal_simple("client::prop::urgent",
                                   g_config_get_lua_State(), toplevel);
 }
 

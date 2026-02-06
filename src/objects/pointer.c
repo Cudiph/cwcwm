@@ -18,6 +18,10 @@
 
 /** Low-level API to manage pointer and pointer device
  *
+ * See also:
+ *
+ * - `cuteful.pointer`
+ *
  * @author Dwi Asmoro Bangun
  * @copyright 2024
  * @license GPLv3
@@ -68,6 +72,77 @@
  * @tparam boolean horizontal The orientation of the axis.
  * @tparam number delta
  * @tparam number delta_discrete
+ */
+
+/** Emitted when swipe gestures begin.
+ *
+ * @signal pointer::swipe::begin
+ * @tparam cwc_pointer pointer The pointer object.
+ * @tparam integer time_msec The event time in milliseconds.
+ * @tparam integer fingers Number of fingers that touch the surface.
+ */
+
+/** Emitted when fingers move after swipe gestures started.
+ *
+ * @signal pointer::swipe::update
+ * @tparam cwc_pointer pointer The pointer object.
+ * @tparam integer time_msec The event time in milliseconds.
+ * @tparam integer fingers Number of fingers that touch the surface.
+ * @tparam number dx Difference of x axis compared to the previous event.
+ * @tparam number dy Difference of y axis compared to the previous event.
+ */
+
+/** Emitted when finger(s) lifted from the surface.
+ *
+ * @signal pointer::swipe::end
+ * @tparam cwc_pointer pointer The pointer object.
+ * @tparam integer time_msec The event time in milliseconds.
+ * @tparam boolean cancelled The swipe gesture is considered cancelled.
+ */
+
+/** Emitted when pinch gesture begin.
+ *
+ * @signal pointer::pinch::begin
+ * @tparam cwc_pointer pointer The pointer object.
+ * @tparam integer time_msec The event time in milliseconds.
+ * @tparam integer fingers Number of fingers that touch the surface.
+ */
+
+/** Emitted when fingers move after pinch gesture started.
+ *
+ * @signal pointer::pinch::update
+ * @tparam cwc_pointer pointer The pointer object.
+ * @tparam integer time_msec The event time in milliseconds.
+ * @tparam integer fingers Number of fingers that touch the surface.
+ * @tparam number dx Difference of x axis compared to the previous event.
+ * @tparam number dy Difference of y axis compared to the previous event.
+ * @tparam integer scale Absolute scale compared to the begin event.
+ * @tparam integer rotation Relative angle in degrees clockwise compared to the
+ * previous event.
+ */
+
+/** Emitted when finger(s) lifted from the surface.
+ *
+ * @signal pointer::pinch::end
+ * @tparam cwc_pointer pointer The pointer object.
+ * @tparam integer time_msec The event time in milliseconds.
+ * @tparam boolean cancelled The pinch gesture is considered cancelled.
+ */
+
+/** Emitted when hold gesture begin.
+ *
+ * @signal pointer::hold::begin
+ * @tparam cwc_pointer pointer The pointer object.
+ * @tparam integer time_msec The event time in milliseconds.
+ * @tparam integer fingers Number of fingers that touch the surface.
+ */
+
+/** Emitted when finger(s) lifted from the surface.
+ *
+ * @signal pointer::hold::end
+ * @tparam cwc_pointer pointer The pointer object.
+ * @tparam integer time_msec The event time in milliseconds.
+ * @tparam boolean cancelled The hold gesture is considered cancelled.
  */
 
 //============================ CODE =================================
@@ -144,12 +219,34 @@ static int luaC_pointer_bind(lua_State *L)
         info.luaref_press = luaL_ref(L, LUA_REGISTRYINDEX);
     }
 
+    int data_index = 4;
     if (on_release_is_function) {
         lua_pushvalue(L, 4);
         info.luaref_release = luaL_ref(L, LUA_REGISTRYINDEX);
+        data_index++;
     }
 
-    keybind_mouse_register(server.main_mouse_kmap, modifiers, button, info);
+    // save the keybind data
+    if (lua_istable(L, data_index)) {
+        lua_getfield(L, data_index, "description");
+        if (lua_isstring(L, -1))
+            info.description = strdup(lua_tostring(L, -1));
+
+        lua_getfield(L, data_index, "group");
+        if (lua_isstring(L, -1))
+            info.group = strdup(lua_tostring(L, -1));
+
+        lua_getfield(L, data_index, "exclusive");
+        info.exclusive = lua_toboolean(L, -1);
+
+        lua_getfield(L, data_index, "repeated");
+        info.repeat = lua_toboolean(L, -1);
+
+        lua_getfield(L, data_index, "pass");
+        info.pass = lua_toboolean(L, -1);
+    }
+
+    keybind_register(server.main_mouse_kmap, modifiers, button, info);
 
     return 0;
 }
@@ -464,6 +561,98 @@ static int luaC_pointer_move_to(lua_State *L)
     return 0;
 }
 
+static int __send_key(lua_State *L, bool raw)
+{
+    struct cwc_cursor *cursor = luaC_pointer_checkudata(L, 1);
+    uint32_t button           = luaL_checkinteger(L, 2);
+    bool pressed              = luaL_checkinteger(L, 3);
+
+    if (raw)
+        cwc_cursor_send_key_raw(cursor, button, pressed);
+    else
+        cwc_cursor_send_key(cursor, button, pressed);
+
+    return 0;
+}
+
+/** Send pointer key to client.
+ *
+ * @method send_key
+ * @tparam enum keycode Event code from `input-event-codes.h`
+ * @tparam enum state Whether key is pressed (true) or released (false).
+ * @noreturn
+ * @see cuteful.enum.mouse_btn
+ * @see cuteful.enum.key_state
+ */
+static int luaC_pointer_send_key(lua_State *L)
+{
+    return __send_key(L, false);
+}
+
+/** Send pointer key to client without any compositor processing.
+ *
+ * @method send_key_raw
+ * @tparam enum keycode Event code from `input-event-codes.h`
+ * @tparam enum state Whether key is pressed (true) or released (false).
+ * @noreturn
+ * @see cuteful.enum.mouse_btn
+ * @see cuteful.enum.key_state
+ */
+static int luaC_pointer_send_key_raw(lua_State *L)
+{
+    return __send_key(L, true);
+}
+
+static int __send_axis(lua_State *L, bool raw)
+{
+    struct cwc_cursor *cursor = luaC_pointer_checkudata(L, 1);
+    double delta              = luaL_checknumber(L, 2);
+    int delta_discrete        = luaL_checkinteger(L, 3);
+    bool horizontal           = lua_toboolean(L, 4);
+    bool inverse              = lua_toboolean(L, 5);
+
+    if (raw)
+        cwc_cursor_send_axis(cursor, delta, delta_discrete, horizontal,
+                             inverse);
+    else
+        cwc_cursor_send_axis_raw(cursor, delta, delta_discrete, horizontal,
+                                 inverse);
+
+    return 0;
+}
+
+/** Send axis event.
+ *
+ * @method send_axis
+ * @tparam number delta The length of vector.
+ * @tparam integer delta_discrete Discrete step information with each multiple
+ * of 120 representing one logical scroll step.
+ * @tparam[opt=false] boolean horizontal Perform horizontal (x) axis instead of
+ * vertical (y) axis.
+ * @tparam[opt=false] boolean inverse Flip the direction of axis
+ * @noreturn
+ */
+static int luaC_pointer_send_axis(lua_State *L)
+{
+    return __send_axis(L, false);
+}
+
+/** Send axis event without any compositor processing.
+ *
+ * @method send_axis_raw
+ * @tparam number delta The length of vector.
+ * @tparam number delta_discrete Discrete step information with each multiple of
+ * 120 representing one logical scroll step.
+ * @tparam[opt=false] boolean horizontal Perform horizontal (x) axis instead of
+ * vertical (y) axis.
+ * @tparam[opt=false] boolean inverse Flip the direction of axis
+ * @noreturn
+ */
+static int luaC_pointer_send_axis_raw(lua_State *L)
+{
+    return __send_axis(L, true);
+}
+
 #define REG_METHOD(name)    {#name, luaC_pointer_##name}
 #define REG_READ_ONLY(name) {"get_" #name, luaC_pointer_get_##name}
 #define REG_SETTER(name)    {"set_" #name, luaC_pointer_set_##name}
@@ -482,11 +671,19 @@ void luaC_pointer_setup(lua_State *L)
     };
 
     luaL_Reg pointer_methods[] = {
-        REG_METHOD(move),       REG_METHOD(move_to),
+        REG_METHOD(move),
+        REG_METHOD(move_to),
+        REG_METHOD(send_key),
+        REG_METHOD(send_key_raw),
+        REG_METHOD(send_axis),
+        REG_METHOD(send_axis_raw),
 
-        REG_READ_ONLY(data),    REG_READ_ONLY(seat),
+        REG_READ_ONLY(data),
+        REG_READ_ONLY(seat),
 
-        REG_PROPERTY(position), REG_PROPERTY(grab),  REG_PROPERTY(send_events),
+        REG_PROPERTY(position),
+        REG_PROPERTY(grab),
+        REG_PROPERTY(send_events),
 
         {NULL, NULL},
     };

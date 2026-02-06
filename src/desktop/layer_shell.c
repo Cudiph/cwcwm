@@ -277,7 +277,7 @@ static void on_new_surface(struct wl_listener *listener, void *data)
 
 void setup_layer_shell(struct cwc_server *s)
 {
-    s->layer_shell = wlr_layer_shell_v1_create(s->wl_display, 4);
+    s->layer_shell = wlr_layer_shell_v1_create(s->wl_display, 5);
     s->layer_shell_surface_l.notify = on_new_surface;
     wl_signal_add(&s->layer_shell->events.new_surface,
                   &s->layer_shell_surface_l);

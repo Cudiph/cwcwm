@@ -36,7 +36,7 @@ guaranteed not to break your configuration.
 Required dependencies:
 
 - wayland
-- wlroots 0.19
+- wlroots 0.20 (git)
 - hyprcursor
 - cairo
 - xkbcommon

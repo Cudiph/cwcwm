@@ -1,4 +1,5 @@
 local cful = require("cuteful")
+local config = require("config")
 
 local screen_test = require("luapi.screen")
 local client_test = require("luapi.client")
@@ -13,6 +14,12 @@ local pointer_test = require("luapi.pointer")
 local kbd_test = require("luapi.kbd")
 
 local cwc = cwc
+
+config.init({
+    xkb_variant = "colemak",
+    xkb_layout  = "us,de,fr",
+    xkb_options = "grp:alt_shift_toggle,grp:caps_select",
+})
 
 local mod = cful.enum.modifier
 
@@ -88,10 +95,11 @@ cwc.kbd.bind({}, "F12", function()
     cwc.screen.focused():get_tag(2):view_only()
     container_test.api()
     print("--------------------------------- API TEST END ------------------------------------")
+    io.flush()
 end)
 
--- signal test by pressing F11 must execute after API test
-cwc.kbd.bind({}, "F11", function()
+-- signal test by pressing F1 (must execute after API test)
+cwc.kbd.bind({}, "F1", function()
     print(
         "\n--------------------------------- SIGNAL TEST START ------------------------------------")
     client_test.signal()
@@ -102,6 +110,15 @@ cwc.kbd.bind({}, "F11", function()
     pointer_test.signal()
     kbd_test.signal()
     print("--------------------------------- SIGNAL TEST END ------------------------------------")
+    io.flush()
 end)
 
 cwc.kbd.bind({ MODKEY, mod.CTRL }, "r", cwc.reload, { description = "reload configuration" })
+
+-- automatic start
+cwc.timer.new(3, function()
+    cful.kbd.click(cful.kbd.event_code.KEY_F12)
+    cwc.timer.new(3, function()
+        cful.kbd.click(cful.kbd.event_code.KEY_F1)
+    end, { one_shot = true })
+end, { one_shot = true })

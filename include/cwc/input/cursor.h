@@ -22,6 +22,13 @@ enum cwc_cursor_state {
     CWC_CURSOR_STATE_RESIZE_MASTER,
 };
 
+enum cwc_cursor_pseudo_btn {
+    SCROLL_LEFT = 0x13371,
+    SCROLL_UP,
+    SCROLL_RIGHT,
+    SCROLL_DOWN,
+};
+
 struct hyprcursor_buffer {
     struct wlr_buffer base;
     cairo_surface_t *surface;
@@ -67,7 +74,6 @@ struct cwc_cursor {
     float scale;
 
     // states
-    struct wlr_pointer_constraint_v1 *active_constraint;
     bool dont_emit_signal;
     bool grab;
     bool send_events;
@@ -110,6 +116,12 @@ void process_cursor_motion(struct cwc_cursor *cursor,
                            double dx_unaccel,
                            double dy_unaccel);
 
+void process_cursor_axis(struct cwc_cursor *cursor,
+                         struct wlr_pointer_axis_event *event);
+
+void process_cursor_button(struct cwc_cursor *cursor,
+                           struct wlr_pointer_button_event *event);
+
 struct cwc_cursor *cwc_cursor_create(struct wlr_seat *seat);
 
 void cwc_cursor_destroy(struct cwc_cursor *cursor);
@@ -132,6 +144,24 @@ void cwc_cursor_update_scale(struct cwc_cursor *cursor);
  */
 bool cwc_cursor_hyprcursor_change_style(
     struct cwc_cursor *cursor, struct hyprcursor_cursor_style_info info);
+
+void cwc_cursor_send_axis(struct cwc_cursor *cursor,
+                          double delta,
+                          int delta_discrete,
+                          bool horizontal,
+                          bool inverse);
+void cwc_cursor_send_axis_raw(struct cwc_cursor *cursor,
+                              double delta,
+                              int delta_discrete,
+                              bool horizontal,
+                              bool inverse);
+
+void cwc_cursor_send_key(struct cwc_cursor *cursor,
+                         uint32_t button,
+                         enum wl_pointer_button_state state);
+void cwc_cursor_send_key_raw(struct cwc_cursor *cursor,
+                             uint32_t button,
+                             enum wl_pointer_button_state state);
 
 struct cwc_pointer_constraint {
     struct wlr_pointer_constraint_v1 *constraint;
@@ -164,6 +194,46 @@ struct cwc_pointer_button_event {
 struct cwc_pointer_axis_event {
     struct cwc_cursor *cursor;
     struct wlr_pointer_axis_event *event;
+};
+
+struct cwc_pointer_swipe_begin_event {
+    struct cwc_cursor *cursor;
+    struct wlr_pointer_swipe_begin_event *event;
+};
+
+struct cwc_pointer_swipe_update_event {
+    struct cwc_cursor *cursor;
+    struct wlr_pointer_swipe_update_event *event;
+};
+
+struct cwc_pointer_swipe_end_event {
+    struct cwc_cursor *cursor;
+    struct wlr_pointer_swipe_end_event *event;
+};
+
+struct cwc_pointer_pinch_begin_event {
+    struct cwc_cursor *cursor;
+    struct wlr_pointer_pinch_begin_event *event;
+};
+
+struct cwc_pointer_pinch_update_event {
+    struct cwc_cursor *cursor;
+    struct wlr_pointer_pinch_update_event *event;
+};
+
+struct cwc_pointer_pinch_end_event {
+    struct cwc_cursor *cursor;
+    struct wlr_pointer_pinch_end_event *event;
+};
+
+struct cwc_pointer_hold_begin_event {
+    struct cwc_cursor *cursor;
+    struct wlr_pointer_hold_begin_event *event;
+};
+
+struct cwc_pointer_hold_end_event {
+    struct cwc_cursor *cursor;
+    struct wlr_pointer_hold_end_event *event;
 };
 
 #endif // !_CWC_INPUT_CURSOR_H

@@ -9,6 +9,7 @@ local enum = require("cuteful.enum")
 local tag = require("cuteful.tag")
 local impl = require("impl")
 local config = require("config")
+local crules = require("cuteful.rules")
 
 -- make it local so the `undefined global` lsp error stop yapping on every cwc access
 local cwc = cwc
@@ -23,6 +24,7 @@ end
 
 -- execute keybind script
 gears.protected_call(require, "keybind")
+gears.protected_call(require, "mousebind")
 
 -- use core implementation
 impl.use_core()
@@ -45,7 +47,7 @@ end)
 cwc.connect_signal("screen::new", function(screen)
     -- screen settings
     if screen.name == "DP-1" then
-        screen:set_position(0, 0)
+        screen:set_position(0, 0)       -- NOTE: Position(s) MUST be non-negative - based on #49 (https://github.com/Cudiph/cwcwm/issues/49).
 
         screen:set_mode(1920, 1080, 60) -- width, height, refresh rate
         screen:set_adaptive_sync(true)
@@ -88,6 +90,22 @@ end)
 -- end)
 
 ------------------------ CLIENT BEHAVIOR -----------------------------
+crules.add_client_rule {
+    where = { appid = "^firefox$" },
+    set = { workspace = 2 },
+    run = function(client)
+        client.screen.active_workspace = 2
+    end,
+}
+
+crules.add_client_rule {
+    where = { appid = "pcmanfm" },
+    set = { floating = true },
+    run = function(client)
+        client:center()
+    end,
+}
+
 cwc.connect_signal("client::map", function(client)
     -- unmanaged client is a popup/tooltip client in xwayland so lets skip it.
     if client.unmanaged then return end
@@ -106,7 +124,9 @@ cwc.connect_signal("client::map", function(client)
     client:raise()
     client:focus()
 
-    -- the declarative rules isn't implemented yet so here is an example to do ruling.
+    --[[ you could use the rules approach above or do it imperative way like so.
+    -- Both approach is equivalent.
+
     -- It'll move any firefox app to the workspace 2 and maximize it also we moving to tag 2.
     if client.appid == "firefox" then
         client:move_to_tag(2)
@@ -117,6 +137,7 @@ cwc.connect_signal("client::map", function(client)
         client.floating = true
         client:center()
     end
+    --]]
 end)
 
 cwc.connect_signal("client::unmap", function(client)

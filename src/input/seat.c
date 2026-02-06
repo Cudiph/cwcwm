@@ -31,6 +31,7 @@
 #include <wlr/types/wlr_touch.h>
 #include <wlr/types/wlr_transient_seat_v1.h>
 
+#include "cwc/config.h"
 #include "cwc/desktop/output.h"
 #include "cwc/desktop/toplevel.h"
 #include "cwc/input/cursor.h"
@@ -60,8 +61,9 @@ static void on_request_primary_selection(struct wl_listener *listener,
         wl_container_of(listener, seat, request_primary_selection_l);
     struct wlr_seat_request_set_primary_selection_event *device = data;
 
-    wlr_seat_set_primary_selection(seat->wlr_seat, device->source,
-                                   device->serial);
+    if (g_config.middle_click_paste)
+        wlr_seat_set_primary_selection(seat->wlr_seat, device->source,
+                                       device->serial);
 }
 
 static void on_request_start_drag(struct wl_listener *listener, void *data)
@@ -73,6 +75,14 @@ static void on_request_start_drag(struct wl_listener *listener, void *data)
     if (wlr_seat_validate_pointer_grab_serial(seat->wlr_seat, event->origin,
                                               event->serial)) {
         wlr_seat_start_pointer_drag(seat->wlr_seat, event->drag, event->serial);
+        return;
+    }
+
+    struct wlr_touch_point *point;
+    if (wlr_seat_validate_touch_grab_serial(seat->wlr_seat, event->origin,
+                                            event->serial, &point)) {
+        wlr_seat_start_touch_drag(seat->wlr_seat, event->drag, event->serial,
+                                  point);
         return;
     }
 
@@ -90,8 +100,25 @@ static void on_drag_motion(struct wl_listener *listener, void *data)
 static void on_drag_destroy(struct wl_listener *listener, void *data)
 {
     struct cwc_drag *drag = wl_container_of(listener, drag, on_drag_destroy_l);
+    struct cwc_seat *seat = drag->wlr_drag->seat->data;
+
+    struct cwc_toplevel *toplevel = cwc_toplevel_try_from_wlr_surface(
+        seat->wlr_seat->keyboard_state.focused_surface);
+    struct cwc_output *output =
+        cwc_output_at(server.output_layout, seat->cursor->wlr_cursor->x,
+                      seat->cursor->wlr_cursor->y);
+
+    /* restore client focus but since the focus stack is stored per output basis
+     * so it only works if drag and drop between 2 clients are in the same
+     * output. */
+    if (toplevel && output && toplevel->container->output == output)
+        cwc_output_focus_newest_focus_visible_toplevel(output);
+
     wl_list_remove(&drag->on_drag_destroy_l.link);
     wl_list_remove(&drag->on_drag_motion_l.link);
+
+    wlr_scene_node_destroy(&drag->scene_tree->node);
+
     free(drag);
 }
 
@@ -216,7 +243,7 @@ void cwc_seat_destroy(struct cwc_seat *seat)
 void cwc_seat_add_keyboard_device(struct cwc_seat *seat,
                                   struct wlr_input_device *dev)
 {
-    cwc_keyboard_group_add_device(server.seat->kbd_group, dev);
+    cwc_keyboard_group_add_device(seat->kbd_group, dev);
 }
 
 static void map_input_device_to_output(struct cwc_seat *seat,

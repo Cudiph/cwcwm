@@ -4,6 +4,7 @@ local enum = require("cuteful.enum")
 local conf = {
     -- misc --
     tasklist_show_all                  = false,
+    middle_click_paste                 = true,
 
     -- pointer config --
     cursor_size                        = 20,
@@ -14,9 +15,9 @@ local conf = {
     -- keyboard config --
     repeat_rate                        = 30,
     repeat_delay                       = 300,
-    -- xkb_variant = "colemak",
-    -- xkb_layout  = "us,de,fr",
-    -- xkb_options = "grp:ctrl_shift_toggle",
+    -- xkb_variant                        = "colemak",
+    -- xkb_layout                         = "us,de,fr",
+    -- xkb_options                        = "grp:alt_shift_toggle,grp:caps_select",
 
     -- client config --
     default_decoration_mode            = enum.decoration_mode.SERVER_SIDE,

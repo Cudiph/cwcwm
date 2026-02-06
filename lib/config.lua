@@ -4,10 +4,11 @@
 -- any write on the config table will automatically be taken care of,
 -- so no need to manually call `cwc.commit`.
 --
--- @usage local config = require("config")
+-- @usage
+--   local config = require("config")
 --
--- config["cursor_size"] = 25
--- config["cursor_edge_snapping_overlay_color"] = { 0.1, 0.2, 0.3, 0.05 }
+--   config["cursor_size"] = 25
+--   config["cursor_edge_snapping_overlay_color"] = { 0.1, 0.2, 0.3, 0.05 }
 --
 -- @author Dwi Asmoro Bangun
 -- @copyright 2025
@@ -96,6 +97,10 @@ end
 -- @config tasklist_show_all
 -- @tparam[opt=true] boolean tasklist_show_all
 
+--- Whether to disable primary selection pasting using middle click.
+-- @config middle_click_paste
+-- @tparam[opt=true] boolean middle_click_paste
+
 --- The color of client border.
 -- @config border_color_normal
 -- @tparam[opt=#888888] gears_color border_color_normal
@@ -128,6 +133,9 @@ end
 -- @tparam[opt=5000] integer cursor_inactive_timeout
 
 --- Distance in pixel from the edge of screen to trigger edge tiling for floating client.
+--
+-- Setting it to zero will disable edge snapping.
+--
 -- @config cursor_edge_threshold
 -- @tparam[opt=16] integer cursor_edge_threshold
 
@@ -180,6 +188,7 @@ end
 -- it pass the sanity check (true) or not (false)
 local sanity_check = {
     tasklist_show_all                  = "boolean",
+    middle_click_paste                 = "boolean",
 
     border_color_normal                = config.check_color,
     border_color_focus                 = config.check_color,
@@ -192,7 +201,7 @@ local sanity_check = {
     cursor_size                        = config.check_positive,
     cursor_inactive_timeout            = config.check_positive,
     cursor_edge_threshold              = config.check_positive,
-    cursor_edge_snapping_overlay_color = check_rgba, -- TODO: proper checking
+    cursor_edge_snapping_overlay_color = check_rgba,
 
     repeat_rate                        = config.check_positive,
     repeat_delay                       = config.check_positive,
@@ -238,9 +247,13 @@ config.mt.__newindex = function(t, k, v)
 
     local sanity_type = type(sanity_val)
 
-    if (sanity_type == "string" and type(v) ~= sanity_val) or
-        (sanity_type == "function" and not sanity_val(v)) then
-        print_error("config: key " .. k .. " is not using the right type")
+    if (sanity_type == "string" and type(v) ~= sanity_val) then
+        print_error("config: key `" .. k .. "` is not using the right type (expected '" .. sanity_type .. "')")
+        return
+    end
+
+    if (sanity_type == "function" and not sanity_val(v)) then
+        print_error("config: key `" .. k .. "` is not using the right type")
         return
     end
 

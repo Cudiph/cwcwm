@@ -8,14 +8,23 @@
 #include "cwc/util.h"
 
 struct cwc_server;
+struct wlr_keyboard;
+
+struct cwc_keyboard {
+    struct wl_list link;
+    struct wlr_keyboard *wlr_kbd;
+};
 
 struct cwc_keyboard_group {
     struct cwc_seat *seat;
     struct wlr_keyboard_group *wlr_kbd_group;
     struct wlr_virtual_keyboard_v1 *vkbd;
 
+    struct wl_list keyboards; // cwc_keyboard.link
+
     bool grab;
     bool send_events;
+    int layout_idx;
 
     struct wl_listener modifiers_l;
     struct wl_listener key_l;
@@ -37,8 +46,24 @@ void cwc_keyboard_group_destroy(struct cwc_keyboard_group *kbd_group);
 
 void cwc_keyboard_group_add_device(struct cwc_keyboard_group *kbd_group,
                                    struct wlr_input_device *device);
+void cwc_keyboard_group_remove_device(struct cwc_keyboard_group *kbd_group,
+                                      struct wlr_input_device *device);
 
 void cwc_keyboard_update_keymap(struct wlr_keyboard *wlr_kbd);
+
+void cwc_keyboard_group_set_xkb_layout(struct cwc_keyboard_group *kbd_group,
+                                       int idx);
+
+void cwc_keyboard_group_update_modifiers(struct cwc_keyboard_group *kbd_group,
+                                         uint32_t depressed,
+                                         uint32_t latched_mods,
+                                         uint32_t locked);
+void cwc_keyboard_group_send_key(struct cwc_keyboard_group *kbd_group,
+                                 uint32_t keycode,
+                                 enum wl_keyboard_key_state state);
+void cwc_keyboard_group_send_key_raw(struct cwc_keyboard_group *kbd_group,
+                                     uint32_t keycode,
+                                     enum wl_keyboard_key_state state);
 
 struct wlr_surface;
 void keyboard_focus_surface(struct cwc_seat *seat, struct wlr_surface *surface);
@@ -111,22 +136,15 @@ int cwc_keybind_map_register_bind_from_lua(struct lua_State *L,
 uint64_t keybind_generate_key(uint32_t modifiers, uint32_t key);
 
 /* register a keybind to the map */
-void keybind_kbd_register(struct cwc_keybind_map *kmap,
-                          uint32_t modifiers,
-                          xkb_keysym_t key,
-                          struct cwc_keybind_info info);
-void keybind_mouse_register(struct cwc_keybind_map *kmap,
-                            uint32_t modifiers,
-                            uint32_t button,
-                            struct cwc_keybind_info info);
+void keybind_register(struct cwc_keybind_map *kmap,
+                      uint32_t modifiers,
+                      uint32_t key,
+                      struct cwc_keybind_info info);
 
 /* remove a keybind from a map */
-void keybind_kbd_remove(struct cwc_keybind_map *kmap,
-                        uint32_t modifiers,
-                        xkb_keysym_t key);
-void keybind_mouse_remove(struct cwc_keybind_map *kmap,
-                          uint32_t modifiers,
-                          uint32_t button);
+void keybind_remove(struct cwc_keybind_map *kmap,
+                    uint32_t modifiers,
+                    uint32_t key);
 
 /* true if a keybind entry found/processed */
 bool keybind_kbd_execute(struct cwc_keybind_map *kmap,

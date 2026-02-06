@@ -18,6 +18,7 @@
 
 #include <wayland-server-core.h>
 #include <wayland-util.h>
+#include <wlr/interfaces/wlr_keyboard.h>
 #include <wlr/types/wlr_foreign_toplevel_management_v1.h>
 #include <wlr/types/wlr_input_method_v2.h>
 #include <wlr/types/wlr_keyboard.h>
@@ -25,6 +26,7 @@
 #include <wlr/types/wlr_keyboard_shortcuts_inhibit_v1.h>
 #include <wlr/types/wlr_seat.h>
 #include <wlr/types/wlr_virtual_keyboard_v1.h>
+#include <xkbcommon/xkbcommon-keysyms.h>
 #include <xkbcommon/xkbcommon.h>
 
 #include "cwc/config.h"
@@ -93,6 +95,16 @@ static void on_kbd_group_modifiers(struct wl_listener *listener, void *data)
     struct cwc_keyboard_group *kbd_group =
         wl_container_of(listener, kbd_group, modifiers_l);
 
+    xkb_layout_index_t active_index =
+        xkb_state_serialize_layout(kbd_group->wlr_kbd_group->keyboard.xkb_state,
+                                   XKB_STATE_LAYOUT_EFFECTIVE);
+
+    if (kbd_group->layout_idx != active_index) {
+        cwc_object_emit_signal_simple("kbd::prop::layout_index",
+                                      g_config_get_lua_State(), kbd_group);
+        kbd_group->layout_idx = active_index;
+    }
+
     process_modifier_event(kbd_group);
 }
 
@@ -148,8 +160,13 @@ static void process_key_event(struct cwc_keyboard_group *kbd_group,
     // It will also look more readable e.g. MOD + "1" | MOD + SHIFT + "1"
     // while using transformed is MOD + "1" + MOD | SHIFT + "exclam".
     struct xkb_state *state = xkb_state_new(wlr_kbd->keymap);
-    int keysym              = xkb_state_key_get_one_sym(state, keycode);
+    const xkb_keysym_t *syms;
+    int nsyms = xkb_state_key_get_syms(state, keycode, &syms);
     xkb_state_unref(state);
+
+    uint32_t keysym = XKB_KEY_NoSymbol;
+    if (nsyms)
+        keysym = syms[0];
 
     uint32_t modifiers = wlr_keyboard_get_modifiers(wlr_kbd);
     bool handled       = 0;
@@ -171,7 +188,6 @@ static void process_key_event(struct cwc_keyboard_group *kbd_group,
         // is a case when you hold down a key and hitting keybind while still
         // holding it, the client still assume that key is pressed because
         // client doesn't get notified when the key is released
-        // TODO: stupid hack #1
         keybind_kbd_execute(server.main_kbd_kmap, seat, modifiers, keysym,
                             false);
         wl_event_source_timer_update(server.main_kbd_kmap->repeat_timer, 0);
@@ -204,7 +220,6 @@ static void process_key_event(struct cwc_keyboard_group *kbd_group,
                 kbd_grab, event->time_msec, event->keycode, event->state);
             handled = true;
 
-            // TODO: stupid hack #2
             if (event->state == WL_KEYBOARD_KEY_STATE_RELEASED)
                 wlr_seat_keyboard_notify_key(wlr_seat, event->time_msec,
                                              event->keycode, event->state);
@@ -356,6 +371,7 @@ cwc_keyboard_group_create(struct cwc_seat *seat,
         kbd_group->config_commit_l.notify = on_config_commit;
         wl_signal_add(&g_config.events.commit, &kbd_group->config_commit_l);
     }
+    wl_list_init(&kbd_group->keyboards);
 
     struct wlr_keyboard *wlr_kbd = &kbd_group->wlr_kbd_group->keyboard;
     wlr_seat_set_keyboard(seat->wlr_seat, wlr_kbd);
@@ -389,9 +405,113 @@ void cwc_keyboard_group_add_device(struct cwc_keyboard_group *kbd_group,
 {
     struct wlr_keyboard *wlr_kbd = wlr_keyboard_from_input_device(device);
 
+    struct cwc_keyboard *kbd = calloc(1, sizeof(*kbd));
+    kbd->wlr_kbd             = wlr_kbd;
+    wlr_kbd->data            = kbd;
+    wl_list_insert(&kbd_group->keyboards, &kbd->link);
+
     cwc_keyboard_update_keymap(wlr_kbd);
 
     wlr_keyboard_group_add_keyboard(kbd_group->wlr_kbd_group, wlr_kbd);
+}
+
+void cwc_keyboard_group_remove_device(struct cwc_keyboard_group *kbd_group,
+                                      struct wlr_input_device *device)
+{
+    struct wlr_keyboard *wlr_kbd = wlr_keyboard_from_input_device(device);
+    struct cwc_keyboard *kbd     = wlr_kbd->data;
+    kbd->wlr_kbd                 = wlr_kbd;
+
+    wl_list_remove(&kbd->link);
+    free(kbd);
+    wlr_keyboard_group_remove_keyboard(kbd_group->wlr_kbd_group, wlr_kbd);
+}
+
+static inline void _update_modifiers(struct cwc_keyboard_group *kbd_group,
+                                     uint32_t depressed,
+                                     uint32_t latched,
+                                     uint32_t locked,
+                                     uint32_t group)
+{
+    struct cwc_keyboard *kbd;
+    wl_list_for_each(kbd, &kbd_group->keyboards, link)
+    {
+        wlr_keyboard_notify_modifiers(kbd->wlr_kbd, depressed, latched, locked,
+                                      group);
+    }
+
+    wlr_keyboard_notify_modifiers(&kbd_group->wlr_kbd_group->keyboard,
+                                  depressed, latched, locked, group);
+}
+
+void cwc_keyboard_group_set_xkb_layout(struct cwc_keyboard_group *kbd_group,
+                                       int idx)
+{
+    struct wlr_keyboard *wlr_kbd = &kbd_group->wlr_kbd_group->keyboard;
+    struct xkb_state *state      = wlr_kbd->xkb_state;
+    int num_layout               = xkb_keymap_num_layouts(wlr_kbd->keymap);
+    int new_group                = idx % num_layout;
+
+    xkb_mod_mask_t depressed_mods =
+        xkb_state_serialize_mods(state, XKB_STATE_MODS_DEPRESSED);
+    xkb_mod_mask_t latched_mods =
+        xkb_state_serialize_mods(state, XKB_STATE_MODS_LATCHED);
+    xkb_mod_mask_t locked_mods =
+        xkb_state_serialize_mods(state, XKB_STATE_MODS_LOCKED);
+
+    _update_modifiers(kbd_group, depressed_mods, latched_mods, locked_mods,
+                      new_group);
+}
+
+void cwc_keyboard_group_update_modifiers(struct cwc_keyboard_group *kbd_group,
+                                         uint32_t depressed,
+                                         uint32_t latched,
+                                         uint32_t locked)
+{
+    struct xkb_state *state = kbd_group->wlr_kbd_group->keyboard.xkb_state;
+
+    uint32_t group =
+        xkb_state_serialize_layout(state, XKB_STATE_LAYOUT_EFFECTIVE);
+
+    _update_modifiers(kbd_group, depressed, latched, locked, group);
+}
+
+static void __cwc_keyboard_group_send_key(struct cwc_keyboard_group *kbd_group,
+                                          uint32_t keycode,
+                                          enum wl_keyboard_key_state state,
+                                          bool raw)
+{
+    struct timespec now;
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    uint64_t now_msec = timespec_to_msec(&now);
+
+    struct wlr_keyboard_key_event event = {
+        .keycode      = keycode,
+        .state        = state,
+        .time_msec    = now_msec,
+        .update_state = true,
+    };
+
+    if (raw) {
+        wlr_seat_keyboard_notify_key(kbd_group->seat->wlr_seat, now_msec,
+                                     keycode, state);
+    } else {
+        wlr_keyboard_notify_key(&kbd_group->wlr_kbd_group->keyboard, &event);
+    }
+}
+
+void cwc_keyboard_group_send_key(struct cwc_keyboard_group *kbd_group,
+                                 uint32_t keycode,
+                                 enum wl_keyboard_key_state state)
+{
+    __cwc_keyboard_group_send_key(kbd_group, keycode, state, false);
+}
+
+void cwc_keyboard_group_send_key_raw(struct cwc_keyboard_group *kbd_group,
+                                     uint32_t keycode,
+                                     enum wl_keyboard_key_state state)
+{
+    __cwc_keyboard_group_send_key(kbd_group, keycode, state, true);
 }
 
 inline void keyboard_focus_surface(struct cwc_seat *seat,

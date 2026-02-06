@@ -30,14 +30,20 @@ local enum = {
     --
     -- @table mouse_btn
     mouse_btn = {
-        LEFT    = 0x110,
-        RIGHT   = 0x111,
-        MIDDLE  = 0x112,
-        SIDE    = 0x113,
-        EXTRA   = 0x114,
-        FORWARD = 0x115,
-        BACK    = 0x116,
-        TASK    = 0x117,
+        LEFT         = 0x110,
+        RIGHT        = 0x111,
+        MIDDLE       = 0x112,
+        SIDE         = 0x113,
+        EXTRA        = 0x114,
+        FORWARD      = 0x115,
+        BACK         = 0x116,
+        TASK         = 0x117,
+
+        -- Pseudo button this doesn't exist in linux input event codes header
+        SCROLL_LEFT  = 0x13371,
+        SCROLL_UP    = 0x13372,
+        SCROLL_RIGHT = 0x13373,
+        SCROLL_DOWN  = 0x13374,
     },
 
     --- Extracted from wlr_direction `wlr_output_layout.h`
@@ -48,6 +54,15 @@ local enum = {
         DOWN  = bit.lshift(1, 1),
         LEFT  = bit.lshift(1, 2),
         RIGHT = bit.lshift(1, 3),
+    },
+
+    --- Extracted from `wayland-server-protocol.h`
+    --
+    -- @table key_state
+    key_state = {
+        RELEASED = 0,
+        PRESSED  = 1,
+        REPEATED = 2,
     },
 
     --- Extracted from `wayland-server-protocol.h`

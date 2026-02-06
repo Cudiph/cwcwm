@@ -356,12 +356,12 @@ static int dwl_ipc_setup()
     cwc_signal_connect("client::focus", on_client_prop_change);
     cwc_signal_connect("client::unfocus", on_client_should_title_reset);
     cwc_signal_connect("client::unmap", on_client_should_title_reset);
-    cwc_signal_connect("client::property::urgent",
+    cwc_signal_connect("client::prop::urgent",
                        on_client_prop_change_and_update_tag);
-    cwc_signal_connect("client::property::tag",
+    cwc_signal_connect("client::prop::tag",
                        on_client_prop_change_and_update_tag);
-    cwc_signal_connect("client::property::fullscreen", on_client_prop_change);
-    cwc_signal_connect("client::property::floating", on_client_prop_change);
+    cwc_signal_connect("client::prop::fullscreen", on_client_prop_change);
+    cwc_signal_connect("client::prop::floating", on_client_prop_change);
     cwc_signal_connect("client::prop::title", on_client_prop_change);
     cwc_signal_connect("client::prop::appid", on_client_prop_change);
 
@@ -403,13 +403,12 @@ static void dwl_ipc_cleanup()
     cwc_signal_disconnect("client::focus", on_client_prop_change);
     cwc_signal_disconnect("client::unfocus", on_client_should_title_reset);
     cwc_signal_disconnect("client::unmap", on_client_should_title_reset);
-    cwc_signal_disconnect("client::property::urgent",
+    cwc_signal_disconnect("client::prop::urgent",
                           on_client_prop_change_and_update_tag);
-    cwc_signal_disconnect("client::property::tag",
+    cwc_signal_disconnect("client::prop::tag",
                           on_client_prop_change_and_update_tag);
-    cwc_signal_disconnect("client::property::fullscreen",
-                          on_client_prop_change);
-    cwc_signal_disconnect("client::property::floating", on_client_prop_change);
+    cwc_signal_disconnect("client::prop::fullscreen", on_client_prop_change);
+    cwc_signal_disconnect("client::prop::floating", on_client_prop_change);
     cwc_signal_disconnect("client::prop::title", on_client_prop_change);
     cwc_signal_disconnect("client::prop::appid", on_client_prop_change);
 
@@ -424,7 +423,7 @@ plugin_init(dwl_ipc_setup);
 plugin_exit(dwl_ipc_cleanup);
 
 PLUGIN_NAME("dwl-ipc");
-PLUGIN_VERSION("1.0.0");
+PLUGIN_VERSION("0.4.0-dev");
 PLUGIN_DESCRIPTION("dwl IPC plugin");
 PLUGIN_LICENSE("GPLv3");
 PLUGIN_AUTHOR("Dwi Asmoro Bangun <dwiaceromo@gmail.com>");

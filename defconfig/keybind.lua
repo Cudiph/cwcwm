@@ -8,7 +8,6 @@ local cwc = cwc
 
 local enum = cful.enum
 local mod = enum.modifier
-local button = enum.mouse_btn
 local direction = enum.direction
 
 local MODKEY = mod.LOGO
@@ -18,13 +17,6 @@ local TERMINAL = "kitty"
 if cwc.is_nested() then
     MODKEY = mod.ALT
 end
-
-------------------- pointer/mouse binding ---------------------
-local pointer = cwc.pointer
-
--- client interactive mode
-pointer.bind(MODKEY, button.LEFT, pointer.move_interactive)
-pointer.bind(MODKEY, button.RIGHT, pointer.resize_interactive)
 
 ------------------- keyboard binding --------------------
 local kbd = cwc.kbd
@@ -595,6 +587,7 @@ kbd.bind({ MODKEY, mod.CTRL }, "slash", function()
     local s = cwc.screen.focused()
     local c = cwc.client.focused()
     local pos = pointer.get_position()
+
     if c.decoration_mode == enum.decoration_mode.CLIENT_SIDE then
         c.decoration_mode = enum.decoration_mode.SERVER_SIDE
     else

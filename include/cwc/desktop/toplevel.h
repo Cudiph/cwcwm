@@ -49,17 +49,25 @@ struct cwc_toplevel {
         struct wlr_xwayland_surface *xwsurface;
         struct wlr_xdg_toplevel *xdg_toplevel;
     };
-    struct wlr_scene_tree *surf_tree;
     struct xwayland_props *xwprops; // NULL if type != xwayland
+    struct wlr_scene *capture_scene;
+    struct wlr_scene_tree *capture_scene_tree;
+    struct wlr_scene_tree *surf_tree;
+
     struct cwc_container *container;
+
     struct wlr_ext_foreign_toplevel_handle_v1 *ext_foreign_handle;
     struct wlr_foreign_toplevel_handle_v1 *wlr_foreign_handle;
+    struct wlr_ext_image_capture_source_v1 *wlr_capture_source;
 
     struct cwc_toplevel_decoration *decoration;
     bool mapped;
     bool tearing_hint;
     bool urgent;
     uint32_t resize_serial;
+
+    char *xdg_tag;
+    char *xdg_description;
 
     struct wl_list link_output_toplevels; // cwc_output.toplevels
     struct wl_list link_container;        // cwc_container.toplevels
@@ -83,12 +91,15 @@ struct cwc_toplevel {
     struct wl_listener foreign_request_activate_l;
     struct wl_listener foreign_request_close_l;
     struct wl_listener foreign_destroy_l;
+
+    struct wl_listener set_geometry_l; // unmanaged only
 };
 
 struct cwc_popup {
     enum cwc_data_type type;
     struct wlr_xdg_popup *xdg_popup;
     struct wlr_scene_tree *scene_tree;
+    struct wlr_scene_tree *capture_scene_tree;
 
     struct wl_listener popup_destroy_l;
     struct wl_listener popup_commit_l;

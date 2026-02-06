@@ -45,15 +45,36 @@ static struct lifecwcle {
 static void stop_cycle()
 {
     lifecwcle.on_cycle = false;
-    if (lifecwcle.raised)
-        cwc_toplevel_focus(cwc_container_get_front_toplevel(lifecwcle.raised),
-                           true);
+    if (!lifecwcle.raised)
+        return;
+
+    cwc_toplevel_focus(cwc_container_get_front_toplevel(lifecwcle.raised),
+                       true);
+
+    struct cwc_toplevel *focused = cwc_toplevel_get_focused();
+    lua_State *L                 = g_config_get_lua_State();
+
+    if (luaC_config_get(L, "border_color_normal")) {
+        cairo_pattern_t *pattern =
+            cairo_pattern_reference(*(cairo_pattern_t **)lua_touserdata(L, -1));
+
+        cwc_border_set_pattern(&lifecwcle.raised->border, pattern);
+        cairo_pattern_destroy(pattern);
+    }
+
+    if (focused && focused->container
+        && luaC_config_get(L, "border_color_focus")) {
+        cairo_pattern_t *pattern =
+            cairo_pattern_reference(*(cairo_pattern_t **)lua_touserdata(L, -1));
+        cwc_border_set_pattern(&focused->container->border, pattern);
+        cairo_pattern_destroy(pattern);
+    }
+
     lifecwcle.raised = NULL;
 }
 
 static void raise_container(struct cwc_container *container)
 {
-
     cairo_pattern_t *raised_pattern = NULL;
     lua_State *L                    = g_config_get_lua_State();
     if (luaC_config_get(L, "border_color_raised"))
@@ -284,7 +305,7 @@ static int cwcle_init()
 plugin_init(cwcle_init);
 
 PLUGIN_NAME("cwcle");
-PLUGIN_VERSION("1.0.0");
+PLUGIN_VERSION("0.4.0-dev");
 PLUGIN_DESCRIPTION("windows like alt+tab");
 PLUGIN_LICENSE("MIT");
 PLUGIN_AUTHOR("Dwi Asmoro Bangun <dwiaceromo@gmail.com>");
