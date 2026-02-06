@@ -325,7 +325,7 @@ void xwayland_s_fini(struct cwc_server *server)
     }
 
     /* remove socket files */
-    snprintf(path, sizeof(path), "/tmp/.X11-unix/X%d", server->x11_socket_fd);
+    snprintf(path, sizeof(path), "/tmp/.X11-unix/X%d", server->x11_display);
     unlink(path);
     snprintf(path, sizeof(path), "/tmp/.X%d-lock", server->x11_display);
     unlink(path);

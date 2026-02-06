@@ -317,6 +317,9 @@ server_init(struct cwc_server *s, char *config_path, char *library_path)
 void server_fini(struct cwc_server *s)
 {
     cwc_log(CWC_INFO, "Shutting down cwc...");
+#ifndef CWC_XWAYLAND
+    xwayland_s_fini(s); // graceful cleanup
+#endif
     wl_display_destroy_clients(s->wl_display);
 
     cwc_signal_emit_c("cwc::shutdown", NULL);
@@ -340,8 +343,6 @@ void server_fini(struct cwc_server *s)
     cwc_idle_fini(s);
 #ifdef CWC_XWAYLAND
     xwayland_fini(s);
-#else
-    xwayland_s_fini(s);
 #endif // CWC_XWAYLAND
 
     wlr_output_layout_destroy(s->output_layout);

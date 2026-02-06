@@ -17,7 +17,6 @@ script_header = custom_target(
 srcs = [
   'main.c',
   'server.c',
-  'xwayland.c',
 
   'config.c',
   'plugin.c',
@@ -36,6 +35,7 @@ srcs = [
   'desktop/session_lock.c',
   'desktop/toplevel.c',
   'desktop/transaction.c',
+  'desktop/xwayland.c',
 
   'input/cursor.c',
   'input/manager.c',
