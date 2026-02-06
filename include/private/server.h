@@ -33,6 +33,9 @@ extern void cwc_idle_fini(struct cwc_server *s);
 extern void xwayland_init(struct cwc_server *s);
 extern void xwayland_fini(struct cwc_server *s);
 
+extern void xwayland_s_init(struct cwc_server *s);
+extern void xwayland_s_fini(struct cwc_server *s);
+
 extern void setup_transaction(struct cwc_server *s);
 
 extern void setup_ipc(struct cwc_server *s);

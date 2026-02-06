@@ -266,6 +266,8 @@ server_init(struct cwc_server *s, char *config_path, char *library_path)
     setup_decoration_manager(s);
 #ifdef CWC_XWAYLAND
     xwayland_init(s);
+#else
+    xwayland_s_init(s);
 #endif // CWC_XWAYLAND
 
     s->foreign_toplevel_list = wlr_ext_foreign_toplevel_list_v1_create(dpy, 1);
@@ -338,6 +340,8 @@ void server_fini(struct cwc_server *s)
     cwc_idle_fini(s);
 #ifdef CWC_XWAYLAND
     xwayland_fini(s);
+#else
+    xwayland_s_fini(s);
 #endif // CWC_XWAYLAND
 
     wlr_output_layout_destroy(s->output_layout);

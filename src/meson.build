@@ -17,6 +17,7 @@ script_header = custom_target(
 srcs = [
   'main.c',
   'server.c',
+  'xwayland.c',
 
   'config.c',
   'plugin.c',

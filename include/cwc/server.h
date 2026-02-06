@@ -55,6 +55,15 @@ struct cwc_server {
     struct wlr_xwayland *xwayland;
     struct wl_listener xw_ready_l;
     struct wl_listener xw_new_surface_l;
+#else // xwayland-satellite
+    int    x11_display;
+    int    x11_socket_fd;       // unix socket
+    int    x11_abs_socket_fd;   // abstract socket
+    pid_t  xwayland_s_pid;
+    int    xwayland_s_pidfd;
+    struct wl_event_source *x11_fd_source;
+    struct wl_event_source *x11_abs_fd_source;
+    struct wl_event_source *xwayland_s_exit_source;
 #endif // CWC_XWAYLAND
 
     struct wlr_xdg_decoration_manager_v1 *xdg_decoration_manager;
