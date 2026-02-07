@@ -266,6 +266,8 @@ server_init(struct cwc_server *s, char *config_path, char *library_path)
     setup_decoration_manager(s);
 #ifdef CWC_XWAYLAND
     xwayland_init(s);
+#else
+    xwayland_satellite_init(s);
 #endif // CWC_XWAYLAND
 
     s->foreign_toplevel_list = wlr_ext_foreign_toplevel_list_v1_create(dpy, 1);
@@ -315,6 +317,9 @@ server_init(struct cwc_server *s, char *config_path, char *library_path)
 void server_fini(struct cwc_server *s)
 {
     cwc_log(CWC_INFO, "Shutting down cwc...");
+#ifndef CWC_XWAYLAND
+    xwayland_satellite_fini(s); // graceful cleanup
+#endif
     wl_display_destroy_clients(s->wl_display);
 
     cwc_signal_emit_c("cwc::shutdown", NULL);

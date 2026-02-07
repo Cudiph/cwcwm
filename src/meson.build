@@ -35,6 +35,7 @@ srcs = [
   'desktop/session_lock.c',
   'desktop/toplevel.c',
   'desktop/transaction.c',
+  'desktop/xwayland.c',
 
   'input/cursor.c',
   'input/manager.c',
