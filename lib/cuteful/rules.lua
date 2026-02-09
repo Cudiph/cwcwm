@@ -146,9 +146,9 @@ function M.apply_rule(obj, rule)
     if not M.check_rule(obj, rule) then return end
 
     -- effect
-    for effect_k, effect_v in pairs(rule.set) do
+    for effect_k, effect_v in pairs(rule.set or {}) do
         if obj["set_" .. effect_k] == nil then
-            eprint("property " .. effect_k .. " is either read only or not exist", 3)
+            eprint("property " .. effect_k .. " is either read only or not exist")
             goto continue
         end
 
