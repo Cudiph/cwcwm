@@ -119,6 +119,10 @@ nix-env -iA nixos.cwc
 ```
 </details>
 
+## Community
+
+[Join our Discord server](discord)
+
 
 ## Credits
 
@@ -140,3 +144,4 @@ See [LICENSE.md](LICENSE.md) for license details.
 [conventional-commits]: https://www.conventionalcommits.org/en/v1.0.0/#commit-message-with--to-draw-attention-to-breaking-change
 [cwc]: https://aur.archlinux.org/packages/cwc
 [cwc-git]: https://aur.archlinux.org/packages/cwc-git
+[discord]: https://discord.gg/jVx7Y25WgQ
