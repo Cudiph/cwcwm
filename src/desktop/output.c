@@ -1350,7 +1350,13 @@ void cwc_output_set_layout_mode(struct cwc_output *output,
     if (!workspace)
         workspace = output->state->active_workspace;
 
-    output->state->tag_info[workspace].layout_mode = mode;
+    struct cwc_tag_info *tag = &output->state->tag_info[workspace];
+    bool changed             = false;
+
+    if (tag->layout_mode != mode) {
+        changed          = true;
+        tag->layout_mode = mode;
+    }
 
     switch (mode) {
     case CWC_LAYOUT_BSP:
@@ -1364,6 +1370,10 @@ void cwc_output_set_layout_mode(struct cwc_output *output,
     }
 
     transaction_schedule_tag(cwc_output_get_tag(output, workspace));
+    if (changed) {
+        cwc_object_emit_signal_simple("tag::prop::layout_mode",
+                                      g_config_get_lua_State(), tag);
+    }
 }
 
 void cwc_output_set_strategy_idx(struct cwc_output *output, int idx)

@@ -5,12 +5,12 @@ local enum = require("cuteful.enum")
 local cwc = cwc
 
 local signal_list = {
-}
-
-local triggered_list = {
+    "tag::prop::layout_mode",
     "tag::prop::label",
     "tag::prop::hidden",
 }
+
+local triggered_list = {}
 
 for _, signame in pairs(signal_list) do
     cwc.connect_signal(signame, function()

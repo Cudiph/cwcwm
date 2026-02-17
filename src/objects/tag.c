@@ -56,6 +56,12 @@
  * @tparam cwc_tag tag The tag object.
  */
 
+/** Property signal.
+ *
+ * @signal tag::prop::layout_mode
+ * @tparam cwc_tag tag The tag object.
+ */
+
 //============================ CODE =================================
 
 /** Index of the tag in the screen.
@@ -166,9 +172,7 @@ static int luaC_tag_set_hidden(lua_State *L)
     struct cwc_tag_info *tag = luaC_tag_checkudata(L, 1);
     bool set                 = lua_toboolean(L, 2);
 
-    tag->hidden = set;
-    if (tag->ext_workspace)
-        wlr_ext_workspace_handle_v1_set_hidden(tag->ext_workspace, set);
+    cwc_tag_info_set_hidden(tag, set);
 
     return 0;
 }
