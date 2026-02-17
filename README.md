@@ -2,7 +2,7 @@
 
 ## About CwC
 
-CwC is an extensible Wayland compositor with dynamic window management based on wlroots. 
+CwC is an extensible Wayland compositor with dynamic window management based on wlroots.
 Highly influenced by [awesome window manager](https://awesomewm.org), CwC uses Lua for its
 configuration and C plugins for extensions.
 
@@ -77,19 +77,16 @@ $ sudo make uninstall
 $ make clean
 ```
 
-
-
 <div align="center">
   <h2>Screenshot</h2>
   <img src="https://github.com/user-attachments/assets/99c3681a-e68c-4936-84be-586d8b2f04ad" alt="screenshot" />
 </div>
 
-
 ### Packaging status
+
 <a href="https://repology.org/project/cwc-misnamed/versions">
     <img src="https://repology.org/badge/vertical-allrepos/cwc-misnamed.svg?columns=3" alt="Packaging status">
 </a>
-
 
 <details>
 <summary>Arch Linux</summary>
@@ -99,6 +96,7 @@ git clone https://aur.archlinux.org/cwc.git
 cd cwc
 makepkg -si
 ```
+
 </details>
 
 <details>
@@ -109,6 +107,7 @@ eselect repository enable zuki
 emaint sync
 emerge \=gui-wm/cwcwm-0.2.0 or \=gui-wm/cwcwm-9999 for the git version
 ```
+
 </details>
 
 <details>
@@ -117,12 +116,12 @@ emerge \=gui-wm/cwcwm-0.2.0 or \=gui-wm/cwcwm-9999 for the git version
 ```
 nix-env -iA nixos.cwc
 ```
+
 </details>
 
 ## Community
 
-[Join our Discord server](discord)
-
+[Join our Discord server][discord]
 
 ## Credits
 
