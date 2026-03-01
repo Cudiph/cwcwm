@@ -104,6 +104,11 @@ struct cwc_cursor {
     struct wl_listener hold_begin_l;
     struct wl_listener hold_end_l;
 
+    struct wl_listener tabtool_axis_l;
+    struct wl_listener tabtool_proximity_l;
+    struct wl_listener tabtool_tip_l;
+    struct wl_listener tabtool_button_l;
+
     struct wl_listener config_commit_l;
     struct wl_listener destroy_l;
 };
@@ -137,6 +142,8 @@ void cwc_cursor_set_surface(struct cwc_cursor *cursor,
 void cwc_cursor_hide_cursor(struct cwc_cursor *cursor);
 
 void cwc_cursor_update_scale(struct cwc_cursor *cursor);
+
+void cwc_cursor_notify_activity(struct cwc_cursor *cursor);
 
 /* change style (mainly size)
  *

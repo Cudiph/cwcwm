@@ -521,10 +521,7 @@ static int luaC_pointer_move(lua_State *L)
         return 0;
     }
 
-    struct timespec now;
-    clock_gettime(CLOCK_MONOTONIC, &now);
-    uint64_t now_msec = timespec_to_msec(&now);
-    process_cursor_motion(cursor, now_msec, NULL, x, y, x, y);
+    process_cursor_motion(cursor, 0, NULL, x, y, x, y);
 
     return 0;
 }
@@ -553,10 +550,7 @@ static int luaC_pointer_move_to(lua_State *L)
         return 0;
     }
 
-    struct timespec now;
-    clock_gettime(CLOCK_MONOTONIC, &now);
-    uint64_t now_msec = timespec_to_msec(&now);
-    process_cursor_motion(cursor, now_msec, NULL, dx, dy, dx, dy);
+    process_cursor_motion(cursor, 0, NULL, dx, dy, dx, dy);
 
     return 0;
 }
