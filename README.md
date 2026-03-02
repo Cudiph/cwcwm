@@ -101,9 +101,10 @@ makepkg -si
 
 <details>
 <summary>Gentoo</summary>
-
+#due to gentoo dropping hyprland and the tools you will need to add hyproverlay
 ```
-eselect repository enable zuki
+eselect repository enable zuki hyproverlay
+#/etc/portage/package.accept_keywords/hyproverlay */*::hyproverlay
 emaint sync
 emerge \=gui-wm/cwcwm-0.2.0 or \=gui-wm/cwcwm-9999 for the git version
 ```
