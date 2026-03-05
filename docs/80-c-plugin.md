@@ -1,26 +1,26 @@
 # C Plugin
 
-DISCLAIMER: By writing or loading C plugin writer assume you already know what you're doing and
-writer is not responsible for segfault, loss of data, kernel panic, bad API design,
+DISCLAIMER: By writing or loading a C plugin, the Writer assumes you already know what you're doing and
+is not responsible for segfault, loss of data, kernel panic, bad API design,
 thermonuclear war, or the current economic crisis. Always make sure the plugin you want to load
 doesn't do anything malicious.
 
 ## Loading C Plugin
 
-Loading C plugin can be done by using `cwc.plugin.load` API and to unload it using
+Loading C plugin can be done by using the `cwc.plugin.load` API. A plugin can be unload using
 `cwc.plugin.unload_byname`. If the plugin already exist `cwc.plugin.load` won't reload it,
-if the plugin doesn't support unloading `unload_byname` is doing nothing.
+if the plugin doesn't support unloading `unload_byname` changes nothing.
 
 ## Writing C Plugin
 
-You may be want to write C Plugin because you need full access to cwc internals and perhaps you
-want to add amazing feature so that CwC become more awesome (pun intended). Knowledge of the CwC
-internal code and wlroots may be necessary to start hacking.
+You may want to write a C Plugin because you need full access to CwC internals and perhaps you
+want to add an amazing feature so that CwC becomes more awesome (pun intended). Knowledge of the CwC
+internals and wlroots might be necessary to start hacking.
 
-The API for writing the C plugin is very similar to writing linux kernel module in fact some of the code
-is from linux `module.h`, the difference is it's just start with `PLUGIN` instead of `MODULE`.
+The API for writing the C plugin is very similar to writing a linux kernel module; in fact some of the code
+is from the linux `module.h`, the difference is that it start with `PLUGIN` instead of `MODULE`.
 
-What it does under the hood is just loading the shared object using dlopen.
+What it does under the hood is it just loads the shared object using dlopen.
 Let's take a look at `flayout.c` plugin for example.
 
 ```C
@@ -59,8 +59,8 @@ PLUGIN_LICENSE("MIT");
 PLUGIN_AUTHOR("Dwi Asmoro Bangun <dwiaceromo@gmail.com>");
 ```
 
-First we includes CwC header and other library header that we need. All the public CwC header
-is commonly located at `/usr/include/cwc`, with that information you may need to adjust compiler flag.
+First we includes the CwC header and other library headers that we need. All the public CwC headers
+are located at `/usr/include/cwc`, may need to adjust a compiler flag.
 
 ```C
 #include <wlr/types/wlr_output_layout.h>
@@ -74,9 +74,8 @@ is commonly located at `/usr/include/cwc`, with that information you may need to
 
 Then create an entry point for the plugin load to call. The function name can be anything
 as long as you call `plugin_init` macro with the function name as argument.
-The function signature is `int (*name)(void)`, the return value is actually doesn't decide anything
-but it'll follow linux convention with zero for success and non-zero for error in case
-something change in the future.
+The function signature is `int (*name)(void)`, the return value is zero if successful and non-zero if there is an error
+in case something changes in the future.
 
 ```C
 static int init_can_be_any_name()
@@ -89,9 +88,9 @@ static int init_can_be_any_name()
 plugin_init(init_can_be_any_name);
 ```
 
-If the plugin support unloading, `plugin_exit` macro can be used to mark a function to call
+If the plugin supports unloading, the `plugin_exit` macro can be used to mark a function to call
 before the plugin is unloaded. If the plugin doesn't support unloading you may omit it.
-Or if you support unloading but doesn't need a cleanup just pass an empty function.
+If you support unloading but doesn't need a cleanup just pass an empty function.
 The function signature is `void (*name)(void)`.
 
 ```C
@@ -103,7 +102,7 @@ static void fini()
 plugin_exit(fini);
 ```
 
-Last is plugin metadata, `PLUGIN_NAME` and `PLUGIN_VERSION` is mandatory so that the loader can
+Lastly, plugin metadata. `PLUGIN_NAME` and `PLUGIN_VERSION` is mandatory so that the loader can
 manage it.
 
 ```C
@@ -114,9 +113,8 @@ PLUGIN_LICENSE("MIT");
 PLUGIN_AUTHOR("Dwi Asmoro Bangun <dwiaceromo@gmail.com>");
 ```
 
-After writing the plugin now it's time for the compilation. The plugin need to be compiled
-to shared object file (.so) with linker flag
+After writing the plugin, compile it to a shared object file (.so) with linker flags
 `--allow-shlib-undefined`, `-shared`, and `--as-needed`
 
 If you want to create a lua API in the plugin the convention used is `cwc.<plugin_name>`. For example
-in `cwcle` the `PLUGIN_NAME` is `cwcle` so in the lua side it should be accessed with `cwc.cwcle`.
+in `cwcle` the `PLUGIN_NAME` is `cwcle` so on the lua side it should be accessed with `cwc.cwcle`.

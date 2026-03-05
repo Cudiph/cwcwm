@@ -1,11 +1,11 @@
 # Custom Layout
 
-Custom layout only applicable for master/stack layout mode, for others layout is need to be
+Custom layouts are only applicable for the master/stack layout mode. Layouts for other modes need to be
 integrated to the compositor itself.
 
 ## Custom layout in C
 
-To create a custom layout in C is by implementing the `struct layout_interface` the structure is as following.
+To create a custom layout in C, implement the `struct layout_interface`. The structure is as follows:
 
 ```C
 struct layout_interface {
@@ -23,7 +23,7 @@ struct layout_interface {
 };
 ```
 
-the field `name` is the name of the layout and the `arrange` is function to arrange
+The field `name` is the name of the layout and the `arrange` is function to arrange
 the layout.
 
 - `toplevels` - array of toplevels that can be arranged.
@@ -32,7 +32,7 @@ the layout.
 - `master_state` - info such as such as master width factor, master_count, etc.
 
 Let's take a look at `monocle` layout for the simplest implementation how to arrange the toplevels.
-The monocle layout is just set all the tileable toplevel to the size of the workarea/usable area.
+The monocle layout just sets all the tileable toplevels to the size of the workarea/usable area.
 
 ```C
 static void arrange_monocle(struct cwc_toplevel **toplevels,
@@ -57,8 +57,8 @@ static void arrange_monocle(struct cwc_toplevel **toplevels,
 ```
 
 One thing to keep in mind is to set the toplevel size and position we use `cwc_container_set_xxx`
-instead of `cwc_toplevel_set_xxx` because the toplevel decoration need to accounted. Also
-you don't need to worry about the gap as it's already taken care by both `set_position_gap` and
+instead of `cwc_toplevel_set_xxx` because the toplevel decoration need to be accounted. Also
+you don't need to worry about the gap as it's already taken care of by both `set_position_gap` and
 `set_size`.
 
 Once the interface is implemented, now register it by using `master_register_layout`.
