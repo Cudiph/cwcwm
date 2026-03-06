@@ -99,12 +99,20 @@ makepkg -si
 
 </details>
 
+
 <details>
+
 <summary>Gentoo</summary>
 
+# Due to gentoo dropping hyprland, you will need to enable hyproverlay repository for the hyprcursor library```
+
 ```
-eselect repository enable zuki
+eselect repository enable zuki hyproverlay
+
+#/etc/portage/package.accept_keywords/hyproverlay */*::hyproverlay
+
 emaint sync
+
 emerge \=gui-wm/cwcwm-0.2.0 or \=gui-wm/cwcwm-9999 for the git version
 ```
 
