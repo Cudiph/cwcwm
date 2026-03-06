@@ -104,7 +104,7 @@ makepkg -si
 
 <summary>Gentoo</summary>
 
-#due to gentoo dropping hyprland and the tools you will need to add hyproverlay
+# Due to gentoo dropping hyprland, you will need to enable hyproverlay repository for the hyprcursor library```
 
 ```
 eselect repository enable zuki hyproverlay
