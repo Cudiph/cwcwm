@@ -16,6 +16,7 @@ In this guide the words *tag* and *workspace* may be used interchangeably.
 CwC's layout system is similar to Awesome but in CwC, layouts are grouped into multiple `layout mode`s.
 In a single `layout mode` there are multiple `strategy`s.
 Currently there are three: `layout mode`s with varying `strategy`s:
+
 - `floating` (Traditional):        Currently there are no strategies of this mode.
 - `master` (Awesome layout style): Tiled \[left\], monocle, fullscreen (via flayout plugin).
 - `bsp`: (bspwm tiling mode):      Longest side scheme insertion.
@@ -139,7 +140,7 @@ config.init(require("conf"))
 Before starting CwC run `cwc --check` to check if there are any errors in your configuration,
 so your not staring at a confusing blank screen.
 If there is ever a problem and you cant exit CwC with `Super + CTRL + Delete`,
-you can switch to a different tty by pressing `CTRL + ALT + FnN` where N is the tty number.
+you can switch to a different tty by pressing `CTRL + ALT + (F1-F6)` where N is the tty number.
 
 ## Default Keybindings
 
