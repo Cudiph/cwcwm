@@ -1,38 +1,33 @@
 # Getting Started
 
-Getting started with cwc.
+Getting started with CwC.
 
 ## Basic concept
 
 ### Tag system
 
-CwC is using dwm tag model rather than like in Awesome where the tag is a 32 bit bitfield
-which mean it's limited to 30 tags but it should be enough for most people I think. The tags
-is integrated to the screen so the tags is independent across screens and since it's integrated,
-all the tag operation is on the screen object when using lua or C api. The tag and workspace in this
-guide may be used interchangeably.
+In CwC, every window can have multiple tags. Tags are implemented as a 32 bit field (similar to dwm)
+which means there can be at most 30 tags. Since tags are tied to specific screens / monitors, tag operations happen
+on the screen objects when using the lua or C API.
+In this guide the words *tag* and *workspace* may be used interchangeably.
 
 ### Layout system
 
-The layout system is similar like in Awesome with the difference in cwc is that it's grouped.
-The grouping is called `layout mode` with the layout options is called `strategy`,
-there are 3 modes which is `floating`, `master/stack`, and `bsp`.
-This allow cwc to act like traditional floating/stacking window manager,
-Awesome layout style, and bspwm tiling mode.
+CwC's layout system is similar to Awesome but in CwC, layouts are grouped into multiple `layout mode`s.
+In a single `layout mode` there are multiple `strategy`s.
+Currently there are three: `layout mode`s with varying `strategy`s:
 
-Strategy:
-
-- `Floating` - Currently there are none.
-- `Master/stack` - Tiled \[left\], monocle, fullscreen (via flayout plugin).
-- `BSP` - Longest side scheme insertion.
+- `floating` (Traditional):        Currently there are no strategies of this mode.
+- `master` (Awesome layout style): Tiled \[left\], monocle, fullscreen (via flayout plugin).
+- `bsp`: (bspwm tiling mode):      Longest side scheme insertion.
 
 The `layout mode` can be changed at runtime by pressing `Super + Space` and
-to change the `strategy` is by pressing `Super + Control + Space`.
+the `strategy` can be changed by pressing `Super + Control + Space`.
 
 ### The client
 
-The client or window or toplevel in wayland terms is a surface that can be transformed by the
-user such as fullscreen, maximizing, minimizing, resizing, etc.
+Every window or client (or toplevel in wayland terms) is a surface that can be transformed by the
+user. These transformations are things like full screening, maximizing, minimizing, resizing, etc.
 
 ### The screen
 
@@ -40,33 +35,34 @@ The screen or output in wayland terms is a device that describes part of the com
 
 ### The container
 
-The container basically a group of client overlapping each other inside a rectangular area.
-It's can be used to simulate window swallowing or tabbed layout. Every client operation like resizing
-will be reflected to every client in the container.
+A container is a group of clients which live inside of a single rectangular area. 
+Only one client out of the group is displayed at a time. Cycle to the next / previous client in the group by pressing 
+`Super + Tab` or `Super + Shift + Tab`.
+This can be used to simulate window swallowing or a tabbed layout. Every client operation like resizing
+will be applied to every client in the container.
 
-To try it, use `Super + T` to mark current focused container then open any application it
-will be inserted to the marked container. To switch view between clients in the container
-press `Super + Tab` and `Super + Shift + Tab`, this concept is taken from tabbing in browser.
+To try it, use `Super + T` to mark currently focused container, then open any application.
+The new client will be inserted to the marked container.
 
 ### Signals
 
-The compositor may emit a signal when an event occurs. CwC doesn't have per object signal like in
-Awesome because it's simpler to manage between lua script and C plugins so every signal is need
-to be subscribed by using `cwc.connect_signal`, to unsubscribe use `cwc.disconnect_signal`,
-and to notify use `cwc.emit_signal`. To mimic per object signal cwc use format like `object::eventname`
-where object will be passed as first argument in the callback function. For example when
-a client is mapped to the screen, it emits `client::map` signal.
+The compositor may emit a signal when an event occurs. CwC doesn't have per object signals like
+Awesome. This makes it simpler to coordinate between lua script and C plugins.
+One can subscribe to a signal by using `cwc.connect_signal`, to unsubscribe use `cwc.disconnect_signal`,
+and to notify use `cwc.emit_signal`. To mimic per object signals, CwC uses the following format: `object::eventname`
+`object` will be passed as the first argument to the callback function. For example when
+a client is mapped to the screen, it emits a `client::map` signal.
 
 ## Lua configuration
 
-CwC will search lua configuration in `$XDG_CONFIG_HOME/cwc/rc.lua` or `~/.config/cwc/rc.lua`,
+CwC will search for lua files in `$XDG_CONFIG_HOME/cwc/rc.lua` or `~/.config/cwc/rc.lua`,
 if both path are not exist or contain an error cwc will load the default lua configuration.
 
 The default configuration is the best way to learn the lua API.
-The entry point located at `defconfig/rc.lua` from the project root directory,
-there's explanation how things working.
-If the comments still unclear or wrong feel free to open an issue.
-Here is some highlight of common things in the lua configuration.
+The entry point is located at `defconfig/rc.lua` from the project root directory.
+There are code comments that explain how things work.
+If the comments are unclear or wrong feel free to open an issue.
+Here is some highlight of common things in the lua configuration:
 
 Configuration can be reloaded by calling `cwc.reload`, to check whether the configuration is
 triggered by `cwc.reload`, use `cwc.is_startup`.
@@ -78,8 +74,7 @@ if cwc.is_startup() then
 end
 ```
 
-To create a keybinding, use `cwc.pointer.bind` for mouse buttons and use `cwc.kbd.bind` for keyboard
-buttons.
+To create keybindings, use `cwc.kbd.bind`; for mouse buttons, use `cwc.pointer.bind`.
 
 ```lua
 local cful = require("cuteful")
@@ -98,13 +93,14 @@ kbd.bind({ MODKEY }, "j", function()
 end, { description = "focus down" })
 ```
 
-Some of the object has function for configuration, to set a configuration just call the function
-with value you want to set. Here is an example when user want to set mouse sensitivity to very low with keyboard
-repeat rate to 30hz and set the normal client border to dark grey.
+Some of the object have functions for configuration. To set a configuration just call the function
+with value you want to set. Here is an example when user want to set mouse sensitivity to very low, keyboard
+repeat rate to 30hz, and set the normal client border to dark grey.
 
 ```lua
 cwc.pointer.set_cursor_size(24)
 
+-- how quickly additional keypress event are send when holding down a key
 cwc.kbd.set_repeat_rate(30)
 
 local gears = require("gears")
@@ -117,7 +113,7 @@ end
 ```
 
 Or better yet using the declarative config like so.
-Below script is equivalent to the script above.
+The script below is equivalent to the one above.
 
 ```lua
 ---- ./conf.lua ----
@@ -141,13 +137,12 @@ config.init(require("conf"))
 -- rest of script...
 ```
 
-Before really opening the wayland session,
-it is better to run `cwc --check` to verify if there any error in the configuration,
-so there is no confusing blank screen.
+Before starting CwC run `cwc --check` to check if there are any errors in your configuration,
+so your not staring at a confusing blank screen.
+If there is ever a problem and you cant exit CwC with `Super + CTRL + Delete`,
+you can switch to a different tty by pressing `CTRL + ALT + (F1-F6)` where N is the tty number.
 
-To switch tty press `ALT + CTRL + Fn` where n is the tty number.
-
-## Default Keybinding
+## Default Keybindings
 
 ### cwc
 
@@ -227,12 +222,13 @@ To switch tty press `ALT + CTRL + Fn` where n is the tty number.
 - `Super + F1` open a web browser
 - `Super + Print` screenshot entire screen
 - `Super + b` toggle waybar
-- `Super + p` application launcher
+- `Super + p` application launcher (default is rofi)
+- `Super + RETURN` open a terminal
 - `Super + v` clipboard history
 
 ### tag
 
-- `Super + 0` deactivate all tag on all screen
+- `Super + 0` deactivate all tags on all screen
 - `Super + 1` view tag #1
 - `Super + 2` view tag #2
 - `Super + 3` view tag #3
