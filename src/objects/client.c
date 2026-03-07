@@ -695,25 +695,7 @@ static int luaC_client_set_geometry(lua_State *L)
     struct cwc_toplevel *toplevel = luaC_client_checkudata(L, 1);
     struct wlr_box box            = cwc_toplevel_get_box(toplevel);
 
-    lua_getfield(L, 2, "x");
-    if (!lua_isnil(L, -1))
-        box.x = luaL_checkint(L, -1);
-    lua_pop(L, 1);
-
-    lua_getfield(L, 2, "y");
-    if (!lua_isnil(L, -1))
-        box.y = luaL_checkint(L, -1);
-    lua_pop(L, 1);
-
-    lua_getfield(L, 2, "width");
-    if (!lua_isnil(L, -1))
-        box.width = luaL_checkint(L, -1);
-    lua_pop(L, 1);
-
-    lua_getfield(L, 2, "height");
-    if (!lua_isnil(L, -1))
-        box.height = luaL_checkint(L, -1);
-    lua_pop(L, 1);
+    luaC_box_from_table(L, 2, &box);
 
     cwc_toplevel_set_position_global(toplevel, box.x, box.y);
     cwc_toplevel_set_size_surface(toplevel, box.width, box.height);

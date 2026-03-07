@@ -24,12 +24,16 @@
 #include <wlr/types/wlr_tablet_pad.h>
 #include <wlr/types/wlr_tablet_v2.h>
 
+#include "cwc/config.h"
 #include "cwc/desktop/toplevel.h"
 #include "cwc/input/cursor.h"
 #include "cwc/input/manager.h"
 #include "cwc/input/seat.h"
 #include "cwc/input/tablet.h"
+#include "cwc/luaclass.h"
+#include "cwc/luaobject.h"
 #include "cwc/server.h"
+#include "cwc/signal.h"
 #include "cwc/util.h"
 
 static void on_tablet_tool_set_cursor(struct wl_listener *listener, void *data)
@@ -79,16 +83,29 @@ static void tablet_tool_init(struct cwc_tablet *tablet,
     wl_signal_add(&wlr_tool->events.destroy, &tabtool->destroy_l);
 }
 
-void handle_cursor_motion(struct cwc_cursor *cursor,
-                          struct wlr_tablet_tool_axis_event *event)
+static void handle_cursor_motion(struct cwc_cursor *cursor,
+                                 struct wlr_tablet_tool_axis_event *event)
 {
+
     bool changed_x = event->updated_axes & WLR_TABLET_TOOL_AXIS_X;
     bool changed_y = event->updated_axes & WLR_TABLET_TOOL_AXIS_Y;
 
     if (!changed_x && !changed_y)
         return;
-    struct wlr_input_device *device = &event->tablet->base;
+
     struct wlr_cursor *wlr_cursor   = cursor->wlr_cursor;
+    struct wlr_input_device *device = &event->tablet->base;
+
+    if (cursor->state != CWC_CURSOR_STATE_NORMAL) {
+        double lx, ly;
+        wlr_cursor_absolute_to_layout_coords(wlr_cursor, device, event->x,
+                                             event->y, &lx, &ly);
+        double dx = changed_x ? lx - cursor->wlr_cursor->x : 0;
+        double dy = changed_y ? ly - cursor->wlr_cursor->y : 0;
+        process_cursor_motion(cursor, event->time_msec, device, dx, dy, dx, dy);
+        return;
+    }
+
     struct cwc_tablet *tablet       = event->tablet->data;
     struct cwc_tablet_tool *tabtool = event->tool->data;
 
@@ -164,6 +181,7 @@ void process_tablet_tool_proximity(
 {
     struct cwc_tablet_tool *tabtool = event->tool->data;
     struct cwc_tablet *tablet       = event->tablet->data;
+    struct wlr_cursor *wlr_cursor   = cursor->wlr_cursor;
 
     if (tabtool && event->state == WLR_TABLET_TOOL_PROXIMITY_OUT) {
         wlr_tablet_v2_tablet_tool_notify_proximity_out(tabtool->tablet_v2_tool);
@@ -181,7 +199,17 @@ void process_tablet_tool_proximity(
     double dx = lx - cursor->wlr_cursor->x;
     double dy = ly - cursor->wlr_cursor->y;
 
-    process_cursor_motion(cursor, event->time_msec, device, dx, dy, dx, dy);
+    double cx = wlr_cursor->x;
+    double cy = wlr_cursor->y;
+    double sx, sy;
+    struct wlr_surface *surface = scene_surface_at(cx, cy, &sx, &sy);
+
+    if (surface && wlr_surface_accepts_tablet_v2(surface, tablet->tablet_v2)) {
+        wlr_cursor_warp_absolute(wlr_cursor, tablet->tablet_v2->wlr_device,
+                                 event->x, event->y);
+    } else {
+        process_cursor_motion(cursor, event->time_msec, device, dx, dy, dx, dy);
+    }
 }
 
 void process_tablet_tool_tip(struct cwc_cursor *cursor,
@@ -202,6 +230,7 @@ void process_tablet_tool_tip(struct cwc_cursor *cursor,
     if (wlr_surface_accepts_tablet_v2(surface, tablet->tablet_v2)) {
         if (event->state == WLR_TABLET_TOOL_TIP_UP) {
             wlr_tablet_v2_tablet_tool_notify_up(tabtool->tablet_v2_tool);
+            stop_interactive(cursor);
             return;
         } else {
             wlr_tablet_v2_tablet_tool_notify_down(tabtool->tablet_v2_tool);
@@ -236,6 +265,10 @@ void process_tablet_tool_button(struct cwc_cursor *cursor,
 
 static void _cwc_tablet_destroy(struct cwc_tablet *tablet)
 {
+    lua_State *L = g_config_get_lua_State();
+    cwc_object_emit_signal_simple("tablet::destroy", L, tablet);
+    luaC_object_unregister(L, tablet);
+
     wl_list_remove(&tablet->link);
     wl_list_remove(&tablet->destroy_l.link);
 
@@ -270,7 +303,10 @@ struct cwc_tablet *cwc_tablet_create(struct cwc_seat *seat,
 
     wl_list_insert(&seat->tablet_devs, &tablet->link);
 
-    cwc_log(CWC_DEBUG, "new tablet: %s\n", tablet->tablet_v2->wlr_device->name);
+    lua_State *L = g_config_get_lua_State();
+    luaC_object_tablet_register(L, tablet);
+    cwc_object_emit_signal_simple("tablet::new", L, tablet);
+
     return tablet;
 }
 

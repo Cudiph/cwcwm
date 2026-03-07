@@ -65,6 +65,7 @@ srcs = [
   'objects/timer.c',
   'objects/kbd.c',
   'objects/pointer.c',
+  'objects/tablet.c',
 
   'protocol/dwl_ipc_v2.c',
 

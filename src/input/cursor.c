@@ -304,6 +304,47 @@ void cwc_cursor_notify_activity(struct cwc_cursor *cursor)
                                          cursor->seat);
 }
 
+static bool cwc_cursor_check_interactive(struct cwc_cursor *cursor,
+                                         struct wlr_input_device *device,
+                                         double dx,
+                                         double dy)
+{
+    struct wlr_cursor *wlr_cursor = cursor->wlr_cursor;
+
+    switch (cursor->state) {
+    case CWC_CURSOR_STATE_MOVE:
+        wlr_cursor_move(wlr_cursor, device, dx, dy);
+        process_cursor_move_floating(cursor);
+        return true;
+    case CWC_CURSOR_STATE_MOVE_MASTER:
+    case CWC_CURSOR_STATE_MOVE_BSP:
+        wlr_cursor_move(wlr_cursor, device, dx, dy);
+        process_cursor_move(cursor);
+        return true;
+    case CWC_CURSOR_STATE_RESIZE:
+        // skip synchronization otherwise it'll make resizing sluggish
+        server.resize_count = -1e6;
+        wlr_cursor_move(wlr_cursor, device, dx, dy);
+        process_cursor_resize(cursor);
+        return true;
+    case CWC_CURSOR_STATE_RESIZE_BSP:
+        server.resize_count = -1e6;
+        wlr_cursor_move(wlr_cursor, device, dx, dy);
+        process_cursor_resize_bsp(cursor);
+        return true;
+    case CWC_CURSOR_STATE_RESIZE_MASTER:
+        server.resize_count = -1e6;
+        wlr_cursor_move(wlr_cursor, device, dx, dy);
+        process_cursor_resize_master(cursor);
+        return true;
+    default:
+        return false;
+        break;
+    };
+
+    unreachable_();
+}
+
 void process_cursor_motion(struct cwc_cursor *cursor,
                            uint32_t time_msec,
                            struct wlr_input_device *device,
@@ -317,30 +358,8 @@ void process_cursor_motion(struct cwc_cursor *cursor,
 
     cwc_cursor_notify_activity(cursor);
 
-    switch (cursor->state) {
-    case CWC_CURSOR_STATE_MOVE:
-        wlr_cursor_move(wlr_cursor, device, dx, dy);
-        return process_cursor_move_floating(cursor);
-    case CWC_CURSOR_STATE_MOVE_MASTER:
-    case CWC_CURSOR_STATE_MOVE_BSP:
-        wlr_cursor_move(wlr_cursor, device, dx, dy);
-        return process_cursor_move(cursor);
-    case CWC_CURSOR_STATE_RESIZE:
-        // skip synchronization otherwise it'll make resizing sluggish
-        server.resize_count = -1e6;
-        wlr_cursor_move(wlr_cursor, device, dx, dy);
-        return process_cursor_resize(cursor);
-    case CWC_CURSOR_STATE_RESIZE_BSP:
-        server.resize_count = -1e6;
-        wlr_cursor_move(wlr_cursor, device, dx, dy);
-        return process_cursor_resize_bsp(cursor);
-    case CWC_CURSOR_STATE_RESIZE_MASTER:
-        server.resize_count = -1e6;
-        wlr_cursor_move(wlr_cursor, device, dx, dy);
-        return process_cursor_resize_master(cursor);
-    default:
-        break;
-    }
+    if (cwc_cursor_check_interactive(cursor, device, dx, dy))
+        return;
 
     double cx = wlr_cursor->x;
     double cy = wlr_cursor->y;
