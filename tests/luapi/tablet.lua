@@ -13,7 +13,7 @@ local signal_list = {
 local triggered_list = {}
 
 for _, signame in pairs(signal_list) do
-    cwc.connect_signal(signame, function ()
+    cwc.connect_signal(signame, function()
         triggered_list[signame] = true
     end)
 end

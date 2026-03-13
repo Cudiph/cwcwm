@@ -370,3 +370,23 @@ void cleanup_seat(struct cwc_input_manager *input_mgr)
 {
     wl_list_remove(&input_mgr->create_seat_l.link);
 }
+
+void cwc_seat_begin_down(struct cwc_seat *seat,
+                         struct wlr_surface *surface,
+                         double sx,
+                         double sy,
+                         bool accept_tablet)
+{
+    if (surface == NULL)
+        return;
+
+    seat->is_down                    = true;
+    seat->surface_origin_x           = seat->cursor->wlr_cursor->x - sx;
+    seat->surface_origin_y           = seat->cursor->wlr_cursor->y - sy;
+    seat->init_surface_accept_tablet = accept_tablet;
+}
+
+void cwc_seat_end_down(struct cwc_seat *seat)
+{
+    seat->is_down = false;
+}

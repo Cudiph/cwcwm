@@ -96,6 +96,7 @@ static void handle_cursor_motion(struct cwc_cursor *cursor,
     struct wlr_cursor *wlr_cursor   = cursor->wlr_cursor;
     struct wlr_input_device *device = &event->tablet->base;
 
+    /* when in interactive mode, let the pointer simulation handle it */
     if (cursor->state != CWC_CURSOR_STATE_NORMAL) {
         double lx, ly;
         wlr_cursor_absolute_to_layout_coords(wlr_cursor, device, event->x,
@@ -117,7 +118,18 @@ static void handle_cursor_motion(struct cwc_cursor *cursor,
     if (!surface)
         goto move_only;
 
-    if (wlr_surface_accepts_tablet_v2(surface, tablet->tablet_v2)) {
+    struct cwc_seat *seat = cursor->seat->data;
+
+    if (seat->is_down) {
+        double cx                       = cursor->wlr_cursor->x;
+        double cy                       = cursor->wlr_cursor->y;
+        double sx                       = cx - seat->surface_origin_x;
+        double sy                       = cy - seat->surface_origin_y;
+        struct cwc_tablet_tool *tabtool = event->tool->data;
+        wlr_tablet_v2_tablet_tool_notify_motion(tabtool->tablet_v2_tool, sx,
+                                                sy);
+    } else if (wlr_surface_accepts_tablet_v2(surface, tablet->tablet_v2)) {
+        wlr_seat_pointer_notify_enter(cursor->seat, surface, sx, sy);
         wlr_tablet_v2_tablet_tool_notify_proximity_in(
             tabtool->tablet_v2_tool, tablet->tablet_v2, surface);
         wlr_tablet_v2_tablet_tool_notify_motion(tabtool->tablet_v2_tool, sx,
@@ -140,7 +152,6 @@ void process_tablet_tool_motion(struct cwc_cursor *cursor,
     cwc_cursor_notify_activity(cursor);
 
     struct cwc_tablet_tool *tabtool = event->tool->data;
-    struct cwc_tablet *tablet       = event->tablet->data;
 
     handle_cursor_motion(cursor, event);
 
@@ -218,6 +229,13 @@ void process_tablet_tool_tip(struct cwc_cursor *cursor,
     struct cwc_tablet_tool *tabtool = event->tool->data;
     struct cwc_tablet *tablet       = event->tablet->data;
     struct wlr_cursor *wlr_cursor   = cursor->wlr_cursor;
+    struct cwc_seat *seat           = cursor->seat->data;
+
+    if (seat->is_down && event->state == WLR_TABLET_TOOL_TIP_UP) {
+        cwc_seat_end_down(seat);
+        wlr_tablet_v2_tablet_tool_notify_up(tabtool->tablet_v2_tool);
+        stop_interactive(cursor);
+    }
 
     double cx = wlr_cursor->x;
     double cy = wlr_cursor->y;
@@ -233,6 +251,7 @@ void process_tablet_tool_tip(struct cwc_cursor *cursor,
             stop_interactive(cursor);
             return;
         } else {
+            cwc_seat_begin_down(seat, surface, sx, sy, true);
             wlr_tablet_v2_tablet_tool_notify_down(tabtool->tablet_v2_tool);
         }
     } else {

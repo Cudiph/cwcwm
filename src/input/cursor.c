@@ -366,9 +366,6 @@ void process_cursor_motion(struct cwc_cursor *cursor,
     double sx, sy;
     struct wlr_surface *surface = scene_surface_at(cx, cy, &sx, &sy);
     struct cwc_output *output   = cwc_output_at(server.output_layout, cx, cy);
-    struct wlr_pointer_constraint_v1 *surf_constraint =
-        wlr_pointer_constraints_v1_constraint_for_surface(
-            server.input->pointer_constraints, surface, cursor->seat);
 
     if (cursor->last_output != output) {
         lua_State *L = g_config_get_lua_State();
@@ -394,6 +391,10 @@ void process_cursor_motion(struct cwc_cursor *cursor,
         server.input->relative_pointer_manager, wlr_seat,
         (uint64_t)time_msec * 1000, dx, dy, dx_unaccel, dy_unaccel);
 
+    struct wlr_pointer_constraint_v1 *surf_constraint =
+        wlr_pointer_constraints_v1_constraint_for_surface(
+            server.input->pointer_constraints, surface, cursor->seat);
+
     // sway + dwl implementation in very simplified way, may contain bugs
     if (surf_constraint && device && device->type == WLR_INPUT_DEVICE_POINTER
         && surf_constraint->surface
@@ -413,7 +414,12 @@ void process_cursor_motion(struct cwc_cursor *cursor,
         dy = sy_confined - sy;
     }
 
-    if (surface) {
+    struct cwc_seat *seat = wlr_seat->data;
+    if (seat->is_down) {
+        sx = cx - seat->surface_origin_x;
+        sy = cy - seat->surface_origin_y;
+        wlr_seat_pointer_notify_motion(wlr_seat, time_msec, sx, sy);
+    } else if (surface) {
         wlr_seat_pointer_notify_enter(wlr_seat, surface, sx, sy);
         wlr_seat_pointer_notify_motion(wlr_seat, time_msec, sx, sy);
     } else {
@@ -959,7 +965,8 @@ void process_cursor_button(struct cwc_cursor *cursor,
     double cx = cursor->wlr_cursor->x;
     double cy = cursor->wlr_cursor->y;
     double sx, sy;
-    struct cwc_toplevel *toplevel = cwc_toplevel_at(cx, cy, &sx, &sy);
+    struct wlr_surface *surf      = scene_surface_at(cx, cy, &sx, &sy);
+    struct cwc_toplevel *toplevel = cwc_toplevel_try_from_wlr_surface(surf);
 
     wlr_idle_notifier_v1_notify_activity(server.idle->idle_notifier,
                                          cursor->seat);
@@ -987,6 +994,8 @@ void process_cursor_button(struct cwc_cursor *cursor,
         handled |= keybind_mouse_execute(server.main_mouse_kmap, modifiers,
                                          event->button, true);
 
+        struct cwc_seat *seat = cursor->seat->data;
+        cwc_seat_begin_down(seat, surf, sx, sy, false);
     } else {
         struct wlr_keyboard *kbd = wlr_seat_get_keyboard(cursor->seat);
         uint32_t modifiers       = kbd ? wlr_keyboard_get_modifiers(kbd) : 0;
@@ -996,6 +1005,9 @@ void process_cursor_button(struct cwc_cursor *cursor,
         // same as keyboard binding always pass release button to client
         keybind_mouse_execute(server.main_mouse_kmap, modifiers, event->button,
                               false);
+
+        struct cwc_seat *seat = cursor->seat->data;
+        cwc_seat_end_down(seat);
     }
 
     if (!handled && cursor->send_events)
