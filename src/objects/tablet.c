@@ -21,7 +21,7 @@
  * @author Dwi Asmoro Bangun
  * @copyright 2026
  * @license GPLv3
- * @coreclassmod cwc_tablet
+ * @inputmodule cwc.tablet
  */
 
 #include <lauxlib.h>

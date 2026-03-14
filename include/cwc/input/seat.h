@@ -25,7 +25,7 @@ struct cwc_seat {
     struct cwc_text_input *focused_text_input;
     struct wlr_input_method_keyboard_grab_v2 *kbd_grab;
 
-    /* states */
+    /* held down states */
     bool is_down;
     bool init_surface_accept_tablet;
     double surface_origin_x;
