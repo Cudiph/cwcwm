@@ -37,6 +37,8 @@ extern char *library_path;
 int luaC_init();
 void luaC_fini();
 
+void luaC_box_from_table(lua_State *L, int table_pos, struct wlr_box *box);
+
 //========== MACRO =============
 
 static inline void luaC_dumpstack(lua_State *L)

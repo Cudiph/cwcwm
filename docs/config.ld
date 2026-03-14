@@ -46,6 +46,7 @@ file                                          = {
     "../src/objects/timer.c",
     "../src/objects/pointer.c",
     "../src/objects/kbd.c",
+    "../src/objects/tablet.c",
 
     "../plugins/cwcle.c",
 
@@ -2358,6 +2359,7 @@ local inputmodulemap = {
     ["cwc.input"] = "cwc.input<span class='listplusign'> + cwc_input</span>",
     ["cwc.kbd"] = "cwc.kbd<span class='listplusign'> + cwc_kbd</span>",
     ["cwc.pointer"] = "cwc.pointer<span class='listplusign'> + cwc_pointer</span>",
+    ["cwc.tablet"] = "cwc.tablet<span class='listplusign'> + cwc_tablet</span>",
 }
 
 -- Add the full module name in front.
