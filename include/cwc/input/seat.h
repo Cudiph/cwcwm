@@ -54,6 +54,7 @@ struct cwc_seat {
 struct cwc_drag {
     struct wlr_drag *wlr_drag;
     struct wlr_scene_tree *scene_tree;
+    struct cwc_seat *seat;
 
     struct wl_listener on_drag_motion_l;
     struct wl_listener on_drag_destroy_l;
