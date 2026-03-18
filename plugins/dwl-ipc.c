@@ -5,6 +5,7 @@
 #include "cwc/desktop/output.h"
 #include "cwc/desktop/toplevel.h"
 #include "cwc/layout/container.h"
+#include "cwc/layout/master.h"
 #include "cwc/plugin.h"
 #include "cwc/protocol/dwl_ipc_v2.h"
 #include "cwc/server.h"
@@ -125,6 +126,38 @@ get_ipc_output_tag_state(struct cwc_output *cwc_o,
     }
 }
 
+static const char *get_layout_symbol(struct cwc_output *output)
+{
+    struct cwc_tag_info *info = cwc_output_get_current_tag_info(output);
+
+    switch (info->layout_mode) {
+    case CWC_LAYOUT_MASTER:
+        return info->master_state.current_layout->name;
+    case CWC_LAYOUT_FLOATING:
+        return "floating";
+    case CWC_LAYOUT_BSP:
+        return "bsp";
+    default:
+        return "";
+    }
+}
+
+static void update_layout_symbol(struct cwc_output *output)
+{
+    struct cwc_output_addon *output_addon = cwc_output_get_output_addon(output);
+    if (!output_addon)
+        return;
+
+    const char *symbol = get_layout_symbol(output);
+
+    struct cwc_ipc_output *ipc_output;
+    wl_list_for_each(ipc_output, &output_addon->ipc_outputs, link)
+    {
+        cwc_dwl_ipc_output_v2_set_layout_symbol(ipc_output->output_handle,
+                                                 symbol);
+    }
+}
+
 static void on_new_dwl_ipc_output(struct wl_listener *listener, void *data)
 {
     struct cwc_dwl_ipc_output_v2 *output_handle = data;
@@ -142,6 +175,8 @@ static void on_new_dwl_ipc_output(struct wl_listener *listener, void *data)
 
     cwc_dwl_ipc_output_v2_set_active(
         output_handle, cwc_output_get_focused() == output_handle->output->data);
+    cwc_dwl_ipc_output_v2_set_layout_symbol(output_handle,
+                                            get_layout_symbol(output));
 
     for (int i = 1; i <= output->state->max_general_workspace; i++) {
         struct cwc_dwl_ipc_output_v2_tag_state state;
@@ -295,6 +330,18 @@ static void on_screen_prop_active_tag(void *data)
 {
     struct cwc_output *output = data;
     update_tag_idle_source(output);
+    update_layout_symbol(output);
+}
+
+static void on_tag_prop_layout_mode(void *data)
+{
+    struct cwc_tag_info *tag = data;
+    struct cwc_output *output;
+    wl_list_for_each(output, &server.outputs, link)
+    {
+        if (cwc_output_get_current_tag_info(output) == tag)
+            update_layout_symbol(output);
+    }
 }
 
 static void on_screen_focus(void *data)
@@ -369,6 +416,7 @@ static int dwl_ipc_setup()
     cwc_signal_connect("screen::focus", on_screen_focus);
     cwc_signal_connect("screen::unfocus", on_screen_unfocus);
     cwc_signal_connect("screen::prop::active_tag", on_screen_prop_active_tag);
+    cwc_signal_connect("tag::prop::layout_mode", on_tag_prop_layout_mode);
 
     return 0;
 }
@@ -417,6 +465,7 @@ static void dwl_ipc_cleanup()
     cwc_signal_disconnect("screen::unfocus", on_screen_unfocus);
     cwc_signal_disconnect("screen::prop::active_tag",
                           on_screen_prop_active_tag);
+    cwc_signal_disconnect("tag::prop::layout_mode", on_tag_prop_layout_mode);
 }
 
 plugin_init(dwl_ipc_setup);
