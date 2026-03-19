@@ -15,6 +15,8 @@
 static struct cwc_dwl_ipc_manager_v2 *manager;
 static struct wl_listener on_new_dwl_ipc_output_l;
 
+static void update_tag_idle_source(struct cwc_output *output);
+
 struct cwc_ipc_output {
     struct wl_list link;
     struct cwc_dwl_ipc_output_v2 *output_handle;
@@ -189,6 +191,16 @@ static void on_client_should_title_reset(void *data)
     }
 }
 
+static void on_client_unmap(void *data)
+{
+    struct cwc_toplevel *toplevel = data;
+    if (!toplevel->container)
+        return;
+
+    on_client_should_title_reset(data);
+    update_tag_idle_source(toplevel->container->output);
+}
+
 static void on_screen_new(void *data)
 {
     struct cwc_output *output      = data;
@@ -355,7 +367,8 @@ static int dwl_ipc_setup()
 
     cwc_signal_connect("client::focus", on_client_prop_change);
     cwc_signal_connect("client::unfocus", on_client_should_title_reset);
-    cwc_signal_connect("client::unmap", on_client_should_title_reset);
+    cwc_signal_connect("client::unmap", on_client_unmap);
+    cwc_signal_connect("client::map", on_client_prop_change_and_update_tag);
     cwc_signal_connect("client::prop::urgent",
                        on_client_prop_change_and_update_tag);
     cwc_signal_connect("client::prop::tag",
