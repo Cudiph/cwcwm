@@ -3,7 +3,6 @@
   stdenv,
   stdenvAdapters,
   wayland,
-  wlroots_0_19,
   hyprcursor,
   pango,
   cairo,
@@ -30,21 +29,24 @@
   debug ? false,
   gtk3Support ? false,
   gtk3 ? null,
+  wlroots,
 }:
-assert gtk3Support -> gtk3 != null; let
-  inherit (lib.lists) flatten concatLists optional optionals;
-  inherit (builtins) foldl' readFile;
+assert gtk3Support -> gtk3 != null;
+let
+  inherit (lib.lists)
+    flatten
+    ;
+  inherit (builtins) foldl';
 
   luaEnv = luajit.withPackages (ps: [
     ps.lgi
   ]);
-  commonDeps =
-    [
-      gdk-pixbuf
-      pango
-      glib
-    ]
-    ++ lib.optional gtk3Support gtk3;
+  commonDeps = [
+    gdk-pixbuf
+    pango
+    glib
+  ]
+  ++ lib.optional gtk3Support gtk3;
 
   adapters = flatten [
     stdenvAdapters.useMoldLinker
@@ -53,77 +55,86 @@ assert gtk3Support -> gtk3 != null; let
 
   customStdenv = foldl' (acc: adapter: adapter acc) stdenv adapters;
 in
-  customStdenv.mkDerivation {
-    pname = "cwc";
-    version = "nightly";
+customStdenv.mkDerivation {
+  pname = "cwc";
+  version = "nightly";
 
-    src = builtins.path {
-      path = ../.;
-      name = "source";
-    };
+  src = builtins.path {
+    path = ../.;
+    name = "source";
+  };
 
-    nativeBuildInputs = [
-      meson
-      ninja
-      pkg-config
-      wayland-protocols
-      wayland-scanner
-      git
-      python3Minimal
-      makeWrapper
-      wrapGAppsHook3
-      gobject-introspection
-    ];
+  nativeBuildInputs = [
+    meson
+    ninja
+    pkg-config
+    wayland-protocols
+    wayland-scanner
+    git
+    python3Minimal
+    makeWrapper
+    wrapGAppsHook3
+    gobject-introspection
+  ];
 
-    buildInputs =
-      [
-        wayland
-        wlroots_0_19
-        hyprcursor
-        cairo
-        libxkbcommon
-        libinput
-        xxHash
-        xwayland
-        libxcb
-        libxcb-wm
-        luaEnv
-        libdrm
+  buildInputs = [
+    wayland
+    wlroots
+    hyprcursor
+    cairo
+    libxkbcommon
+    libinput
+    xxHash
+    xwayland
+    libxcb
+    libxcb-wm
+    luaEnv
+    libdrm
+  ]
+  ++ commonDeps;
+
+  propagatedBuildInputs = commonDeps;
+
+  doCheck = true;
+
+  GI_TYPELIB_PATH = "${pango.out}/lib/girepository-1.0";
+
+  mesonFlags = [
+    "-Dplugins=true"
+    "-Dtests=false"
+  ];
+
+  LUA_CPATH = "${luaEnv}/lib/lua/${luajit.luaversion}/?.so";
+  LUA_PATH = "${luaEnv}/share/lua/${luajit.luaversion}/?.lua;;";
+
+  postInstall = ''
+    # Copied from @SK4G from #31
+
+    wrapProgram "$out/bin/cwc" \
+    --prefix LUA_PATH : "${luaEnv}/share/lua/5.1/?.lua;${luaEnv}/share/lua/5.1/?/init.lua;${placeholder "out"}/share/cwc/?.lua" \
+    --prefix LUA_CPATH : "${luaEnv}/lib/lua/5.1/?.so;${placeholder "out"}/lib/cwc/plugins/?.so" \
+    --prefix GI_TYPELIB_PATH : "${
+      lib.makeSearchPath "lib/girepository-1.0" [
+        gobject-introspection
+        gtk3
+        pango
+        gdk-pixbuf
       ]
-      ++ commonDeps;
+    }" \
+    --prefix XDG_DATA_DIRS : "$out/share:${gtk3}/share:${gdk-pixbuf}/share:${pango}/share" \
+    --prefix GIO_MODULE_DIR : "${glib}/lib/gio/modules" \
+  '';
 
-    propagatedBuildInputs = commonDeps;
-
-    doCheck = true;
-
-    GI_TYPELIB_PATH = "${pango.out}/lib/girepository-1.0";
-
-    mesonFlags = ["-Dplugins=true" "-Dtests=false"];
-
-    LUA_CPATH = "${luaEnv}/lib/lua/${luajit.luaversion}/?.so";
-    LUA_PATH = "${luaEnv}/share/lua/${luajit.luaversion}/?.lua;;";
-
-    postInstall = ''
-      # Copied from @SK4G from #31
-
-      wrapProgram "$out/bin/cwc" \
-      --prefix LUA_PATH : "${luaEnv}/share/lua/5.1/?.lua;${luaEnv}/share/lua/5.1/?/init.lua;${placeholder "out"}/share/cwc/?.lua" \
-      --prefix LUA_CPATH : "${luaEnv}/lib/lua/5.1/?.so;${placeholder "out"}/lib/cwc/plugins/?.so" \
-      --prefix GI_TYPELIB_PATH : "${lib.makeSearchPath "lib/girepository-1.0" [gobject-introspection gtk3 pango gdk-pixbuf]}" \
-      --prefix XDG_DATA_DIRS : "$out/share:${gtk3}/share:${gdk-pixbuf}/share:${pango}/share" \
-      --prefix GIO_MODULE_DIR : "${glib}/lib/gio/modules" \
-    '';
-
-    passthru = {
-      providedSessions = ["cwc"];
-      inherit luajit;
-    };
-    meta = {
-      mainProgram = "cwc";
-      description = "Hackable wayland compositor";
-      homepage = "https://github.com/Cudiph/cwcwm";
-      license = lib.licenses.gpl3Plus;
-      maintainers = [];
-      platforms = lib.platforms.linux;
-    };
-  }
+  passthru = {
+    providedSessions = [ "cwc" ];
+    inherit luajit;
+  };
+  meta = {
+    mainProgram = "cwc";
+    description = "Hackable wayland compositor";
+    homepage = "https://github.com/Cudiph/cwcwm";
+    license = lib.licenses.gpl3Plus;
+    maintainers = [ ];
+    platforms = lib.platforms.linux;
+  };
+}
