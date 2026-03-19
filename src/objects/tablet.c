@@ -121,7 +121,8 @@ static int luaC_tablet_map_to_region(lua_State *L)
 /** Width of the tablet in mm.
  *
  * @property width
- * @tparam integer width
+ * @tparam[opt=0] integer width
+ * @negativeallowed false
  * @readonly
  */
 static int luaC_tablet_get_width(lua_State *L)
@@ -135,7 +136,8 @@ static int luaC_tablet_get_width(lua_State *L)
 /** Height of the tablet in mm.
  *
  * @property height
- * @tparam integer height
+ * @tparam[opt=0] integer height
+ * @negativeallowed false
  * @readonly
  */
 static int luaC_tablet_get_height(lua_State *L)
@@ -150,6 +152,7 @@ static int luaC_tablet_get_height(lua_State *L)
  *
  * @property usb_product_id
  * @tparam[opt=0] integer usb_product_id
+ * @negativeallowed false
  * @readonly
  */
 static int luaC_tablet_get_usb_product_id(lua_State *L)
@@ -163,6 +166,7 @@ static int luaC_tablet_get_usb_product_id(lua_State *L)
 /** USB vendor ID of the tablet (zero if unset).
  *
  * @property usb_vendor_id
+ * @negativeallowed false
  * @tparam[opt=0] integer usb_vendor_id
  * @readonly
  */
