@@ -138,5 +138,6 @@ LUAC_CLASS_CREATE(cwc_timer, timer)
 LUAC_CLASS_CREATE(cwc_plugin, plugin)
 LUAC_CLASS_CREATE(cwc_keyboard_group, kbd)
 LUAC_CLASS_CREATE(cwc_cursor, pointer)
+LUAC_CLASS_CREATE(cwc_tablet, tablet)
 
 #endif // !_CWC_LUACLASS_H

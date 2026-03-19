@@ -732,6 +732,9 @@ int luaC_init()
     /* cwc_tag */
     luaC_tag_setup(L);
 
+    /* cwc.tablet */
+    luaC_tablet_setup(L);
+
     strcat(cwc_datadir, "/defconfig/rc.lua");
     char *luarc_default_location = get_luarc_path();
     int has_error                = 0;
@@ -760,4 +763,27 @@ void luaC_fini()
     lua_State *L = g_config_get_lua_State();
     lua_close(L);
     g_config._L_but_better_to_use_function_than_directly = NULL;
+}
+
+void luaC_box_from_table(lua_State *L, int table_pos, struct wlr_box *box)
+{
+    lua_getfield(L, table_pos, "x");
+    if (!lua_isnil(L, -1))
+        box->x = luaL_checkint(L, -1);
+    lua_pop(L, 1);
+
+    lua_getfield(L, table_pos, "y");
+    if (!lua_isnil(L, -1))
+        box->y = luaL_checkint(L, -1);
+    lua_pop(L, 1);
+
+    lua_getfield(L, table_pos, "width");
+    if (!lua_isnil(L, -1))
+        box->width = luaL_checkint(L, -1);
+    lua_pop(L, 1);
+
+    lua_getfield(L, table_pos, "height");
+    if (!lua_isnil(L, -1))
+        box->height = luaL_checkint(L, -1);
+    lua_pop(L, 1);
 }

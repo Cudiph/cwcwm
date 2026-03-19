@@ -8,6 +8,7 @@
 struct cwc_server;
 struct cwc_keyboard_group;
 struct cwc_input_manager;
+struct wlr_surface;
 
 /* wlr_seat.data == cwc_seat */
 struct cwc_seat {
@@ -23,6 +24,13 @@ struct cwc_seat {
     struct cwc_input_method *input_method;
     struct cwc_text_input *focused_text_input;
     struct wlr_input_method_keyboard_grab_v2 *kbd_grab;
+
+    /* held down states */
+    bool is_down;
+    bool init_surface_accept_tablet;
+    double surface_origin_x;
+    double surface_origin_y;
+    struct wlr_surface *init_surface;
 
     struct wl_list switch_devs;     // struct cwc_switch.link
     struct wl_list tablet_devs;     // struct cwc_tablet.link
@@ -46,6 +54,7 @@ struct cwc_seat {
 struct cwc_drag {
     struct wlr_drag *wlr_drag;
     struct wlr_scene_tree *scene_tree;
+    struct cwc_seat *seat;
 
     struct wl_listener on_drag_motion_l;
     struct wl_listener on_drag_destroy_l;
@@ -73,5 +82,12 @@ void cwc_seat_add_tablet_pad_device(struct cwc_seat *seat,
 
 void cwc_seat_add_touch_device(struct cwc_seat *seat,
                                struct wlr_input_device *dev);
+
+void cwc_seat_begin_down(struct cwc_seat *seat,
+                         struct wlr_surface *surface,
+                         double sx,
+                         double sy,
+                         bool accept_tablet);
+void cwc_seat_end_down(struct cwc_seat *seat);
 
 #endif // !_CWC_SEAT_H

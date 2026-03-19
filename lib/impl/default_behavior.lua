@@ -1,3 +1,5 @@
+-- Default behavior
+
 local cwc = cwc
 
 cwc.connect_signal("client::map", function(client)

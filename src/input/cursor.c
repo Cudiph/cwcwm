@@ -54,6 +54,7 @@
 #include "cwc/input/keyboard.h"
 #include "cwc/input/manager.h"
 #include "cwc/input/seat.h"
+#include "cwc/input/tablet.h"
 #include "cwc/layout/bsp.h"
 #include "cwc/layout/container.h"
 #include "cwc/layout/master.h"
@@ -294,6 +295,56 @@ static inline void _send_pointer_move_signal(struct cwc_cursor *cursor,
     cwc_signal_emit("pointer::move", &event, L, 6);
 }
 
+void cwc_cursor_notify_activity(struct cwc_cursor *cursor)
+{
+    cwc_cursor_unhide(cursor);
+    wl_event_source_timer_update(cursor->inactive_timer,
+                                 g_config.cursor_inactive_timeout);
+    wlr_idle_notifier_v1_notify_activity(server.idle->idle_notifier,
+                                         cursor->seat);
+}
+
+static bool cwc_cursor_check_interactive(struct cwc_cursor *cursor,
+                                         struct wlr_input_device *device,
+                                         double dx,
+                                         double dy)
+{
+    struct wlr_cursor *wlr_cursor = cursor->wlr_cursor;
+
+    switch (cursor->state) {
+    case CWC_CURSOR_STATE_MOVE:
+        wlr_cursor_move(wlr_cursor, device, dx, dy);
+        process_cursor_move_floating(cursor);
+        return true;
+    case CWC_CURSOR_STATE_MOVE_MASTER:
+    case CWC_CURSOR_STATE_MOVE_BSP:
+        wlr_cursor_move(wlr_cursor, device, dx, dy);
+        process_cursor_move(cursor);
+        return true;
+    case CWC_CURSOR_STATE_RESIZE:
+        // skip synchronization otherwise it'll make resizing sluggish
+        server.resize_count = -1e6;
+        wlr_cursor_move(wlr_cursor, device, dx, dy);
+        process_cursor_resize(cursor);
+        return true;
+    case CWC_CURSOR_STATE_RESIZE_BSP:
+        server.resize_count = -1e6;
+        wlr_cursor_move(wlr_cursor, device, dx, dy);
+        process_cursor_resize_bsp(cursor);
+        return true;
+    case CWC_CURSOR_STATE_RESIZE_MASTER:
+        server.resize_count = -1e6;
+        wlr_cursor_move(wlr_cursor, device, dx, dy);
+        process_cursor_resize_master(cursor);
+        return true;
+    default:
+        return false;
+        break;
+    };
+
+    unreachable_();
+}
+
 void process_cursor_motion(struct cwc_cursor *cursor,
                            uint32_t time_msec,
                            struct wlr_input_device *device,
@@ -305,58 +356,16 @@ void process_cursor_motion(struct cwc_cursor *cursor,
     struct wlr_seat *wlr_seat     = cursor->seat;
     struct wlr_cursor *wlr_cursor = cursor->wlr_cursor;
 
-    cwc_cursor_unhide(cursor);
-    wl_event_source_timer_update(cursor->inactive_timer,
-                                 g_config.cursor_inactive_timeout);
-    wlr_idle_notifier_v1_notify_activity(server.idle->idle_notifier, wlr_seat);
+    cwc_cursor_notify_activity(cursor);
 
-    switch (cursor->state) {
-    case CWC_CURSOR_STATE_MOVE:
-        wlr_cursor_move(wlr_cursor, device, dx, dy);
-        return process_cursor_move_floating(cursor);
-    case CWC_CURSOR_STATE_MOVE_MASTER:
-    case CWC_CURSOR_STATE_MOVE_BSP:
-        wlr_cursor_move(wlr_cursor, device, dx, dy);
-        return process_cursor_move(cursor);
-    case CWC_CURSOR_STATE_RESIZE:
-        // skip synchronization otherwise it'll make resizing sluggish
-        server.resize_count = -1e6;
-        wlr_cursor_move(wlr_cursor, device, dx, dy);
-        return process_cursor_resize(cursor);
-    case CWC_CURSOR_STATE_RESIZE_BSP:
-        server.resize_count = -1e6;
-        wlr_cursor_move(wlr_cursor, device, dx, dy);
-        return process_cursor_resize_bsp(cursor);
-    case CWC_CURSOR_STATE_RESIZE_MASTER:
-        server.resize_count = -1e6;
-        wlr_cursor_move(wlr_cursor, device, dx, dy);
-        return process_cursor_resize_master(cursor);
-    default:
-        break;
-    }
+    if (cwc_cursor_check_interactive(cursor, device, dx, dy))
+        return;
 
     double cx = wlr_cursor->x;
     double cy = wlr_cursor->y;
     double sx, sy;
     struct wlr_surface *surface = scene_surface_at(cx, cy, &sx, &sy);
     struct cwc_output *output   = cwc_output_at(server.output_layout, cx, cy);
-    struct wlr_pointer_constraint_v1 *surf_constraint =
-        wlr_pointer_constraints_v1_constraint_for_surface(
-            server.input->pointer_constraints, surface, cursor->seat);
-
-    if (!time_msec) {
-        struct timespec now;
-        clock_gettime(CLOCK_MONOTONIC, &now);
-        time_msec = timespec_to_msec(&now);
-        goto notify;
-    }
-
-    if (!cursor->send_events)
-        goto move;
-
-    wlr_relative_pointer_manager_v1_send_relative_motion(
-        server.input->relative_pointer_manager, wlr_seat,
-        (uint64_t)time_msec * 1000, dx, dy, dx_unaccel, dy_unaccel);
 
     if (cursor->last_output != output) {
         lua_State *L = g_config_get_lua_State();
@@ -368,6 +377,23 @@ void process_cursor_motion(struct cwc_cursor *cursor,
 
         cursor->last_output = output;
     }
+
+    if (!time_msec) {
+        struct timespec now;
+        clock_gettime(CLOCK_MONOTONIC, &now);
+        time_msec = timespec_to_msec(&now);
+    }
+
+    if (!cursor->send_events)
+        goto move_only;
+
+    wlr_relative_pointer_manager_v1_send_relative_motion(
+        server.input->relative_pointer_manager, wlr_seat,
+        (uint64_t)time_msec * 1000, dx, dy, dx_unaccel, dy_unaccel);
+
+    struct wlr_pointer_constraint_v1 *surf_constraint =
+        wlr_pointer_constraints_v1_constraint_for_surface(
+            server.input->pointer_constraints, surface, cursor->seat);
 
     // sway + dwl implementation in very simplified way, may contain bugs
     if (surf_constraint && device && device->type == WLR_INPUT_DEVICE_POINTER
@@ -388,8 +414,12 @@ void process_cursor_motion(struct cwc_cursor *cursor,
         dy = sy_confined - sy;
     }
 
-notify:
-    if (surface) {
+    struct cwc_seat *seat = wlr_seat->data;
+    if (seat->is_down) {
+        sx = cx - seat->surface_origin_x;
+        sy = cy - seat->surface_origin_y;
+        wlr_seat_pointer_notify_motion(wlr_seat, time_msec, sx, sy);
+    } else if (surface) {
         wlr_seat_pointer_notify_enter(wlr_seat, surface, sx, sy);
         wlr_seat_pointer_notify_motion(wlr_seat, time_msec, sx, sy);
     } else {
@@ -397,7 +427,7 @@ notify:
         wlr_seat_pointer_clear_focus(wlr_seat);
     }
 
-move:
+move_only:
     if (dx || dy)
         wlr_cursor_move(wlr_cursor, device, dx, dy);
 
@@ -935,10 +965,18 @@ void process_cursor_button(struct cwc_cursor *cursor,
     double cx = cursor->wlr_cursor->x;
     double cy = cursor->wlr_cursor->y;
     double sx, sy;
-    struct cwc_toplevel *toplevel = cwc_toplevel_at(cx, cy, &sx, &sy);
+    struct wlr_surface *surf      = scene_surface_at(cx, cy, &sx, &sy);
+    struct cwc_toplevel *toplevel = cwc_toplevel_try_from_wlr_surface(surf);
 
     wlr_idle_notifier_v1_notify_activity(server.idle->idle_notifier,
                                          cursor->seat);
+
+    if (!event->time_msec) {
+        struct timespec now;
+        clock_gettime(CLOCK_MONOTONIC, &now);
+        uint64_t now_msec = timespec_to_msec(&now);
+        event->time_msec  = now_msec;
+    }
 
     bool handled = false;
     if (event->state == WL_POINTER_BUTTON_STATE_PRESSED) {
@@ -956,6 +994,8 @@ void process_cursor_button(struct cwc_cursor *cursor,
         handled |= keybind_mouse_execute(server.main_mouse_kmap, modifiers,
                                          event->button, true);
 
+        struct cwc_seat *seat = cursor->seat->data;
+        cwc_seat_begin_down(seat, surf, sx, sy, false);
     } else {
         struct wlr_keyboard *kbd = wlr_seat_get_keyboard(cursor->seat);
         uint32_t modifiers       = kbd ? wlr_keyboard_get_modifiers(kbd) : 0;
@@ -965,6 +1005,9 @@ void process_cursor_button(struct cwc_cursor *cursor,
         // same as keyboard binding always pass release button to client
         keybind_mouse_execute(server.main_mouse_kmap, modifiers, event->button,
                               false);
+
+        struct cwc_seat *seat = cursor->seat->data;
+        cwc_seat_end_down(seat);
     }
 
     if (!handled && cursor->send_events)
@@ -1245,6 +1288,42 @@ static void on_hold_end(struct wl_listener *listener, void *data)
                                               event->cancelled);
 }
 
+static void on_tabtool_axis(struct wl_listener *listener, void *data)
+{
+    struct cwc_cursor *cursor =
+        wl_container_of(listener, cursor, tabtool_axis_l);
+    struct wlr_tablet_tool_axis_event *event = data;
+
+    process_tablet_tool_motion(cursor, event);
+}
+
+static void on_tabtool_proximity(struct wl_listener *listener, void *data)
+{
+    struct cwc_cursor *cursor =
+        wl_container_of(listener, cursor, tabtool_proximity_l);
+    struct wlr_tablet_tool_proximity_event *event = data;
+
+    process_tablet_tool_proximity(cursor, event);
+}
+
+static void on_tabtool_tip(struct wl_listener *listener, void *data)
+{
+    struct cwc_cursor *cursor =
+        wl_container_of(listener, cursor, tabtool_tip_l);
+    struct wlr_tablet_tool_tip_event *event = data;
+
+    process_tablet_tool_tip(cursor, event);
+}
+
+static void on_tabtool_button(struct wl_listener *listener, void *data)
+{
+    struct cwc_cursor *cursor =
+        wl_container_of(listener, cursor, tabtool_button_l);
+    struct wlr_tablet_tool_button_event *event = data;
+
+    process_tablet_tool_button(cursor, event);
+}
+
 /* stuff for creating wlr_buffer from cair surface mainly from hypcursor */
 
 static void cairo_buffer_destroy(struct wlr_buffer *wlr_buffer)
@@ -1427,6 +1506,19 @@ struct cwc_cursor *cwc_cursor_create(struct wlr_seat *seat)
                   &cursor->hold_begin_l);
     wl_signal_add(&cursor->wlr_cursor->events.hold_end, &cursor->hold_end_l);
 
+    cursor->tabtool_axis_l.notify      = on_tabtool_axis;
+    cursor->tabtool_proximity_l.notify = on_tabtool_proximity;
+    cursor->tabtool_tip_l.notify       = on_tabtool_tip;
+    cursor->tabtool_button_l.notify    = on_tabtool_button;
+    wl_signal_add(&cursor->wlr_cursor->events.tablet_tool_axis,
+                  &cursor->tabtool_axis_l);
+    wl_signal_add(&cursor->wlr_cursor->events.tablet_tool_proximity,
+                  &cursor->tabtool_proximity_l);
+    wl_signal_add(&cursor->wlr_cursor->events.tablet_tool_tip,
+                  &cursor->tabtool_tip_l);
+    wl_signal_add(&cursor->wlr_cursor->events.tablet_tool_button,
+                  &cursor->tabtool_button_l);
+
     cursor->config_commit_l.notify = on_config_commit;
     wl_signal_add(&g_config.events.commit, &cursor->config_commit_l);
 
@@ -1482,6 +1574,11 @@ void cwc_cursor_destroy(struct cwc_cursor *cursor)
 
     wl_list_remove(&cursor->hold_begin_l.link);
     wl_list_remove(&cursor->hold_end_l.link);
+
+    wl_list_remove(&cursor->tabtool_axis_l.link);
+    wl_list_remove(&cursor->tabtool_proximity_l.link);
+    wl_list_remove(&cursor->tabtool_tip_l.link);
+    wl_list_remove(&cursor->tabtool_button_l.link);
 
     wl_list_remove(&cursor->config_commit_l.link);
 

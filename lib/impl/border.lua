@@ -1,3 +1,5 @@
+-- Border color logic
+
 local config = require("config")
 
 local cwc = cwc

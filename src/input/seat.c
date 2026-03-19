@@ -125,16 +125,23 @@ static void on_drag_destroy(struct wl_listener *listener, void *data)
 static void on_start_drag(struct wl_listener *listener, void *data)
 {
     struct wlr_drag *drag = data;
+    struct cwc_seat *seat = drag->seat->data;
 
     struct cwc_drag *cwc_drag = calloc(1, sizeof(*cwc_drag));
     cwc_drag->wlr_drag        = drag;
+    cwc_drag->seat            = seat;
     cwc_drag->scene_tree =
         wlr_scene_drag_icon_create(server.root.overlay, drag->icon);
+    wlr_scene_node_set_position(&cwc_drag->scene_tree->node,
+                                seat->cursor->wlr_cursor->x,
+                                seat->cursor->wlr_cursor->y);
 
     cwc_drag->on_drag_motion_l.notify  = on_drag_motion;
     cwc_drag->on_drag_destroy_l.notify = on_drag_destroy;
     wl_signal_add(&drag->events.motion, &cwc_drag->on_drag_motion_l);
     wl_signal_add(&drag->events.destroy, &cwc_drag->on_drag_destroy_l);
+
+    cwc_seat_end_down(seat);
 }
 
 static void _cwc_seat_destroy(struct cwc_seat *seat)
@@ -369,4 +376,24 @@ void setup_seat(struct cwc_input_manager *input_mgr)
 void cleanup_seat(struct cwc_input_manager *input_mgr)
 {
     wl_list_remove(&input_mgr->create_seat_l.link);
+}
+
+void cwc_seat_begin_down(struct cwc_seat *seat,
+                         struct wlr_surface *surface,
+                         double sx,
+                         double sy,
+                         bool accept_tablet)
+{
+    if (surface == NULL)
+        return;
+
+    seat->is_down                    = true;
+    seat->surface_origin_x           = seat->cursor->wlr_cursor->x - sx;
+    seat->surface_origin_y           = seat->cursor->wlr_cursor->y - sy;
+    seat->init_surface_accept_tablet = accept_tablet;
+}
+
+void cwc_seat_end_down(struct cwc_seat *seat)
+{
+    seat->is_down = false;
 }
