@@ -335,13 +335,9 @@ static void on_screen_prop_active_tag(void *data)
 
 static void on_tag_prop_layout_mode(void *data)
 {
-    struct cwc_tag_info *tag = data;
-    struct cwc_output *output;
-    wl_list_for_each(output, &server.outputs, link)
-    {
-        if (cwc_output_get_current_tag_info(output) == tag)
-            update_layout_symbol(output);
-    }
+    struct cwc_tag_info *tag  = data;
+    struct cwc_output *output = cwc_output_from_tag_info(tag);
+    update_layout_symbol(output);
 }
 
 static void on_screen_focus(void *data)
