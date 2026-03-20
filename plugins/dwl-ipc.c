@@ -280,7 +280,21 @@ static void update_tag_idle_source(struct cwc_output *output)
 static void on_client_prop_change_and_update_tag(void *data)
 {
     struct cwc_toplevel *toplevel = data;
+    if (!toplevel->container)
+        return;
+
     update_tag_idle_source(toplevel->container->output);
+}
+
+static void on_client_unmap(void *data)
+{
+    struct cwc_toplevel *toplevel = data;
+    if (!toplevel->container)
+        return;
+
+    struct cwc_output *output = toplevel->container->output;
+    on_client_should_title_reset(data);
+    update_tag_idle_source(output);
 }
 
 static void update_prop_idle(void *data)
@@ -398,7 +412,8 @@ static int dwl_ipc_setup()
 
     cwc_signal_connect("client::focus", on_client_prop_change);
     cwc_signal_connect("client::unfocus", on_client_should_title_reset);
-    cwc_signal_connect("client::unmap", on_client_should_title_reset);
+    cwc_signal_connect("client::unmap", on_client_unmap);
+    cwc_signal_connect("client::map", on_client_prop_change_and_update_tag);
     cwc_signal_connect("client::prop::urgent",
                        on_client_prop_change_and_update_tag);
     cwc_signal_connect("client::prop::tag",
@@ -446,7 +461,8 @@ static void dwl_ipc_cleanup()
 
     cwc_signal_disconnect("client::focus", on_client_prop_change);
     cwc_signal_disconnect("client::unfocus", on_client_should_title_reset);
-    cwc_signal_disconnect("client::unmap", on_client_should_title_reset);
+    cwc_signal_disconnect("client::unmap", on_client_unmap);
+    cwc_signal_disconnect("client::map", on_client_prop_change_and_update_tag);
     cwc_signal_disconnect("client::prop::urgent",
                           on_client_prop_change_and_update_tag);
     cwc_signal_disconnect("client::prop::tag",
