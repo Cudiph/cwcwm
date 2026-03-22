@@ -10,6 +10,12 @@ struct cwc_keyboard_group;
 struct cwc_input_manager;
 struct wlr_surface;
 
+enum cwc_seat_simulation_mode {
+    CWC_SIMULATE_POINTER,
+    CWC_SIMULATE_TABLET,
+    CWC_SIMULATE_TOUCH,
+};
+
 /* wlr_seat.data == cwc_seat */
 struct cwc_seat {
     struct wl_list link; // struct cwc_input_manager.seats
@@ -27,7 +33,7 @@ struct cwc_seat {
 
     /* held down states */
     bool is_down;
-    bool init_surface_accept_tablet;
+    enum cwc_seat_simulation_mode input_simulation;
     double surface_origin_x;
     double surface_origin_y;
     struct wlr_surface *init_surface;
@@ -85,9 +91,9 @@ void cwc_seat_add_touch_device(struct cwc_seat *seat,
 
 void cwc_seat_begin_down(struct cwc_seat *seat,
                          struct wlr_surface *surface,
-                         double sx,
-                         double sy,
-                         bool accept_tablet);
+                         double surf_x,
+                         double surf_y,
+                         enum cwc_seat_simulation_mode mode);
 void cwc_seat_end_down(struct cwc_seat *seat);
 
 #endif // !_CWC_SEAT_H

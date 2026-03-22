@@ -104,6 +104,12 @@ struct cwc_cursor {
     struct wl_listener hold_begin_l;
     struct wl_listener hold_end_l;
 
+    struct wl_listener touch_up_l;
+    struct wl_listener touch_down_l;
+    struct wl_listener touch_motion_l;
+    struct wl_listener touch_cancel_l;
+    struct wl_listener touch_frame_l;
+
     struct wl_listener tabtool_axis_l;
     struct wl_listener tabtool_proximity_l;
     struct wl_listener tabtool_tip_l;

@@ -75,10 +75,10 @@ static void on_new_input(struct wl_listener *listener, void *data)
         cwc_seat_add_tablet_device(server.seat, device);
         break;
     case WLR_INPUT_DEVICE_TABLET_PAD:
-        cwc_seat_add_tablet_pad_device(server.seat, device);
+        // cwc_seat_add_tablet_pad_device(server.seat, device);
         break;
     case WLR_INPUT_DEVICE_TOUCH:
-        // cwc_seat_add_touch_device(server.seat, device);
+        cwc_seat_add_touch_device(server.seat, device);
         break;
     }
 

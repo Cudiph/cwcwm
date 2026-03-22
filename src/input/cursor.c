@@ -55,6 +55,7 @@
 #include "cwc/input/manager.h"
 #include "cwc/input/seat.h"
 #include "cwc/input/tablet.h"
+#include "cwc/input/touch.h"
 #include "cwc/layout/bsp.h"
 #include "cwc/layout/container.h"
 #include "cwc/layout/master.h"
@@ -259,14 +260,13 @@ static void cwc_cursor_unhide(struct cwc_cursor *cursor)
     if (!cursor->hidden)
         return;
 
+    cursor->hidden = false;
     if (cursor->name_before_hidden) {
         cwc_cursor_set_image_by_name(cursor, cursor->name_before_hidden);
     } else if (cursor->client_surface) {
         cwc_cursor_set_surface(cursor, cursor->client_surface,
                                cursor->hotspot_x, cursor->hotspot_y);
     }
-
-    cursor->hidden = false;
 }
 
 static inline void _send_pointer_move_signal(struct cwc_cursor *cursor,
@@ -355,8 +355,6 @@ void process_cursor_motion(struct cwc_cursor *cursor,
 {
     struct wlr_seat *wlr_seat     = cursor->seat;
     struct wlr_cursor *wlr_cursor = cursor->wlr_cursor;
-
-    cwc_cursor_notify_activity(cursor);
 
     if (cwc_cursor_check_interactive(cursor, device, dx, dy))
         return;
@@ -507,6 +505,7 @@ static void on_cursor_motion(struct wl_listener *listener, void *data)
         wl_container_of(listener, cursor, cursor_motion_l);
 
     struct wlr_pointer_motion_event *event = data;
+    cwc_cursor_notify_activity(cursor);
 
     process_cursor_motion(cursor, event->time_msec, &event->pointer->base,
                           event->delta_x, event->delta_y, event->unaccel_dx,
@@ -524,6 +523,7 @@ static void on_cursor_motion_absolute(struct wl_listener *listener, void *data)
     double lx, ly;
     wlr_cursor_absolute_to_layout_coords(cursor->wlr_cursor, device, event->x,
                                          event->y, &lx, &ly);
+    cwc_cursor_notify_activity(cursor);
 
     double dx = lx - cursor->wlr_cursor->x;
     double dy = ly - cursor->wlr_cursor->y;
@@ -928,8 +928,9 @@ void stop_interactive(struct cwc_cursor *cursor)
     else if (cursor->client_surface) {
         cwc_cursor_set_surface(cursor, cursor->client_surface,
                                cursor->hotspot_x, cursor->hotspot_y);
-    } else
+    } else {
         cwc_cursor_set_image_by_name(cursor, NULL);
+    }
 
     struct cwc_toplevel **grabbed = &cursor->grabbed_toplevel;
 
@@ -978,15 +979,19 @@ void process_cursor_button(struct cwc_cursor *cursor,
         event->time_msec  = now_msec;
     }
 
-    bool handled = false;
+    struct cwc_seat *seat = cursor->seat->data;
+    bool handled          = false;
     if (event->state == WL_POINTER_BUTTON_STATE_PRESSED) {
         struct cwc_output *new_output =
             cwc_output_at(server.output_layout, cx, cy);
-        if (new_output)
-            cwc_output_focus(new_output);
 
-        if (toplevel)
-            cwc_toplevel_focus(toplevel, false);
+        if (!seat->is_down) {
+            if (new_output)
+                cwc_output_focus(new_output);
+
+            if (toplevel)
+                cwc_toplevel_focus(toplevel, false);
+        }
 
         struct wlr_keyboard *kbd = wlr_seat_get_keyboard(cursor->seat);
         uint32_t modifiers       = kbd ? wlr_keyboard_get_modifiers(kbd) : 0;
@@ -995,7 +1000,7 @@ void process_cursor_button(struct cwc_cursor *cursor,
                                          event->button, true);
 
         struct cwc_seat *seat = cursor->seat->data;
-        cwc_seat_begin_down(seat, surf, sx, sy, false);
+        cwc_seat_begin_down(seat, surf, cx - sx, cy - sy, CWC_SIMULATE_POINTER);
     } else {
         struct wlr_keyboard *kbd = wlr_seat_get_keyboard(cursor->seat);
         uint32_t modifiers       = kbd ? wlr_keyboard_get_modifiers(kbd) : 0;
@@ -1010,9 +1015,10 @@ void process_cursor_button(struct cwc_cursor *cursor,
         cwc_seat_end_down(seat);
     }
 
-    if (!handled && cursor->send_events)
+    if (!handled && cursor->send_events) {
         wlr_seat_pointer_notify_button(cursor->seat, event->time_msec,
                                        event->button, event->state);
+    }
 
     if (cursor->grab)
         _send_pointer_button_signal(cursor, event,
@@ -1288,6 +1294,56 @@ static void on_hold_end(struct wl_listener *listener, void *data)
                                               event->cancelled);
 }
 
+static int cursor_inactive_hide_cursor(void *data);
+static void on_touch_up(struct wl_listener *listener, void *data)
+{
+    struct cwc_cursor *cursor = wl_container_of(listener, cursor, touch_up_l);
+    struct wlr_touch_up_event *event = data;
+
+    wlr_idle_notifier_v1_notify_activity(server.idle->idle_notifier,
+                                         cursor->seat);
+    process_touch_up(cursor, event);
+}
+
+static void on_touch_down(struct wl_listener *listener, void *data)
+{
+    struct cwc_cursor *cursor = wl_container_of(listener, cursor, touch_down_l);
+    struct wlr_touch_down_event *event = data;
+
+    cursor_inactive_hide_cursor(cursor);
+    wlr_idle_notifier_v1_notify_activity(server.idle->idle_notifier,
+                                         cursor->seat);
+    process_touch_down(cursor, event);
+}
+
+static void on_touch_motion(struct wl_listener *listener, void *data)
+{
+    struct cwc_cursor *cursor =
+        wl_container_of(listener, cursor, touch_motion_l);
+    struct wlr_touch_motion_event *event = data;
+
+    wlr_idle_notifier_v1_notify_activity(server.idle->idle_notifier,
+                                         cursor->seat);
+    process_touch_motion(cursor, event);
+}
+
+static void on_touch_cancel(struct wl_listener *listener, void *data)
+{
+    struct cwc_cursor *cursor =
+        wl_container_of(listener, cursor, touch_cancel_l);
+    struct wlr_touch_cancel_event *event = data;
+
+    process_touch_cancel(cursor, event);
+}
+
+static void on_touch_frame(struct wl_listener *listener, void *data)
+{
+    struct cwc_cursor *cursor =
+        wl_container_of(listener, cursor, touch_frame_l);
+
+    wlr_seat_touch_notify_frame(cursor->seat);
+}
+
 static void on_tabtool_axis(struct wl_listener *listener, void *data)
 {
     struct cwc_cursor *cursor =
@@ -1389,9 +1445,13 @@ static int animation_loop(void *data)
 
 static int cursor_inactive_hide_cursor(void *data)
 {
-    struct cwc_cursor *cursor  = data;
+    struct cwc_cursor *cursor = data;
+    if (cursor->hidden || cursor->current_name == NULL)
+        goto hide;
+
     cursor->name_before_hidden = cursor->current_name;
-    cursor->hidden             = true;
+hide:
+    cursor->hidden = true;
     cwc_cursor_hide_cursor(cursor);
     return 1;
 }
@@ -1506,6 +1566,21 @@ struct cwc_cursor *cwc_cursor_create(struct wlr_seat *seat)
                   &cursor->hold_begin_l);
     wl_signal_add(&cursor->wlr_cursor->events.hold_end, &cursor->hold_end_l);
 
+    cursor->touch_up_l.notify     = on_touch_up;
+    cursor->touch_down_l.notify   = on_touch_down;
+    cursor->touch_motion_l.notify = on_touch_motion;
+    cursor->touch_cancel_l.notify = on_touch_cancel;
+    cursor->touch_frame_l.notify  = on_touch_frame;
+    wl_signal_add(&cursor->wlr_cursor->events.touch_up, &cursor->touch_up_l);
+    wl_signal_add(&cursor->wlr_cursor->events.touch_down,
+                  &cursor->touch_down_l);
+    wl_signal_add(&cursor->wlr_cursor->events.touch_motion,
+                  &cursor->touch_motion_l);
+    wl_signal_add(&cursor->wlr_cursor->events.touch_cancel,
+                  &cursor->touch_cancel_l);
+    wl_signal_add(&cursor->wlr_cursor->events.touch_frame,
+                  &cursor->touch_frame_l);
+
     cursor->tabtool_axis_l.notify      = on_tabtool_axis;
     cursor->tabtool_proximity_l.notify = on_tabtool_proximity;
     cursor->tabtool_tip_l.notify       = on_tabtool_tip;
@@ -1575,6 +1650,12 @@ void cwc_cursor_destroy(struct cwc_cursor *cursor)
     wl_list_remove(&cursor->hold_begin_l.link);
     wl_list_remove(&cursor->hold_end_l.link);
 
+    wl_list_remove(&cursor->touch_up_l.link);
+    wl_list_remove(&cursor->touch_down_l.link);
+    wl_list_remove(&cursor->touch_motion_l.link);
+    wl_list_remove(&cursor->touch_cancel_l.link);
+    wl_list_remove(&cursor->touch_frame_l.link);
+
     wl_list_remove(&cursor->tabtool_axis_l.link);
     wl_list_remove(&cursor->tabtool_proximity_l.link);
     wl_list_remove(&cursor->tabtool_tip_l.link);
@@ -1625,7 +1706,7 @@ static void hyprcursor_buffer_fini(struct cwc_cursor *cursor)
 
 void cwc_cursor_set_image_by_name(struct cwc_cursor *cursor, const char *name)
 {
-    if (cursor->state != CWC_CURSOR_STATE_NORMAL)
+    if (cursor->state != CWC_CURSOR_STATE_NORMAL || cursor->hidden)
         return;
 
     if (name == NULL) {

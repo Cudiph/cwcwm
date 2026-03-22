@@ -176,10 +176,10 @@ static void cwc_seat_update_capabilities(struct cwc_seat *seat)
 {
     uint32_t caps = WL_SEAT_CAPABILITY_POINTER;
 
-    if (wl_list_length_at_least(&seat->kbd_group->wlr_kbd_group->devices, 1))
+    if (!wl_list_empty(&seat->kbd_group->wlr_kbd_group->devices))
         caps |= WL_SEAT_CAPABILITY_KEYBOARD;
 
-    if (wl_list_length_at_least(&seat->touch_devs, 1))
+    if (!wl_list_empty(&seat->touch_devs))
         caps |= WL_SEAT_CAPABILITY_TOUCH;
 
     wlr_seat_set_capabilities(seat->wlr_seat, caps);
@@ -378,22 +378,55 @@ void cleanup_seat(struct cwc_input_manager *input_mgr)
     wl_list_remove(&input_mgr->create_seat_l.link);
 }
 
+struct surface_tracker {
+    struct wlr_surface *base;
+    struct cwc_seat *seat;
+
+    struct wl_listener surf_destroy_l;
+};
+
+static void on_surface_tracker_destroy(struct wl_listener *listener, void *data)
+{
+    struct surface_tracker *tracker =
+        wl_container_of(listener, tracker, surf_destroy_l);
+
+    if (tracker->seat->init_surface == tracker->base)
+        tracker->seat->init_surface = NULL;
+
+    wl_list_remove(&tracker->surf_destroy_l.link);
+    free(tracker);
+}
+
 void cwc_seat_begin_down(struct cwc_seat *seat,
                          struct wlr_surface *surface,
-                         double sx,
-                         double sy,
-                         bool accept_tablet)
+                         double surf_x,
+                         double surf_y,
+                         enum cwc_seat_simulation_mode mode)
 {
     if (surface == NULL)
         return;
 
-    seat->is_down                    = true;
-    seat->surface_origin_x           = seat->cursor->wlr_cursor->x - sx;
-    seat->surface_origin_y           = seat->cursor->wlr_cursor->y - sy;
-    seat->init_surface_accept_tablet = accept_tablet;
+    seat->is_down          = true;
+    seat->surface_origin_x = surf_x;
+    seat->surface_origin_y = surf_y;
+    seat->input_simulation = mode;
+
+    struct surface_tracker *surface_bruh = calloc(1, sizeof(*surface_bruh));
+    if (!surface_bruh)
+        return;
+
+    seat->init_surface = surface;
+
+    surface_bruh->seat                  = seat;
+    surface_bruh->surf_destroy_l.notify = on_surface_tracker_destroy;
+    wl_signal_add(&surface->events.destroy, &surface_bruh->surf_destroy_l);
 }
 
 void cwc_seat_end_down(struct cwc_seat *seat)
 {
-    seat->is_down = false;
+    seat->is_down          = false;
+    seat->input_simulation = CWC_SIMULATE_POINTER;
+    seat->init_surface     = NULL;
+    seat->surface_origin_x = 0;
+    seat->surface_origin_y = 0;
 }

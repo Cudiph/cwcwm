@@ -148,9 +148,6 @@ move_only:
 void process_tablet_tool_motion(struct cwc_cursor *cursor,
                                 struct wlr_tablet_tool_axis_event *event)
 {
-
-    cwc_cursor_notify_activity(cursor);
-
     struct cwc_tablet_tool *tabtool = event->tool->data;
 
     handle_cursor_motion(cursor, event);
@@ -251,7 +248,8 @@ void process_tablet_tool_tip(struct cwc_cursor *cursor,
             stop_interactive(cursor);
             return;
         } else {
-            cwc_seat_begin_down(seat, surface, sx, sy, true);
+            cwc_seat_begin_down(seat, surface, cx - sx, cy - sy,
+                                CWC_SIMULATE_TABLET);
             wlr_tablet_v2_tablet_tool_notify_down(tabtool->tablet_v2_tool);
         }
     } else {
