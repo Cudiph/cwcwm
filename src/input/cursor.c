@@ -1350,6 +1350,7 @@ static void on_tabtool_axis(struct wl_listener *listener, void *data)
         wl_container_of(listener, cursor, tabtool_axis_l);
     struct wlr_tablet_tool_axis_event *event = data;
 
+    cwc_cursor_notify_activity(cursor);
     process_tablet_tool_motion(cursor, event);
 }
 
@@ -1359,6 +1360,7 @@ static void on_tabtool_proximity(struct wl_listener *listener, void *data)
         wl_container_of(listener, cursor, tabtool_proximity_l);
     struct wlr_tablet_tool_proximity_event *event = data;
 
+    cwc_cursor_notify_activity(cursor);
     process_tablet_tool_proximity(cursor, event);
 }
 
