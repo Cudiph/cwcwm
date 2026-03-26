@@ -95,6 +95,8 @@ static void handle_cursor_motion(struct cwc_cursor *cursor,
 
     struct wlr_cursor *wlr_cursor   = cursor->wlr_cursor;
     struct wlr_input_device *device = &event->tablet->base;
+    double cx                       = wlr_cursor->x;
+    double cy                       = wlr_cursor->y;
 
     /* when in interactive mode, let the pointer simulation handle it */
     if (cursor->state != CWC_CURSOR_STATE_NORMAL) {
@@ -107,28 +109,32 @@ static void handle_cursor_motion(struct cwc_cursor *cursor,
         return;
     }
 
+    struct cwc_seat *seat = cursor->seat->data;
+
+    if (seat->is_down) {
+        if (seat->input_simulation == CWC_SIMULATE_TABLET) {
+            double sx                       = cx - seat->surface_origin_x;
+            double sy                       = cy - seat->surface_origin_y;
+            struct cwc_tablet_tool *tabtool = event->tool->data;
+            wlr_tablet_v2_tablet_tool_notify_motion(tabtool->tablet_v2_tool, sx,
+                                                    sy);
+        } else {
+            process_cursor_motion(cursor, event->time_msec, device, event->dx,
+                                  event->dy, event->dx, event->dy);
+        }
+        goto move_only;
+    }
+
     struct cwc_tablet *tablet       = event->tablet->data;
     struct cwc_tablet_tool *tabtool = event->tool->data;
 
-    double cx = wlr_cursor->x;
-    double cy = wlr_cursor->y;
     double sx, sy;
     struct wlr_surface *surface = scene_surface_at(cx, cy, &sx, &sy);
 
     if (!surface)
         goto move_only;
 
-    struct cwc_seat *seat = cursor->seat->data;
-
-    if (seat->is_down) {
-        double cx                       = cursor->wlr_cursor->x;
-        double cy                       = cursor->wlr_cursor->y;
-        double sx                       = cx - seat->surface_origin_x;
-        double sy                       = cy - seat->surface_origin_y;
-        struct cwc_tablet_tool *tabtool = event->tool->data;
-        wlr_tablet_v2_tablet_tool_notify_motion(tabtool->tablet_v2_tool, sx,
-                                                sy);
-    } else if (wlr_surface_accepts_tablet_v2(surface, tablet->tablet_v2)) {
+    if (wlr_surface_accepts_tablet_v2(surface, tablet->tablet_v2)) {
         wlr_seat_pointer_notify_enter(cursor->seat, surface, sx, sy);
         wlr_tablet_v2_tablet_tool_notify_proximity_in(
             tabtool->tablet_v2_tool, tablet->tablet_v2, surface);
