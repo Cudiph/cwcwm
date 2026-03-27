@@ -235,9 +235,19 @@ void process_tablet_tool_tip(struct cwc_cursor *cursor,
     struct cwc_seat *seat           = cursor->seat->data;
 
     if (seat->is_down && event->state == WLR_TABLET_TOOL_TIP_UP) {
-        cwc_seat_end_down(seat);
-        wlr_tablet_v2_tablet_tool_notify_up(tabtool->tablet_v2_tool);
+        if (seat->input_simulation == CWC_SIMULATE_TABLET) {
+            wlr_tablet_v2_tablet_tool_notify_up(tabtool->tablet_v2_tool);
+        } else {
+            struct wlr_pointer_button_event e = {
+                .state   = (enum wl_pointer_button_state)event->state,
+                .button  = BTN_LEFT,
+                .pointer = NULL};
+            process_cursor_button(cursor, &e);
+        }
+
         stop_interactive(cursor);
+        cwc_seat_end_down(seat);
+        return;
     }
 
     double cx = wlr_cursor->x;
@@ -249,11 +259,7 @@ void process_tablet_tool_tip(struct cwc_cursor *cursor,
         return;
 
     if (wlr_surface_accepts_tablet_v2(surface, tablet->tablet_v2)) {
-        if (event->state == WLR_TABLET_TOOL_TIP_UP) {
-            wlr_tablet_v2_tablet_tool_notify_up(tabtool->tablet_v2_tool);
-            stop_interactive(cursor);
-            return;
-        } else {
+        if (event->state == WLR_TABLET_TOOL_TIP_DOWN) {
             cwc_seat_begin_down(seat, surface, cx - sx, cy - sy,
                                 CWC_SIMULATE_TABLET);
             wlr_tablet_v2_tablet_tool_notify_down(tabtool->tablet_v2_tool);
