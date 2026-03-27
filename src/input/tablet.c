@@ -19,6 +19,7 @@
 #include <linux/input-event-codes.h>
 #include <stdlib.h>
 #include <wayland-server-core.h>
+#include <wayland-server-protocol.h>
 #include <wayland-util.h>
 #include <wlr/types/wlr_cursor.h>
 #include <wlr/types/wlr_tablet_pad.h>
@@ -122,6 +123,10 @@ static void handle_cursor_motion(struct cwc_cursor *cursor,
             process_cursor_motion(cursor, event->time_msec, device, event->dx,
                                   event->dy, event->dx, event->dy);
         }
+        goto move_only;
+    } else if (seat->wlr_seat->drag) {
+        process_cursor_motion(cursor, event->time_msec, device, event->dx,
+                              event->dy, event->dx, event->dy);
         goto move_only;
     }
 
@@ -234,20 +239,30 @@ void process_tablet_tool_tip(struct cwc_cursor *cursor,
     struct wlr_cursor *wlr_cursor   = cursor->wlr_cursor;
     struct cwc_seat *seat           = cursor->seat->data;
 
-    if (seat->is_down && event->state == WLR_TABLET_TOOL_TIP_UP) {
-        if (seat->input_simulation == CWC_SIMULATE_TABLET) {
-            wlr_tablet_v2_tablet_tool_notify_up(tabtool->tablet_v2_tool);
-        } else {
-            struct wlr_pointer_button_event e = {
-                .state   = (enum wl_pointer_button_state)event->state,
-                .button  = BTN_LEFT,
-                .pointer = NULL};
-            process_cursor_button(cursor, &e);
+    if (event->state == WLR_TABLET_TOOL_TIP_UP) {
+        if (seat->is_down) {
+            if (seat->input_simulation == CWC_SIMULATE_TABLET) {
+                wlr_tablet_v2_tablet_tool_notify_up(tabtool->tablet_v2_tool);
+            } else {
+                struct wlr_pointer_button_event e = {
+                    .state   = (enum wl_pointer_button_state)event->state,
+                    .button  = BTN_LEFT,
+                    .pointer = NULL};
+                process_cursor_button(cursor, &e);
+            }
+
+            stop_interactive(cursor);
+            cwc_seat_end_down(seat);
+            return;
         }
 
-        stop_interactive(cursor);
-        cwc_seat_end_down(seat);
-        return;
+        if (seat->wlr_seat->drag) {
+            wlr_seat_pointer_notify_button(seat->wlr_seat,
+                                           get_current_time_msec(), BTN_LEFT,
+                                           WL_POINTER_BUTTON_STATE_RELEASED);
+            wlr_tablet_v2_tablet_tool_notify_up(tabtool->tablet_v2_tool);
+            return;
+        }
     }
 
     double cx = wlr_cursor->x;

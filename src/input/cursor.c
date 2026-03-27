@@ -416,14 +416,13 @@ void process_cursor_motion(struct cwc_cursor *cursor,
     if (seat->is_down) {
         sx = cx - seat->surface_origin_x;
         sy = cy - seat->surface_origin_y;
-        wlr_seat_pointer_notify_motion(wlr_seat, time_msec, sx, sy);
     } else if (surface) {
         wlr_seat_pointer_notify_enter(wlr_seat, surface, sx, sy);
-        wlr_seat_pointer_notify_motion(wlr_seat, time_msec, sx, sy);
     } else {
         cwc_cursor_set_image_by_name(cursor, "default");
         wlr_seat_pointer_clear_focus(wlr_seat);
     }
+    wlr_seat_pointer_notify_motion(wlr_seat, time_msec, sx, sy);
 
 move_only:
     if (dx || dy)

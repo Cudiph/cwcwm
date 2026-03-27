@@ -17,6 +17,7 @@
  */
 
 #include <libinput.h>
+#include <linux/input-event-codes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -86,6 +87,14 @@ static void on_request_start_drag(struct wl_listener *listener, void *data)
         return;
     }
 
+    if (seat->input_simulation == CWC_SIMULATE_TABLET) {
+        wlr_seat_start_pointer_drag(seat->wlr_seat, event->drag, event->serial);
+        wlr_seat_pointer_notify_button(seat->wlr_seat, get_current_time_msec(),
+                                       BTN_LEFT,
+                                       WL_POINTER_BUTTON_STATE_PRESSED);
+        return;
+    }
+
     cwc_log(CWC_DEBUG, "ignoring start_drag request: %u", event->serial);
     wlr_data_source_destroy(event->drag->source);
 }
@@ -113,6 +122,8 @@ static void on_drag_destroy(struct wl_listener *listener, void *data)
 {
     struct cwc_drag *drag = wl_container_of(listener, drag, on_drag_destroy_l);
     struct cwc_seat *seat = drag->wlr_drag->seat->data;
+
+    cwc_log(CWC_DEBUG, "destroying drag: %p", drag);
 
     struct cwc_toplevel *toplevel = cwc_toplevel_try_from_wlr_surface(
         seat->wlr_seat->keyboard_state.focused_surface);
@@ -153,6 +164,7 @@ static void on_start_drag(struct wl_listener *listener, void *data)
     wl_signal_add(&drag->events.motion, &cwc_drag->on_drag_motion_l);
     wl_signal_add(&drag->events.destroy, &cwc_drag->on_drag_destroy_l);
 
+    /* reset to pointer mode for tablet */
     if (seat->input_simulation != CWC_SIMULATE_TOUCH)
         cwc_seat_end_down(seat);
 }
