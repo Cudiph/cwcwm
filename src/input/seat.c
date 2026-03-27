@@ -94,7 +94,19 @@ static void on_drag_motion(struct wl_listener *listener, void *data)
 {
     struct cwc_drag *drag = wl_container_of(listener, drag, on_drag_motion_l);
     struct wlr_cursor *cursor = server.seat->cursor->wlr_cursor;
-    wlr_scene_node_set_position(&drag->scene_tree->node, cursor->x, cursor->y);
+    struct cwc_seat *seat     = drag->seat;
+    if (seat->input_simulation == CWC_SIMULATE_TOUCH) {
+        struct cwc_touch *touch;
+        wl_list_for_each(touch, &seat->touch_devs, link)
+        {
+            wlr_scene_node_set_position(&drag->scene_tree->node, touch->x,
+                                        touch->y);
+            return;
+        }
+    } else {
+        wlr_scene_node_set_position(&drag->scene_tree->node, cursor->x,
+                                    cursor->y);
+    }
 }
 
 static void on_drag_destroy(struct wl_listener *listener, void *data)
@@ -141,7 +153,8 @@ static void on_start_drag(struct wl_listener *listener, void *data)
     wl_signal_add(&drag->events.motion, &cwc_drag->on_drag_motion_l);
     wl_signal_add(&drag->events.destroy, &cwc_drag->on_drag_destroy_l);
 
-    cwc_seat_end_down(seat);
+    if (seat->input_simulation != CWC_SIMULATE_TOUCH)
+        cwc_seat_end_down(seat);
 }
 
 static void _cwc_seat_destroy(struct cwc_seat *seat)

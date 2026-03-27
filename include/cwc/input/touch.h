@@ -10,6 +10,7 @@ struct cwc_touch {
     struct wl_list link;
     struct cwc_seat *seat;
     struct wlr_touch *wlr_touch;
+    double x, y; // last touch pos
 
     struct wl_list touches; // touch_point.link
 

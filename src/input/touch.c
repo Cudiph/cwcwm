@@ -46,6 +46,9 @@ void process_touch_down(struct cwc_cursor *cursor,
     wlr_cursor_warp_absolute(cursor->wlr_cursor, &touch->wlr_touch->base,
                              event->x, event->y);
 
+    touch->x = lx;
+    touch->y = ly;
+
     struct wlr_surface *surface = scene_surface_at(lx, ly, &sx, &sy);
     if (!surface)
         return;
@@ -130,6 +133,9 @@ void process_touch_motion(struct cwc_cursor *cursor,
     wlr_cursor_absolute_to_layout_coords(seat->cursor->wlr_cursor,
                                          &touch->wlr_touch->base, event->x,
                                          event->y, &lx, &ly);
+
+    touch->x = lx;
+    touch->y = ly;
 
     if (cursor->state != CWC_CURSOR_STATE_NORMAL) {
         double dx = lx - cursor->wlr_cursor->x;
