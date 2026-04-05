@@ -27,6 +27,7 @@
 #include <lauxlib.h>
 #include <libinput.h>
 #include <lua.h>
+#include <string.h>
 #include <wayland-util.h>
 #include <wlr/types/wlr_keyboard.h>
 #include <xkbcommon/xkbcommon.h>

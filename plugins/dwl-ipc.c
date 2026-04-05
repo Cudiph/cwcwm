@@ -154,7 +154,7 @@ static void update_layout_symbol(struct cwc_output *output)
     wl_list_for_each(ipc_output, &output_addon->ipc_outputs, link)
     {
         cwc_dwl_ipc_output_v2_set_layout_symbol(ipc_output->output_handle,
-                                                 symbol);
+                                                symbol);
     }
 }
 

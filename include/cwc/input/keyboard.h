@@ -1,11 +1,10 @@
 #ifndef _CWC_INPUT_KEYBOARD_H
 #define _CWC_INPUT_KEYBOARD_H
 
+#include <wayland-server-protocol.h>
 #include <wayland-util.h>
 #include <wlr/types/wlr_input_device.h>
 #include <xkbcommon/xkbcommon.h>
-
-#include "cwc/util.h"
 
 struct cwc_server;
 struct wlr_keyboard;

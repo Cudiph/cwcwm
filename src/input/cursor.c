@@ -377,9 +377,8 @@ void process_cursor_motion(struct cwc_cursor *cursor,
     }
 
     if (!time_msec) {
-        struct timespec now;
-        clock_gettime(CLOCK_MONOTONIC, &now);
-        time_msec = timespec_to_msec(&now);
+        time_msec = get_current_time_msec();
+        goto notify;
     }
 
     if (!cursor->send_events)
@@ -412,6 +411,7 @@ void process_cursor_motion(struct cwc_cursor *cursor,
         dy = sy_confined - sy;
     }
 
+notify:
     struct cwc_seat *seat = wlr_seat->data;
     if (seat->is_down) {
         sx = cx - seat->surface_origin_x;
@@ -790,9 +790,7 @@ void start_interactive_resize(struct cwc_toplevel *toplevel, uint32_t edges)
     }
 
     // init resize schedule
-    struct timespec now;
-    clock_gettime(CLOCK_MONOTONIC, &now);
-    cursor->last_resize_time_msec = timespec_to_msec(&now);
+    cursor->last_resize_time_msec = get_current_time_msec();
 }
 
 static void end_interactive_move_floating(struct cwc_cursor *cursor)
@@ -973,10 +971,7 @@ void process_cursor_button(struct cwc_cursor *cursor,
                                          cursor->seat);
 
     if (!event->time_msec) {
-        struct timespec now;
-        clock_gettime(CLOCK_MONOTONIC, &now);
-        uint64_t now_msec = timespec_to_msec(&now);
-        event->time_msec  = now_msec;
+        event->time_msec = get_current_time_msec();
     }
 
     struct cwc_seat *seat = cursor->seat->data;
@@ -1847,9 +1842,7 @@ static void __cwc_cursor_send_axis(struct cwc_cursor *cursor,
                                    bool inverse,
                                    bool raw)
 {
-    struct timespec now;
-    clock_gettime(CLOCK_MONOTONIC, &now);
-    uint64_t now_msec = timespec_to_msec(&now);
+    uint64_t now_msec = get_current_time_msec();
 
     struct wlr_pointer_axis_event event = {
         .time_msec          = now_msec,
@@ -1896,9 +1889,7 @@ static void __cwc_cursor_send_key(struct cwc_cursor *cursor,
                                   enum wl_pointer_button_state state,
                                   bool raw)
 {
-    struct timespec now;
-    clock_gettime(CLOCK_MONOTONIC, &now);
-    uint64_t now_msec = timespec_to_msec(&now);
+    uint64_t now_msec = get_current_time_msec();
     if (state == 0)
         now_msec += 1;
 

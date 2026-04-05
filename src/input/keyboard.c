@@ -481,9 +481,7 @@ static void __cwc_keyboard_group_send_key(struct cwc_keyboard_group *kbd_group,
                                           enum wl_keyboard_key_state state,
                                           bool raw)
 {
-    struct timespec now;
-    clock_gettime(CLOCK_MONOTONIC, &now);
-    uint64_t now_msec = timespec_to_msec(&now);
+    uint64_t now_msec = get_current_time_msec();
 
     struct wlr_keyboard_key_event event = {
         .keycode      = keycode,

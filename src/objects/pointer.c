@@ -42,6 +42,7 @@
 #include "cwc/input/seat.h"
 #include "cwc/luaclass.h"
 #include "cwc/server.h"
+#include "cwc/util.h"
 
 /** Emitted when a pointer is moved or input device motion event is triggered.
  *
@@ -521,7 +522,7 @@ static int luaC_pointer_move(lua_State *L)
         return 0;
     }
 
-    process_cursor_motion(cursor, 0, NULL, x, y, x, y);
+    process_cursor_motion(cursor, get_current_time_msec(), NULL, x, y, x, y);
 
     return 0;
 }
@@ -550,7 +551,8 @@ static int luaC_pointer_move_to(lua_State *L)
         return 0;
     }
 
-    process_cursor_motion(cursor, 0, NULL, dx, dy, dx, dy);
+    process_cursor_motion(cursor, get_current_time_msec(), NULL, dx, dy, dx,
+                          dy);
 
     return 0;
 }

@@ -169,4 +169,11 @@ static inline uint64_t timespec_to_msec(struct timespec *t)
     return t->tv_sec * 1000 + t->tv_nsec / 1e6;
 }
 
+static inline uint64_t get_current_time_msec()
+{
+    struct timespec now;
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    return timespec_to_msec(&now);
+}
+
 #endif // !_CWC_UTIL_H

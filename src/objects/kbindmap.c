@@ -34,6 +34,7 @@
 #include "cwc/input/keyboard.h"
 #include "cwc/luaclass.h"
 #include "cwc/server.h"
+#include "cwc/util.h"
 
 /** Active state of the keybind map.
  *
