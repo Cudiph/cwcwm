@@ -119,10 +119,10 @@ emerge \=gui-wm/cwcwm-0.2.0 or \=gui-wm/cwcwm-9999 for the git version
 </details>
 
 <details>
-<summary>Pop!_OS / Ubuntu 24.04</summary>
+<summary>Pop!_OS 24.04 LTS / Ubuntu 24.04 LTS (Noble)</summary>
 
-Ubuntu 24.04 (and Pop!_OS based on it) ships older versions of several
-dependencies. See the full [build guide](docs/05-building.md) for manual steps,
+Pop!_OS 24.04 LTS (and Ubuntu 24.04 Noble it is based on) ships older versions
+of several dependencies. See the full [build guide](docs/05-building.md) for manual steps,
 or use the experimental automated script:
 
 ```

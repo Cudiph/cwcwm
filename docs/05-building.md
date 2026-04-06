@@ -1,8 +1,8 @@
-# Building on Ubuntu / Pop!_OS
+# Building on Ubuntu 24.04 LTS (Noble) / Pop!_OS 24.04 LTS
 
-This guide documents the full build process for CwC on Ubuntu 24.04 / Pop!_OS,
-including all dependencies that need to be built from source due to these distros
-shipping older versions.
+This guide was written and tested on Pop!_OS 24.04 LTS (based on Ubuntu 24.04 Noble).
+It documents the full build process for CwC, including all dependencies that need
+to be built from source due to these distros shipping older versions.
 
 An experimental automated build script is also available at [`scripts/build-deps.sh`](../scripts/build-deps.sh).
 
