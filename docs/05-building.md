@@ -24,132 +24,21 @@ sudo apt install meson ninja-build wayland-protocols libwayland-dev \
 ## Dependencies built from source
 
 The following must be built from source because Ubuntu 24.04 packages are too old.
-Build them **in this order** (each depends on the previous).
+Build them **in this order** (each depends on the previous). Clone each repo,
+check out the listed tag, and build/install using the project's standard method
+(cmake or meson). Run `sudo ldconfig` after each install.
 
-### 1. hyprutils (>= 0.7.1)
-
-Required by hyprlang. Needs GCC 14 for C++23 support. Use an older tag to avoid
-needing GCC 15.
-
-```bash
-git clone https://github.com/hyprwm/hyprutils
-cd hyprutils
-git checkout v0.7.1   # newer tags may require GCC 15+
-cmake -B build -DCMAKE_CXX_COMPILER=g++-14
-cmake --build build
-sudo cmake --install build
-sudo ldconfig
-```
-
-### 2. hyprlang (>= 0.4.2)
-
-Required by hyprcursor.
-
-```bash
-git clone https://github.com/hyprwm/hyprlang
-cd hyprlang
-cmake -B build -DCMAKE_CXX_COMPILER=g++-14
-cmake --build build
-sudo cmake --install build
-sudo ldconfig
-```
-
-### 3. hyprcursor
-
-Required by CwC.
-
-```bash
-git clone https://github.com/hyprwm/hyprcursor
-cd hyprcursor
-cmake -B build -DCMAKE_CXX_COMPILER=g++-14
-cmake --build build
-sudo cmake --install build
-sudo ldconfig
-```
-
-### 4. wayland (>= 1.24.0)
-
-Required by wlroots 0.20.
-
-```bash
-git clone https://gitlab.freedesktop.org/wayland/wayland.git
-cd wayland
-git checkout 1.25.0
-meson setup build -Ddocumentation=false -Dtests=false
-ninja -C build
-sudo ninja -C build install
-sudo ldconfig
-```
-
-### 5. wayland-protocols (>= 1.38)
-
-Required by wlroots 0.20 for protocol enum headers.
-
-```bash
-git clone https://gitlab.freedesktop.org/wayland/wayland-protocols.git
-cd wayland-protocols
-git checkout 1.48
-meson setup build
-ninja -C build
-sudo ninja -C build install
-sudo ldconfig
-```
-
-### 6. libdrm (>= 2.4.129)
-
-Required by wlroots 0.20.
-
-```bash
-git clone https://gitlab.freedesktop.org/mesa/drm.git
-cd drm
-git checkout libdrm-2.4.131
-meson setup build
-ninja -C build
-sudo ninja -C build install
-sudo ldconfig
-```
-
-### 7. pixman (>= 0.43.0)
-
-Required by wlroots 0.20.
-
-```bash
-git clone https://gitlab.freedesktop.org/pixman/pixman.git
-cd pixman
-git checkout pixman-0.43.0
-meson setup build
-ninja -C build
-sudo ninja -C build install
-sudo ldconfig
-```
-
-### 8. libdisplay-info (>= 0.2.0)
-
-Required by wlroots 0.20 for DRM backend support.
-
-```bash
-git clone https://gitlab.freedesktop.org/emersion/libdisplay-info.git
-cd libdisplay-info
-git checkout 0.2.0
-meson setup build
-ninja -C build
-sudo ninja -C build install
-sudo ldconfig
-```
-
-### 9. wlroots (0.20.x)
-
-```bash
-git clone https://gitlab.freedesktop.org/wlroots/wlroots.git
-cd wlroots
-git checkout 0.20.0
-meson setup build -Dexamples=false
-ninja -C build
-sudo ninja -C build install
-sudo ldconfig
-```
-
-Verify all features are YES (especially drm-backend).
+| # | Repository | Tag | Build system | Notes |
+|---|-----------|-----|-------------|-------|
+| 1 | [hyprutils](https://github.com/hyprwm/hyprutils) | `v0.10.4` | cmake | Needs GCC 14+ (`-DCMAKE_CXX_COMPILER=g++-14`) |
+| 2 | [hyprlang](https://github.com/hyprwm/hyprlang) | `v0.6.8` | cmake | Needs GCC 14+ |
+| 3 | [hyprcursor](https://github.com/hyprwm/hyprcursor) | `v0.1.13` | cmake | Needs GCC 14+ |
+| 4 | [wayland](https://gitlab.freedesktop.org/wayland/wayland) | `1.25.0` | meson | `-Ddocumentation=false -Dtests=false` |
+| 5 | [wayland-protocols](https://gitlab.freedesktop.org/wayland/wayland-protocols) | `1.48` | meson | |
+| 6 | [libdrm](https://gitlab.freedesktop.org/mesa/drm) | `libdrm-2.4.131` | meson | |
+| 7 | [pixman](https://gitlab.freedesktop.org/pixman/pixman) | `pixman-0.46.4` | meson | |
+| 8 | [libdisplay-info](https://gitlab.freedesktop.org/emersion/libdisplay-info) | `0.3.0` | meson | |
+| 9 | [wlroots](https://gitlab.freedesktop.org/wlroots/wlroots) | `0.20.0` | meson | `-Dexamples=false`; verify drm-backend is YES |
 
 ## Building CwC
 
