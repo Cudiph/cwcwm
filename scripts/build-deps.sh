@@ -4,7 +4,7 @@
 # This script checks for required dependency versions and builds from source
 # when the system packages are too old. Run from the cwcwm repo directory.
 #
-# Usage: ./build-deps.sh [--install-system-deps] [--build-dir DIR]
+# Usage: ./scripts/build-deps.sh [--install-system-deps] [--build-dir DIR]
 
 set -euo pipefail
 

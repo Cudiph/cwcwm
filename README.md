@@ -119,6 +119,19 @@ emerge \=gui-wm/cwcwm-0.2.0 or \=gui-wm/cwcwm-9999 for the git version
 </details>
 
 <details>
+<summary>Pop!_OS / Ubuntu 24.04</summary>
+
+Ubuntu 24.04 (and Pop!_OS based on it) ships older versions of several
+dependencies. See the full [build guide](docs/05-building.md) for manual steps,
+or use the experimental automated script:
+
+```
+./scripts/build-deps.sh --install-system-deps
+```
+
+</details>
+
+<details>
 <summary>NixOS</summary>
 
 ```
