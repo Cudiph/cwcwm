@@ -5,6 +5,13 @@ executable(
   include_directories : cwc_inc,
 )
 
+executable(
+  'vecc',
+  ['vec.c', '../src/util-vec.c', '../src/util.c'],
+  dependencies: [wlr, wayland_server],
+  include_directories : cwc_inc,
+)
+
 boost = dependency('boost')
 executable(
   'hashcpp',
