@@ -155,6 +155,12 @@ void cwc_keybind_map_clear(struct cwc_keybind_map *kmap)
     *map = cwc_hhmap_create(8);
 }
 
+void cwc_keybind_map_stop_repeat(struct cwc_keybind_map *kmap)
+{
+    wl_event_source_timer_update(kmap->repeat_timer, 0);
+    kmap->repeated_bind = NULL;
+}
+
 static void _keybind_remove_if_exist(struct cwc_keybind_map *kmap,
                                      uint64_t generated_key);
 

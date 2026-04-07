@@ -109,6 +109,7 @@ void cwc_vec_pop(struct cwc_vec *vec);
 void cwc_vec_pop_at(struct cwc_vec *vec, size_t idx);
 
 void *cwc_vec_at(struct cwc_vec *vec, size_t idx);
+int cwc_vec_find(struct cwc_vec *vec, void *value);
 
 bool wl_list_length_at_least(struct wl_list *list, int more_than_or_equal_to);
 
