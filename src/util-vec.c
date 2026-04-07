@@ -155,6 +155,16 @@ void cwc_vec_pop(struct cwc_vec *vec)
 
 void cwc_vec_pop_at(struct cwc_vec *vec, size_t idx)
 {
+#ifndef NDEBUG
+    if (idx >= vec->count) {
+        fprintf(stderr,
+                "index out of bounds: trying to access index %ld with vector "
+                "size %ld\n",
+                idx, vec->count);
+        abort();
+    }
+#endif
+
     if (vec->count == 0)
         return;
 
@@ -169,18 +179,8 @@ void cwc_vec_pop_at(struct cwc_vec *vec, size_t idx)
     check_shrink(vec);
 }
 
-void *cwc_vec_at(struct cwc_vec *vec, size_t idx)
+static void *access_idx(struct cwc_vec *vec, size_t idx)
 {
-#ifndef NDEBUG
-    if (idx >= vec->count) {
-        fprintf(stderr,
-                "index out of bounds: trying to access index %ld with vector "
-                "size %ld\n",
-                idx, vec->count);
-        abort();
-    }
-#endif
-
     switch (vec->elem_sizeof) {
     case sizeof(int8_t):
         return (void *)(intptr_t)(((int8_t *)(vec->data))[idx]);
@@ -193,4 +193,47 @@ void *cwc_vec_at(struct cwc_vec *vec, size_t idx)
     default:
         return NULL;
     }
+}
+
+void *cwc_vec_at(struct cwc_vec *vec, size_t idx)
+{
+#ifndef NDEBUG
+    if (idx >= vec->count) {
+        fprintf(stderr,
+                "index out of bounds: trying to access index %ld with vector "
+                "size %ld\n",
+                idx, vec->count);
+        abort();
+    }
+#endif
+
+    return access_idx(vec, idx);
+}
+
+int cwc_vec_find(struct cwc_vec *vec, void *value)
+{
+    for (size_t i = 0; i < vec->count; i++) {
+        switch (vec->elem_sizeof) {
+        case sizeof(int8_t):
+            if (((int8_t *)(vec->data))[i] == (int8_t)(intptr_t)value)
+                return i;
+            break;
+        case sizeof(int16_t):
+            if (((int16_t *)(vec->data))[i] == (int16_t)(intptr_t)value)
+                return i;
+            break;
+        case sizeof(int32_t):
+            if (((int32_t *)(vec->data))[i] == (int32_t)(intptr_t)value)
+                return i;
+            break;
+        case sizeof(int64_t):
+            if (((int64_t *)(vec->data))[i] == (int64_t)(intptr_t)value)
+                return i;
+            break;
+        default:
+            break;
+        }
+    }
+
+    return -1;
 }

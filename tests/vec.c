@@ -28,12 +28,14 @@ static void functional_test()
     assert((int)(intptr_t)cwc_vec_at(vec, 1) == 300);
     assert((int)(intptr_t)cwc_vec_at(vec, 2) == INT_MIN);
     assert((int)(intptr_t)cwc_vec_at(vec, 3) == -1);
+    assert(cwc_vec_find(vec, (void *)INT_MIN) == 2);
     assert(vec->count == 4);
 
     cwc_vec_pop_at(vec, 1);
     assert((int)(intptr_t)cwc_vec_at(vec, 0) == 0x20);
     assert((int)(intptr_t)cwc_vec_at(vec, 1) == INT_MIN);
     assert((int)(intptr_t)cwc_vec_at(vec, 2) == -1);
+    assert(cwc_vec_find(vec, (void *)-1) == 2);
     assert(vec->count == 3);
 
     cwc_vec_destroy(vec);
