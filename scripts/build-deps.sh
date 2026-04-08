@@ -60,7 +60,7 @@ SYSTEM_PKGS=(
     libcairo2-dev libxkbcommon-dev libinput-dev libxxhash-dev
     libluajit-5.1-dev libxcb1-dev xwayland libdrm-dev
     lua-lgi libpango1.0-dev gir1.2-pango-1.0
-    libzip-dev librsvg2-dev
+    libzip-dev librsvg2-dev libtomlplusplus-dev hwdata
     libseat-dev libudev-dev libgbm-dev libgles-dev libegl-dev
     libvulkan-dev glslang-tools liblcms2-dev
     libxcb-dri3-dev libxcb-present-dev libxcb-render-util0-dev
