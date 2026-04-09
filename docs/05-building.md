@@ -1,10 +1,9 @@
-# Building on Ubuntu 24.04 LTS (Noble) / Pop!_OS 24.04 LTS
+# Building on Ubuntu / Pop!_OS
 
-This guide was written and tested on Pop!_OS 24.04 LTS (based on Ubuntu 24.04 Noble).
-It documents the full build process for CwC, including all dependencies that need
-to be built from source due to these distros shipping older versions.
+Tested on Ubuntu 26.04 LTS. May also work on 24.04 (see [notes below](#ubuntu-2404)).
 
-An experimental automated build script is also available at [`scripts/build-deps.sh`](../scripts/build-deps.sh).
+Several dependencies must be built from source as these distros ship older versions.
+An automated build script is available at [`scripts/build-deps.sh`](../scripts/build-deps.sh).
 
 ## System packages
 
@@ -18,7 +17,8 @@ sudo apt install meson ninja-build wayland-protocols libwayland-dev \
   libxcb-present-dev libxcb-render-util0-dev libxcb-shm0-dev \
   libxcb-xfixes0-dev libxcb-xinput-dev libxcb-composite0-dev \
   libxcb-ewmh-dev libxcb-icccm4-dev libxcb-res0-dev libxcb-errors-dev \
-  libffi-dev libexpat1-dev libxml2-dev libliftoff-dev cmake g++-14
+  libffi-dev libexpat1-dev libxml2-dev libliftoff-dev cmake g++-14 \
+  libtomlplusplus-dev hwdata
 ```
 
 ## Dependencies built from source
@@ -50,3 +50,8 @@ sudo ninja -C build install
 ```
 
 CwC should now be available in your display manager or by running `cwc` from a TTY.
+
+## Ubuntu 24.04
+
+Building on Ubuntu 24.04 may require changing `c_std=gnu23` to `c_std=gnu2x` in
+`meson.build` (see commit `d986cf5`). This has only been tested locally once.

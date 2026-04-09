@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# build-deps.sh - Build CwC and its dependencies on Pop!_OS / Ubuntu 24.04
+# build-deps.sh - Build CwC and its dependencies on Ubuntu 26.04
 #
 # This script checks for required dependency versions and builds from source
 # when the system packages are too old. Run from the cwcwm repo directory.
