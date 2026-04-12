@@ -96,4 +96,7 @@ void cwc_seat_begin_down(struct cwc_seat *seat,
                          enum cwc_seat_simulation_mode mode);
 void cwc_seat_end_down(struct cwc_seat *seat);
 
+void cwc_seat_map_input_device(struct cwc_seat *seat,
+                               struct wlr_input_device *dev);
+
 #endif // !_CWC_SEAT_H

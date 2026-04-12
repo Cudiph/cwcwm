@@ -36,15 +36,14 @@ struct touch_point {
 void process_touch_down(struct cwc_cursor *cursor,
                         struct wlr_touch_down_event *event)
 {
-    struct cwc_touch *touch = event->touch->data;
-    struct cwc_seat *seat   = touch->seat;
+    struct cwc_touch *touch      = event->touch->data;
+    struct cwc_seat *seat        = touch->seat;
+    struct wlr_input_device *dev = &touch->wlr_touch->base;
 
     double lx, ly, sx, sy;
-    wlr_cursor_absolute_to_layout_coords(seat->cursor->wlr_cursor,
-                                         &touch->wlr_touch->base, event->x,
-                                         event->y, &lx, &ly);
-    wlr_cursor_warp_absolute(cursor->wlr_cursor, &touch->wlr_touch->base,
-                             event->x, event->y);
+    wlr_cursor_absolute_to_layout_coords(seat->cursor->wlr_cursor, dev,
+                                         event->x, event->y, &lx, &ly);
+    wlr_cursor_warp_absolute(cursor->wlr_cursor, dev, event->x, event->y);
 
     struct wlr_surface *surface = scene_surface_at(lx, ly, &sx, &sy);
     if (!surface)
@@ -72,8 +71,7 @@ void process_touch_down(struct cwc_cursor *cursor,
     } else {
         sx = lx - cursor->wlr_cursor->x;
         sy = ly - cursor->wlr_cursor->y;
-        process_cursor_motion(cursor, event->time_msec, &touch->wlr_touch->base,
-                              sx, sy, sx, sy);
+        process_cursor_motion(cursor, event->time_msec, dev, sx, sy, sx, sy);
         struct wlr_pointer_button_event e = {
             .state   = WL_POINTER_BUTTON_STATE_PRESSED,
             .button  = BTN_LEFT,
@@ -127,9 +125,8 @@ void process_touch_motion(struct cwc_cursor *cursor,
     struct wlr_input_device *dev = &touch->wlr_touch->base;
 
     double lx, ly, sx, sy;
-    wlr_cursor_absolute_to_layout_coords(seat->cursor->wlr_cursor,
-                                         &touch->wlr_touch->base, event->x,
-                                         event->y, &lx, &ly);
+    wlr_cursor_absolute_to_layout_coords(seat->cursor->wlr_cursor, dev,
+                                         event->x, event->y, &lx, &ly);
 
     if (cursor->state != CWC_CURSOR_STATE_NORMAL) {
         double dx = lx - cursor->wlr_cursor->x;
