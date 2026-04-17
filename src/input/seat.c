@@ -253,8 +253,30 @@ void cwc_seat_add_keyboard_device(struct cwc_seat *seat,
     cwc_keyboard_group_add_device(seat->kbd_group, dev);
 }
 
-static void map_input_device_to_output(struct cwc_seat *seat,
-                                       struct wlr_input_device *dev)
+static bool has_prefix(const char *str, const char *prefix)
+{
+    return strncmp(str, prefix, strlen(prefix)) == 0;
+}
+
+static const char *find_builtin_output()
+{
+    const char *matched_name = NULL;
+    struct cwc_output *output;
+    wl_list_for_each(output, &server.outputs, link)
+    {
+        char *name = output->wlr_output->name;
+        if (has_prefix(name, "eDP-") || has_prefix(name, "LVDS-")
+            || has_prefix(name, "DSI-")) {
+            matched_name = name;
+            break;
+        }
+    }
+
+    return matched_name;
+}
+
+void cwc_seat_map_input_device(struct cwc_seat *seat,
+                               struct wlr_input_device *dev)
 {
     const char *output_name = NULL;
 
@@ -266,7 +288,16 @@ static void map_input_device_to_output(struct cwc_seat *seat,
         output_name = wlr_touch_from_input_device(dev)->output_name;
         break;
     default:
-        return;
+        break;
+    }
+
+    switch (dev->type) {
+    case WLR_INPUT_DEVICE_TABLET:
+    case WLR_INPUT_DEVICE_TOUCH:
+        if (output_name == NULL)
+            output_name = find_builtin_output();
+    default:
+        break;
     }
 
     if (output_name == NULL)
@@ -277,6 +308,7 @@ static void map_input_device_to_output(struct cwc_seat *seat,
     if (!output)
         return;
 
+    wlr_cursor_map_input_to_region(seat->cursor->wlr_cursor, dev, NULL);
     wlr_cursor_map_input_to_output(seat->cursor->wlr_cursor, dev,
                                    output->wlr_output);
 }
@@ -285,7 +317,7 @@ void cwc_seat_add_pointer_device(struct cwc_seat *seat,
                                  struct wlr_input_device *dev)
 {
     wlr_cursor_attach_input_device(seat->cursor->wlr_cursor, dev);
-    map_input_device_to_output(seat, dev);
+    cwc_seat_map_input_device(seat, dev);
     cwc_seat_update_capabilities(seat);
 }
 
@@ -299,6 +331,7 @@ void cwc_seat_add_tablet_device(struct cwc_seat *seat,
                                 struct wlr_input_device *dev)
 {
     cwc_tablet_create(seat, dev);
+    cwc_seat_map_input_device(seat, dev);
 }
 
 void cwc_seat_add_tablet_pad_device(struct cwc_seat *seat,
@@ -310,8 +343,8 @@ void cwc_seat_add_tablet_pad_device(struct cwc_seat *seat,
 void cwc_seat_add_touch_device(struct cwc_seat *seat,
                                struct wlr_input_device *dev)
 {
-    map_input_device_to_output(seat, dev);
     cwc_touch_create(seat, dev);
+    cwc_seat_map_input_device(seat, dev);
     cwc_seat_update_capabilities(seat);
 }
 

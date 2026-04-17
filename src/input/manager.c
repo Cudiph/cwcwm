@@ -140,3 +140,16 @@ void cwc_input_manager_update_cursor_scale()
         wlr_cursor_move(seat->cursor->wlr_cursor, NULL, 0, 0);
     }
 }
+
+void cwc_input_manager_configure_all_input_mapping()
+{
+    struct cwc_libinput_device *dev;
+    wl_list_for_each(dev, &server.input->devices, link)
+    {
+        struct cwc_seat *seat;
+        wl_list_for_each(seat, &server.input->seats, link)
+        {
+            cwc_seat_map_input_device(seat, dev->wlr_input_dev);
+        }
+    }
+}

@@ -24,6 +24,7 @@ srcs = [
   'signal.c',
   'util.c',
   'util-map.c',
+  'util-vec.c',
 
   'luac.c',
   'luaclass.c',

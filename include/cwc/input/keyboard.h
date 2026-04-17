@@ -25,6 +25,8 @@ struct cwc_keyboard_group {
     bool send_events;
     int layout_idx;
 
+    struct cwc_vec *handled_tracker;
+
     struct wl_listener modifiers_l;
     struct wl_listener key_l;
 
@@ -120,6 +122,8 @@ static inline uint32_t kbindinfo_key_get_keysym(uint64_t genkey)
 struct cwc_keybind_map *cwc_keybind_map_create(struct wl_list *list);
 void cwc_keybind_map_destroy(struct cwc_keybind_map *kmap);
 void cwc_keybind_map_clear(struct cwc_keybind_map *kmap);
+
+void cwc_keybind_map_stop_repeat(struct cwc_keybind_map *kmap);
 
 struct lua_State;
 int cwc_keybind_map_register_bind_from_lua(struct lua_State *L,

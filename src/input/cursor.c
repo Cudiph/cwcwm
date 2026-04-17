@@ -1703,8 +1703,14 @@ static void hyprcursor_buffer_fini(struct cwc_cursor *cursor)
 
 void cwc_cursor_set_image_by_name(struct cwc_cursor *cursor, const char *name)
 {
-    if (cursor->state != CWC_CURSOR_STATE_NORMAL || cursor->hidden)
+    if (cursor->state != CWC_CURSOR_STATE_NORMAL)
         return;
+
+    if (cursor->hidden) {
+        cursor->name_before_hidden = name;
+        cursor->client_surface     = NULL;
+        return;
+    }
 
     if (name == NULL) {
         cwc_cursor_hide_cursor(cursor);
@@ -1714,7 +1720,8 @@ void cwc_cursor_set_image_by_name(struct cwc_cursor *cursor, const char *name)
     if (cursor->current_name != NULL && strcmp(cursor->current_name, name) == 0)
         return;
 
-    cursor->current_name = name;
+    cursor->current_name       = name;
+    cursor->name_before_hidden = NULL;
 
     hyprcursor_buffer_fini(cursor);
 
@@ -1767,8 +1774,13 @@ void cwc_cursor_set_surface(struct cwc_cursor *cursor,
         return;
 
     cursor->client_surface = surface;
-    cursor->hotspot_x      = hotspot_x;
-    cursor->hotspot_y      = hotspot_y;
+    if (cursor->hidden) {
+        cursor->name_before_hidden = NULL;
+        return;
+    }
+
+    cursor->hotspot_x = hotspot_x;
+    cursor->hotspot_y = hotspot_y;
     wl_list_remove(&cursor->client_side_surface_destroy_l.link);
     if (surface) {
         wl_signal_add(&surface->events.destroy,

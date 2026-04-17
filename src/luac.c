@@ -52,6 +52,7 @@
 #include "cwc/input/keyboard.h"
 #include "cwc/input/manager.h"
 #include "cwc/input/seat.h"
+#include "cwc/input/tablet.h"
 #include "cwc/luac.h"
 #include "cwc/luaclass.h"
 #include "cwc/plugin.h"
@@ -131,6 +132,13 @@ static void reregister_lua_object()
     wl_list_for_each(seat, &server.input->seats, link)
     {
         luaC_object_kbd_register(L, seat->kbd_group);
+
+        struct cwc_tablet *tablet;
+        wl_list_for_each(tablet, &seat->tablet_devs, link)
+        {
+            luaC_object_tablet_register(L, tablet);
+            cwc_object_emit_signal_simple("tablet::new", L, tablet);
+        }
     }
 }
 

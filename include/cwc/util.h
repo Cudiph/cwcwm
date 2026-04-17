@@ -86,6 +86,31 @@ void cwc_hhmap_nremove(struct cwc_hhmap *map, const void *key, int key_len);
 /* rehash(map->alloc) will reset the linked list */
 void __cwc_hhmap_rehash_to_size(struct cwc_hhmap *map, uint64_t new_size);
 
+struct cwc_vec {
+    /* element count */
+    uint64_t count;
+
+    /* allocated element count (not bytes) */
+    uint64_t alloc;
+
+    /* element size in bytes */
+    uint64_t elem_sizeof;
+
+    /* pointer to the array */
+    void *data;
+};
+
+struct cwc_vec *cwc_vec_create(int size, int reserved);
+void cwc_vec_destroy(struct cwc_vec *vec);
+
+bool cwc_vec_push(struct cwc_vec *vec, void *data);
+bool cwc_vec_push_at(struct cwc_vec *vec, size_t idx, void *data);
+void cwc_vec_pop(struct cwc_vec *vec);
+void cwc_vec_pop_at(struct cwc_vec *vec, size_t idx);
+
+void *cwc_vec_at(struct cwc_vec *vec, size_t idx);
+int cwc_vec_find(struct cwc_vec *vec, void *value);
+
 bool wl_list_length_at_least(struct wl_list *list, int more_than_or_equal_to);
 
 void wl_list_swap(struct wl_list *x, struct wl_list *y);

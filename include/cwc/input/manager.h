@@ -51,4 +51,6 @@ void cwc_input_manager_destroy();
 
 void cwc_input_manager_update_cursor_scale();
 
+void cwc_input_manager_configure_all_input_mapping();
+
 #endif // !_CWC_INPUT_MANAGER_H

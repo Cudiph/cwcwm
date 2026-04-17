@@ -172,8 +172,18 @@ static void process_key_event(struct cwc_keyboard_group *kbd_group,
     bool handled       = 0;
 
     struct cwc_keybind_map *kmap;
+    int vec_idx;
     switch (event->state) {
     case WL_KEYBOARD_KEY_STATE_PRESSED:
+        /* should just check if the keybind exist but I'm gonna pop it
+         * afterward if the key is not a keybind
+         */
+        vec_idx = cwc_vec_find(kbd_group->handled_tracker,
+                               (void *)(uintptr_t)keycode);
+        if (vec_idx == -1)
+            cwc_vec_push(kbd_group->handled_tracker,
+                         (void *)(uintptr_t)keycode);
+
         handled |= keybind_kbd_execute(server.main_kbd_kmap, seat, modifiers,
                                        keysym, true);
         wl_list_for_each(kmap, &server.kbd_kmaps, link)
@@ -182,24 +192,29 @@ static void process_key_event(struct cwc_keyboard_group *kbd_group,
                 handled |=
                     keybind_kbd_execute(kmap, seat, modifiers, keysym, true);
         }
+
+        if (!handled)
+            cwc_vec_pop(kbd_group->handled_tracker);
+
         break;
     case WL_KEYBOARD_KEY_STATE_RELEASED:
-        // always notify released to client even when has keybind because there
-        // is a case when you hold down a key and hitting keybind while still
-        // holding it, the client still assume that key is pressed because
-        // client doesn't get notified when the key is released
+        vec_idx = cwc_vec_find(kbd_group->handled_tracker,
+                               (void *)(uintptr_t)keycode);
+        if (vec_idx != -1) {
+            handled = true;
+            cwc_vec_pop_at(kbd_group->handled_tracker, vec_idx);
+        }
+
         keybind_kbd_execute(server.main_kbd_kmap, seat, modifiers, keysym,
                             false);
-        wl_event_source_timer_update(server.main_kbd_kmap->repeat_timer, 0);
-        server.main_kbd_kmap->repeated_bind = NULL;
+        cwc_keybind_map_stop_repeat(server.main_kbd_kmap);
 
         wl_list_for_each(kmap, &server.kbd_kmaps, link)
         {
-            wl_event_source_timer_update(kmap->repeat_timer, 0);
-            kmap->repeated_bind = NULL;
-
             if (kmap->active)
                 keybind_kbd_execute(kmap, seat, modifiers, keysym, false);
+
+            cwc_keybind_map_stop_repeat(kmap);
         }
         break;
     default:
@@ -225,7 +240,6 @@ static void process_key_event(struct cwc_keyboard_group *kbd_group,
                                              event->keycode, event->state);
         }
     }
-
     if (!handled) {
         wlr_seat_set_keyboard(wlr_seat, wlr_kbd);
         wlr_seat_keyboard_notify_key(wlr_seat, event->time_msec, event->keycode,
@@ -356,6 +370,7 @@ cwc_keyboard_group_create(struct cwc_seat *seat,
     kbd_group->wlr_kbd_group->keyboard.data = kbd_group;
     kbd_group->seat                         = seat;
     kbd_group->send_events                  = true;
+    kbd_group->handled_tracker = cwc_vec_create(sizeof(uint32_t), 4);
 
     kbd_group->modifiers_l.notify = on_kbd_group_modifiers;
     kbd_group->key_l.notify       = on_kbd_group_key;
@@ -397,6 +412,7 @@ void cwc_keyboard_group_destroy(struct cwc_keyboard_group *kbd_group)
     wl_list_remove(&kbd_group->config_commit_l.link);
 
     wlr_keyboard_group_destroy(kbd_group->wlr_kbd_group);
+    cwc_vec_destroy(kbd_group->handled_tracker);
     free(kbd_group);
 }
 
@@ -516,11 +532,26 @@ inline void keyboard_focus_surface(struct cwc_seat *seat,
                                    struct wlr_surface *surface)
 {
     struct wlr_keyboard *kbd = wlr_seat_get_keyboard(seat->wlr_seat);
-    if (kbd && surface)
-        wlr_seat_keyboard_notify_enter(seat->wlr_seat, surface, kbd->keycodes,
-                                       kbd->num_keycodes, &kbd->modifiers);
-    else
+
+    if (kbd && surface) {
+        /* skip keybind key when notifying client */
+        struct cwc_vec *keycode_vec = cwc_vec_create(sizeof(uint32_t), 4);
+        for (int i = 0; i < kbd->num_keycodes; i++) {
+            uintptr_t elem = kbd->keycodes[i];
+            if (cwc_vec_find(seat->kbd_group->handled_tracker,
+                             (void *)(uintptr_t)elem + 8)
+                == -1)
+                cwc_vec_push(keycode_vec, (void *)(uintptr_t)elem);
+        }
+
+        wlr_seat_keyboard_notify_enter(seat->wlr_seat, surface,
+                                       keycode_vec->data, keycode_vec->count,
+                                       &kbd->modifiers);
+
+        cwc_vec_destroy(keycode_vec);
+    } else {
         wlr_seat_keyboard_notify_enter(seat->wlr_seat, surface, NULL, 0, NULL);
+    }
 }
 
 static void on_vkbd_destroy(struct wl_listener *listener, void *data)

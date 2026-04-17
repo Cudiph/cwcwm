@@ -777,6 +777,8 @@ static void on_new_output(struct wl_listener *listener, void *data)
 
     if (wl_list_length(&server.outputs) == 1)
         cwc_output_focus(output);
+
+    cwc_input_manager_configure_all_input_mapping();
 }
 
 static void output_manager_apply(struct wlr_output_configuration_v1 *config,
