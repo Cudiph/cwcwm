@@ -178,6 +178,12 @@ static int luaC_pointer_get(lua_State *L)
  * @tparam[opt] table data Additional data
  * @tparam[opt] string data.group Keybinding group
  * @tparam[opt] string data.description Keybinding description
+ * @tparam[opt] string data.exclusive Allow keybind to be executed even in
+ * lockscreen and shortcut inhibit
+ * @tparam[opt] string data.repeated Repeat keybind when hold (only on_press
+ * will be executed)
+ * @tparam[opt] number data.repeat_rate Repeat rate in hertz
+ * @tparam[opt] boolean data.pass Keypress will still pass through the client
  * @noreturn
  * @see cuteful.enum.modifier
  * @see cuteful.enum.mouse_btn
@@ -245,6 +251,9 @@ static int luaC_pointer_bind(lua_State *L)
 
         lua_getfield(L, data_index, "pass");
         info.pass = lua_toboolean(L, -1);
+
+        lua_getfield(L, data_index, "repeat_rate");
+        info.repeat_rate = lua_tointeger(L, -1);
     }
 
     keybind_register(server.main_mouse_kmap, modifiers, button, info);

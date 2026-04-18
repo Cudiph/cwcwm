@@ -62,8 +62,11 @@ static int repeat_loop(void *data)
 
     _keybind_execute(kmap, kmap->repeated_bind, true);
 
-    wl_event_source_timer_update(kmap->repeat_timer,
-                                 2000 / g_config.repeat_rate);
+    int repeat_rate = kmap->repeated_bind->repeat_rate
+                          ? 1000 / kmap->repeated_bind->repeat_rate
+                          : 2000 / g_config.repeat_rate;
+
+    wl_event_source_timer_update(kmap->repeat_timer, repeat_rate);
 
     return 1;
 }

@@ -59,6 +59,10 @@ local function test()
     bind_a.pass = false
     assert(not bind_a.pass)
 
+    assert(bind_a.repeat_rate == 0)
+    bind_a.repeat_rate = 67
+    assert(bind_a.repeat_rate == 67)
+
     assert(#bind_a.modifier_name == 1)
     assert(#bind_a.modifier == 1)
     print(bind_a.modifier[1])
