@@ -1,6 +1,6 @@
 # Building on Ubuntu / Pop!_OS
 
-Tested on Ubuntu 26.04 LTS and Pop!_OS 24. May also work on 24.04 (see [notes below](#ubuntu-2404)).
+Tested on Ubuntu 26.04 LTS and Pop!_OS 24.04 LTS. May also work on Ubuntu 24.04 LTS (see [notes below](#ubuntu-2404)).
 
 Several dependencies must be built from source as these distros ship older versions.
 An experimental automated build script is available at [`scripts/build-deps.sh`](../scripts/build-deps.sh).
@@ -57,6 +57,6 @@ CwC should now be available in your display manager or by running `cwc` from a T
 
 ## Ubuntu 24.04
 
-Building on Ubuntu 24.04 may require building more system packages from source - if
+Building on Ubuntu 24.04 LTS may require building more system packages from source - if
 something is missing when building above depencies, you are on your own to attempt
-to fix/build it.
+to build from source.
