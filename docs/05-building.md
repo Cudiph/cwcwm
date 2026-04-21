@@ -1,13 +1,17 @@
 # Building on Ubuntu / Pop!_OS
 
-Tested on Ubuntu 26.04 LTS. May also work on 24.04 (see [notes below](#ubuntu-2404)).
+Tested on Ubuntu 26.04 LTS and Pop!_OS 24. May also work on 24.04 (see [notes below](#ubuntu-2404)).
 
 Several dependencies must be built from source as these distros ship older versions.
-An automated build script is available at [`scripts/build-deps.sh`](../scripts/build-deps.sh).
+An experimental automated build script is available at [`scripts/build-deps.sh`](../scripts/build-deps.sh).
 
 ## System packages
 
 ```bash
+sudo add-apt-repository universe
+
+sudo apt update
+
 sudo apt install meson ninja-build wayland-protocols libwayland-dev \
   libcairo2-dev libxkbcommon-dev libinput-dev libxxhash-dev \
   libluajit-5.1-dev libxcb1-dev xwayland libdrm-dev lua-lgi \
@@ -43,7 +47,7 @@ check out the listed tag, and build/install using the project's standard method
 ## Building CwC
 
 ```bash
-cd cwcwm
+cd path/to/cwcwm
 meson setup build
 ninja -C build
 sudo ninja -C build install
@@ -53,5 +57,6 @@ CwC should now be available in your display manager or by running `cwc` from a T
 
 ## Ubuntu 24.04
 
-Building on Ubuntu 24.04 may require changing `c_std=gnu23` to `c_std=gnu2x` in
-`meson.build` (see commit `d986cf5`). This has only been tested locally once.
+Building on Ubuntu 24.04 may require building more system packages from source - if
+something is missing when building above depencies, you are on your own to attempt
+to fix/build it.

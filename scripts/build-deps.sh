@@ -113,15 +113,15 @@ needs_pixman=false
 needs_libdisplay_info=false
 needs_wlroots=false
 
-check_pkg "hyprutils"        "0.7.1"  || needs_hyprutils=true
-check_pkg "hyprlang"         "0.4.2"  || needs_hyprlang=true
-check_pkg "hyprcursor"       "0.1.0"  || needs_hyprcursor=true
-check_pkg "wayland-server"   "1.24.0" || needs_wayland=true
-check_pkg "wayland-protocols" "1.38"  || needs_wayland_protocols=true
+check_pkg "hyprutils"        "0.10.4"  || needs_hyprutils=true
+check_pkg "hyprlang"          "0.6.8"  || needs_hyprlang=true
+check_pkg "hyprcursor"        "0.1.0"  || needs_hyprcursor=true
+check_pkg "wayland-server"    "1.24.0" || needs_wayland=true
+check_pkg "wayland-protocols"  "1.47"  || needs_wayland_protocols=true
 check_pkg "libdrm"           "2.4.129" || needs_libdrm=true
-check_pkg "pixman-1"         "0.43.0" || needs_pixman=true
-check_pkg "libdisplay-info"  "0.2.0"  || needs_libdisplay_info=true
-check_pkg "wlroots-0.20"     "0.20.0" || needs_wlroots=true
+check_pkg "pixman-1"          "0.46.4" || needs_pixman=true
+check_pkg "libdisplay-info"   "0.3.0"  || needs_libdisplay_info=true
+check_pkg "wlroots-0.20"      "0.20.0" || needs_wlroots=true
 
 # hyprutils/hyprlang/hyprcursor chain: if a dep needs building, rebuild dependents
 if "$needs_hyprutils"; then
