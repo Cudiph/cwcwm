@@ -66,8 +66,8 @@ SYSTEM_PKGS=(
     libxcb-dri3-dev libxcb-present-dev libxcb-render-util0-dev
     libxcb-shm0-dev libxcb-xfixes0-dev libxcb-xinput-dev
     libxcb-composite0-dev libxcb-ewmh-dev libxcb-icccm4-dev
-    libxcb-res0-dev libxcb-errors-dev
-    libffi-dev libexpat1-dev libxml2-dev libliftoff-dev
+    libxcb-res0-dev libffi-dev libexpat1-dev libxml2-dev
+    libliftoff-dev
 )
 
 echo "========================================="
@@ -240,7 +240,7 @@ echo " All dependencies ready!"
 echo "========================================="
 echo ""
 echo "To build CwC:"
-echo "  cd $(dirname "$(realpath "$0")")"
+echo "  cd $(realpath "$(dirname "$0")/..")"
 echo "  meson setup build"
 echo "  ninja -C build"
 echo "  sudo ninja -C build install"
