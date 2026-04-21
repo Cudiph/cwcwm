@@ -442,10 +442,14 @@ static void on_request_resize(struct wl_listener *listener, void *data)
     struct cwc_toplevel *toplevel =
         wl_container_of(listener, toplevel, request_resize_l);
 
-    struct wlr_xdg_toplevel_resize_event *event = data;
+    uint32_t edges = 0;
+    if (cwc_toplevel_is_x11(toplevel))
+        edges = ((struct wlr_xwayland_resize_event *)data)->edges;
+    else
+        edges = ((struct wlr_xdg_toplevel_resize_event *)data)->edges;
 
     cwc_toplevel_focus(toplevel, true);
-    start_interactive_resize(toplevel, event->edges);
+    start_interactive_resize(toplevel, edges);
 }
 
 static void on_request_move(struct wl_listener *listener, void *data)

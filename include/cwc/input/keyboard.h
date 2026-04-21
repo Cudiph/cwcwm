@@ -98,6 +98,7 @@ struct cwc_keybind_info {
     bool exclusive; // execute keybind even when locked or inhibited
     bool repeat;
     bool pass;
+    int repeat_rate; // in hz
 };
 
 struct cwc_keybind_map {

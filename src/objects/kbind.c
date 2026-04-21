@@ -135,6 +135,27 @@ static int luaC_kbind_set_repeated(lua_State *L)
     return 0;
 }
 
+/** Repeat rate of the keybind in hz.
+ *
+ * @property repeat_rate
+ * @tparam[opt=0] number repeat_rate
+ * @negativeallowed false
+ */
+static int luaC_kbind_get_repeat_rate(lua_State *L)
+{
+    struct cwc_keybind_info *kbind = luaC_kbind_checkudata(L, 1);
+    lua_pushnumber(L, kbind->repeat_rate);
+
+    return 1;
+}
+static int luaC_kbind_set_repeat_rate(lua_State *L)
+{
+    struct cwc_keybind_info *kbind = luaC_kbind_checkudata(L, 1);
+    kbind->repeat_rate             = luaL_checkinteger(L, 2);
+
+    return 0;
+}
+
 /** Pass option of the keybind.
  *
  * @property pass
@@ -277,6 +298,7 @@ void luaC_kbind_setup(lua_State *L)
         REG_PROPERTY(group),
         REG_PROPERTY(exclusive),
         REG_PROPERTY(repeated),
+        REG_PROPERTY(repeat_rate),
         REG_PROPERTY(pass),
 
         {NULL, NULL},

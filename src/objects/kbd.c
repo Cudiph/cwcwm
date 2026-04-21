@@ -169,6 +169,9 @@ int cwc_keybind_map_register_bind_from_lua(lua_State *L,
 
         lua_getfield(L, data_index, "pass");
         info.pass = lua_toboolean(L, -1);
+
+        lua_getfield(L, data_index, "repeat_rate");
+        info.repeat_rate = lua_tointeger(L, -1);
     }
 
     // ready for register
@@ -193,6 +196,7 @@ int cwc_keybind_map_register_bind_from_lua(lua_State *L,
  * lockscreen and shortcut inhibit
  * @tparam[opt] string data.repeated Repeat keybind when hold (only on_press
  * will be executed)
+ * @tparam[opt] number data.repeat_rate Repeat rate in hertz
  * @tparam[opt] boolean data.pass Keypress will still pass through the client
  * @noreturn
  * @see cuteful.enum.modifier
