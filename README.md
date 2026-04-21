@@ -121,7 +121,7 @@ emerge \=gui-wm/cwcwm-0.2.0 or \=gui-wm/cwcwm-9999 for the git version
 <details>
 <summary>Ubuntu / Pop!_OS</summary>
 
-Tested on Ubuntu 26.04 LTS. Ubuntu 24.04 may also work with additional steps.
+Tested on Ubuntu 26.04 LTS and Pop!_OS 24.04 LTS. Ubuntu 24.04 may also work with additional steps.
 See the full [build guide](docs/05-building.md) for details, or use the automated script:
 
 ```
