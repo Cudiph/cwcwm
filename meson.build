@@ -1,4 +1,4 @@
-project('cwcwm', 'c', 'cpp', default_options: ['c_std=gnu23,gnu17,gnu11','b_ndebug=if-release'])
+project('cwcwm', 'c', 'cpp', default_options: ['c_std=gnu2x,gnu17,gnu11','b_ndebug=if-release'])
 
 cwc_datadir = get_option('datadir') / 'cwc'
 add_project_arguments([
