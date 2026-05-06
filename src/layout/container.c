@@ -927,6 +927,16 @@ void cwc_container_for_each_toplevel(struct cwc_container *container,
     }
 }
 
+int cwc_container_get_gaps(struct cwc_container *cont)
+{
+    if (cwc_container_is_maximized(cont) || cwc_container_is_fullscreen(cont)
+        || cwc_container_is_floating(cont)) {
+        return 0;
+    }
+
+    return cwc_output_get_current_tag_info(cont->output)->useless_gaps;
+}
+
 struct wlr_box cwc_container_get_box(struct cwc_container *container)
 {
     return (struct wlr_box){
@@ -1419,7 +1429,7 @@ static inline void update_container_output(struct cwc_container *container)
 
 void cwc_container_set_size(struct cwc_container *container, int w, int h)
 {
-    int gaps = cwc_output_get_current_tag_info(container->output)->useless_gaps;
+    int gaps = cwc_container_get_gaps(container);
 
     int bw            = cwc_border_get_thickness(&container->border);
     int outside_width = (bw + gaps) * 2;

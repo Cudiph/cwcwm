@@ -124,6 +124,7 @@ void cwc_container_focusidx(struct cwc_container *container, int idx);
 void cwc_container_swap(struct cwc_container *source,
                         struct cwc_container *target);
 
+int cwc_container_get_gaps(struct cwc_container *cont);
 struct wlr_box cwc_container_get_box(struct cwc_container *container);
 struct cwc_toplevel *
 cwc_container_get_front_toplevel(struct cwc_container *cont);

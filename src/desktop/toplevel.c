@@ -383,8 +383,7 @@ static void on_surface_commit(struct wl_listener *listener, void *data)
 
     // adjust clipping to follow the tiled size
     if (!cwc_toplevel_is_floating(toplevel)) {
-        int gaps =
-            cwc_output_get_current_tag_info(container->output)->useless_gaps;
+        int gaps          = cwc_container_get_gaps(container);
         int outside_width = (thickness + gaps) * 2;
         geom.width        = container->width - outside_width;
         geom.height       = container->height - outside_width;
@@ -1279,8 +1278,7 @@ struct wlr_box cwc_toplevel_get_geometry(struct cwc_toplevel *toplevel)
 
 void cwc_toplevel_set_size_surface(struct cwc_toplevel *toplevel, int w, int h)
 {
-    int gaps = cwc_output_get_current_tag_info(toplevel->container->output)
-                   ->useless_gaps;
+    int gaps = cwc_container_get_gaps(toplevel->container);
     int outside_width =
         (cwc_border_get_thickness(&toplevel->container->border) + gaps) * 2;
 
