@@ -55,6 +55,7 @@ struct cwc_toplevel {
     struct wlr_scene_tree *surf_tree;
 
     struct cwc_container *container;
+    struct wlr_box geometry;
 
     struct wlr_ext_foreign_toplevel_handle_v1 *ext_foreign_handle;
     struct wlr_foreign_toplevel_handle_v1 *wlr_foreign_handle;

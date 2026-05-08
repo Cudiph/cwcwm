@@ -372,14 +372,19 @@ static void on_surface_commit(struct wl_listener *listener, void *data)
         toplevel->resize_serial = 0;
     }
 
+    /* nothing to do when geometry is unchanged */
+    struct wlr_box geom = cwc_toplevel_get_geometry(toplevel);
+    if (wlr_box_equal(&geom, &toplevel->geometry))
+        return;
+    toplevel->geometry = geom;
+
     if (!container || toplevel->xdg_toplevel->current.resizing
         || cwc_container_get_front_toplevel(container) != toplevel
         || !cwc_output_is_exist(container->output)
         || !cwc_toplevel_is_mapped(toplevel))
         return;
 
-    struct wlr_box geom = cwc_toplevel_get_geometry(toplevel);
-    int thickness       = cwc_border_get_thickness(&container->border);
+    int thickness = cwc_border_get_thickness(&container->border);
 
     // adjust clipping to follow the tiled size
     if (!cwc_toplevel_is_floating(toplevel)) {
@@ -388,13 +393,16 @@ static void on_surface_commit(struct wl_listener *listener, void *data)
         geom.width        = container->width - outside_width;
         geom.height       = container->height - outside_width;
         wlr_scene_subsurface_tree_set_clip(&toplevel->surf_tree->node, &geom);
-        return;
+    } else if (cwc_toplevel_is_maximized(toplevel)) {
+        cwc_toplevel_set_maximized(toplevel, true);
+    } else if (cwc_toplevel_is_fullscreen(toplevel)) {
+        cwc_toplevel_set_fullscreen(toplevel, true);
+    } else { /* follow geometry when floating */
+        cwc_toplevel_set_size_surface(toplevel, geom.width, geom.height);
+        wlr_scene_subsurface_tree_set_clip(&toplevel->surf_tree->node, &geom);
+        cwc_border_resize(&container->border, geom.width + thickness * 2,
+                          geom.height + thickness * 2);
     }
-
-    cwc_toplevel_set_size_surface(toplevel, geom.width, geom.height);
-    wlr_scene_subsurface_tree_set_clip(&toplevel->surf_tree->node, &geom);
-    cwc_border_resize(&container->border, geom.width + thickness * 2,
-                      geom.height + thickness * 2);
 }
 
 static void on_request_maximize(struct wl_listener *listener, void *data)
