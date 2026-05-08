@@ -393,10 +393,10 @@ static void on_surface_commit(struct wl_listener *listener, void *data)
         geom.width        = container->width - outside_width;
         geom.height       = container->height - outside_width;
         wlr_scene_subsurface_tree_set_clip(&toplevel->surf_tree->node, &geom);
-    } else if (cwc_toplevel_is_maximized(toplevel)) {
-        cwc_toplevel_set_maximized(toplevel, true);
     } else if (cwc_toplevel_is_fullscreen(toplevel)) {
         cwc_toplevel_set_fullscreen(toplevel, true);
+    } else if (cwc_toplevel_is_maximized(toplevel)) {
+        cwc_toplevel_set_maximized(toplevel, true);
     } else { /* follow geometry when floating */
         cwc_toplevel_set_size_surface(toplevel, geom.width, geom.height);
         wlr_scene_subsurface_tree_set_clip(&toplevel->surf_tree->node, &geom);
