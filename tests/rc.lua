@@ -13,6 +13,7 @@ local plugin_test = require("luapi.plugin")
 local pointer_test = require("luapi.pointer")
 local kbd_test = require("luapi.kbd")
 local tablet_test = require("luapi.tablet")
+local input_test = require("luapi.input")
 
 local cwc = cwc
 
@@ -93,6 +94,7 @@ cwc.kbd.bind({}, "F12", function()
     pointer_test.api()
     kbd_test.api()
     tablet_test.api()
+    input_test.api()
 
     cwc.screen.focused():get_tag(2):view_only()
     container_test.api()
@@ -113,11 +115,13 @@ cwc.kbd.bind({}, "F1", function()
     pointer_test.signal()
     kbd_test.signal()
     tablet_test.signal()
+    input_test.signal()
     print("--------------------------------- SIGNAL TEST END ------------------------------------")
     io.flush()
 end)
 
 cwc.kbd.bind({ MODKEY, mod.CTRL }, "r", cwc.reload, { description = "reload configuration" })
+kbd.bind({ MODKEY, mod.CTRL }, "Delete", cwc.quit, { description = "exit cwc", group = "cwc" })
 
 -- automatic start
 cwc.timer.new(3, function()

@@ -28,10 +28,14 @@
 #include <libinput.h>
 #include <lua.h>
 #include <wayland-util.h>
+#include <wlr/types/wlr_cursor.h>
 
 #include "cwc/desktop/output.h"
 #include "cwc/desktop/toplevel.h"
+#include "cwc/input/cursor.h"
 #include "cwc/input/manager.h"
+#include "cwc/input/seat.h"
+#include "cwc/luac.h"
 #include "cwc/luaclass.h"
 #include "cwc/server.h"
 
@@ -326,6 +330,90 @@ LIBINPUT_DEVICE_CREATE_PROPERTY(scroll_method, integer, int, scroll, _method);
  */
 LIBINPUT_DEVICE_CREATE_PROPERTY(dwt, boolean, int, dwt, _enabled);
 
+static inline bool is_cursorable(enum wlr_input_device_type type)
+{
+    switch (type) {
+    case WLR_INPUT_DEVICE_POINTER:
+    case WLR_INPUT_DEVICE_TOUCH:
+    case WLR_INPUT_DEVICE_TABLET:
+        return true;
+    default:
+        return false;
+    }
+}
+
+/** Map input surface to a screen.
+ *
+ * @method map_to_output
+ * @tparam cwc_output output The output.
+ * @treturn boolean
+ */
+static int luaC_input_map_to_output(lua_State *L)
+{
+    struct cwc_libinput_device *idev = luaC_input_checkudata(L, 1);
+    struct wlr_output *output        = NULL;
+
+    if (lua_isnil(L, 2))
+        goto success;
+
+    if (!is_cursorable(idev->wlr_input_dev->type)) {
+        lua_pushboolean(L, false);
+        return 1;
+    }
+
+    output = luaC_screen_checkudata(L, 2)->wlr_output;
+
+success:
+    struct cwc_seat *seat;
+    wl_list_for_each(seat, &server.input->seats, link)
+    {
+        wlr_cursor_map_input_to_output(seat->cursor->wlr_cursor,
+                                       idev->wlr_input_dev, output);
+    }
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+/** Map input to rectangular region.
+ *
+ * @method map_to_output
+ * @tparam table region
+ * @tparam integer region.x
+ * @tparam integer region.y
+ * @tparam integer region.width
+ * @tparam integer region.height
+ * @treturn boolean
+ */
+static int luaC_input_map_to_region(lua_State *L)
+{
+    struct cwc_libinput_device *idev = luaC_input_checkudata(L, 1);
+    struct wlr_box *box_ref          = NULL;
+
+    if (lua_isnil(L, 2))
+        goto success;
+
+    if (!is_cursorable(idev->wlr_input_dev->type)
+        || lua_type(L, 2) != LUA_TTABLE) {
+        lua_pushboolean(L, false);
+        return 1;
+    }
+
+    struct wlr_box box;
+    luaC_box_from_table(L, 2, &box);
+    box_ref = &box;
+
+success:
+    struct cwc_seat *seat;
+    wl_list_for_each(seat, &server.input->seats, link)
+    {
+        wlr_cursor_map_input_to_region(seat->cursor->wlr_cursor,
+                                       idev->wlr_input_dev, box_ref);
+    }
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+#define REG_METHOD(name)    {#name, luaC_input_##name}
 #define REG_READ_ONLY(name) {"get_" #name, luaC_input_get_##name}
 #define REG_SETTER(name)    {"set_" #name, luaC_input_set_##name}
 #define REG_PROPERTY(name)  REG_READ_ONLY(name), REG_SETTER(name)
@@ -339,6 +427,9 @@ void luaC_input_setup(lua_State *L)
     };
 
     luaL_Reg input_methods[] = {
+        REG_METHOD(map_to_output),
+        REG_METHOD(map_to_region),
+
         // readonly prop
         REG_READ_ONLY(data),
         REG_READ_ONLY(type),
