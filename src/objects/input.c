@@ -376,7 +376,7 @@ success:
 
 /** Map input to rectangular region.
  *
- * @method map_to_output
+ * @method map_to_region
  * @tparam table region
  * @tparam integer region.x
  * @tparam integer region.y

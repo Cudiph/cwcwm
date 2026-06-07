@@ -1,5 +1,42 @@
 # Change log
 
+## v0.4.0
+
+This version added tablet and touchscreen support with many improvement to the input handling.
+
+### BREAKING CHANGES:
+
+> no breaking change.
+
+### New features:
+
+- individual window capture
+- xwayland-satellite integration
+- tablet support
+- touchscreen support
+- added declarative rules library
+- added support for `xdg-toplevel-tag`
+- added support for `ext-workspace`
+- allow to set repeat rate per keybind
+- new `layout_mode` property signal in `cwc_tag`
+- implement layout changes to `dwl-ipc` plugin
+- added `map_to_output` and `map_to_region` method to `cwc_input`
+
+### Fixes:
+
+- fix request resize in xwayland
+- fix input not registered when dragged outside the surface
+- fix random resize in maximized/fullscreen after changing the gap size
+- fix cursor shape not hidden in constrained surface
+
+### Other changes:
+
+- lib/impl: add use_default static function
+- middle click paste can be disabled
+- executing keybind now doesn't send key release event to the client anymore
+- added instruction for installing on Ubuntu 24.04
+- upgraded to wlroots 0.20
+
 ## v0.3.0
 
 This release introduce keyboard object `cwc_kbd` and pointer object `cwc_pointer` which allow
