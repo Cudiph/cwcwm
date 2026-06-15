@@ -98,7 +98,7 @@ static int luaC_tablet_map_to_output(lua_State *L)
 
 /** Map tablet surface to rectangular region.
  *
- * @method map_to_output
+ * @method map_to_region
  * @tparam table region
  * @tparam integer region.x
  * @tparam integer region.y
