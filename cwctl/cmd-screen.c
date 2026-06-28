@@ -58,12 +58,11 @@ static struct option screen_long_opt[] = {
     {NULL,     0,      NULL, 0  },
 };
 
-static char *filter        = "focused";
-static char formatted[100] = {0};
+static char *filter = "focused";
 
 static void handle_list(char *script)
 {
-    strcat(script, "return scr_list()");
+    snprintf(script + strlen(script), 19, "return scr_list()");
     repl(script);
 }
 
@@ -74,9 +73,9 @@ static void handle_toggle(int cmd_argcount, int argc, char **argv, char *script)
         return;
     }
 
-    snprintf(formatted, 99, "return scr_set('%s', '%s', 'toggle')\n", filter,
-             argv[optind + 1]);
-    strcat(script, formatted);
+    size_t avail = strlen(filter) + strlen(argv[optind + 1]) + 50;
+    snprintf(script + strlen(script), avail, "return scr_set('%s', '%s', 'toggle')\n",
+             filter, argv[optind + 1]);
     repl(script);
 }
 
@@ -87,9 +86,9 @@ static void handle_set(int cmd_argcount, int argc, char **argv, char *script)
         return;
     }
 
-    snprintf(formatted, 99, "return scr_set('%s', '%s', %s)\n", filter,
-             argv[optind + 1], argv[optind + 2]);
-    strcat(script, formatted);
+    size_t avail = strlen(filter) + strlen(argv[optind + 1]) + strlen(argv[optind + 2]) + 50;
+    snprintf(script + strlen(script), avail, "return scr_set('%s', '%s', %s)\n",
+             filter, argv[optind + 1], argv[optind + 2]);
     repl(script);
 }
 
@@ -100,16 +99,15 @@ static void handle_get(int cmd_argcount, int argc, char **argv, char *script)
         return;
     }
 
-    snprintf(formatted, 99, "return scr_get('%s', '%s')\n", filter,
-             argv[optind + 1]);
-    strcat(script, formatted);
+    size_t avail = strlen(filter) + strlen(argv[optind + 1]) + 50;
+    snprintf(script + strlen(script), avail, "return scr_get('%s', '%s')\n",
+             filter, argv[optind + 1]);
     repl(script);
 }
 
 int screen_cmd(int argc, char **argv)
 {
-    char *script = calloc(1, _cwctl_script_screen_lua_len + 100);
-    strcpy(script, (char *)_cwctl_script_screen_lua);
+    char *script = NULL;
 
     int c;
     while ((c = getopt_long(argc, argv, "hf:", screen_long_opt, NULL)) != -1)
@@ -124,6 +122,14 @@ int screen_cmd(int argc, char **argv)
             puts(screen_help);
             goto cleanup;
         }
+
+    {
+        size_t extra = 100 + strlen(filter);
+        for (int i = optind; i < argc; i++)
+            extra += strlen(argv[i]);
+        script = calloc(1, _cwctl_script_screen_lua_len + extra);
+        memcpy(script, _cwctl_script_screen_lua, _cwctl_script_screen_lua_len);
+    }
 
     if ((argc - optind) == 0) {
         handle_list(script);
