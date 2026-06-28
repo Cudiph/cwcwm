@@ -305,7 +305,7 @@ static int cwcle_init()
 plugin_init(cwcle_init);
 
 PLUGIN_NAME("cwcle");
-PLUGIN_VERSION("0.4.0-dev");
+PLUGIN_VERSION("0.5.0-dev");
 PLUGIN_DESCRIPTION("windows like alt+tab");
 PLUGIN_LICENSE("MIT");
 PLUGIN_AUTHOR("Dwi Asmoro Bangun <dwiaceromo@gmail.com>");

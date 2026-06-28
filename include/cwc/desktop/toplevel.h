@@ -76,6 +76,7 @@ struct cwc_toplevel {
     struct wl_listener map_l;
     struct wl_listener unmap_l;
     struct wl_listener commit_l;
+    struct wl_listener popup_l;
     struct wl_listener destroy_l;
     struct wl_listener set_title_l;
     struct wl_listener set_appid_l;
@@ -104,6 +105,8 @@ struct cwc_popup {
 
     struct wl_listener popup_destroy_l;
     struct wl_listener popup_commit_l;
+    struct wl_listener popup_reposition_l;
+    struct wl_listener popup_new_popup_l;
 };
 
 void on_new_xdg_popup(struct wl_listener *listener, void *data);

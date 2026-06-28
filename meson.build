@@ -6,7 +6,7 @@ add_project_arguments([
   '-DHHMAP_AUTOMATIC_REHASH',
   '-DCWC_PRIVATE=',
 
-  '-DCWC_VERSION="v0.4.0"',
+  '-DCWC_VERSION="v0.5.0-dev"',
 ], language: 'c')
 
 git_version_hash = run_command(['git', 'rev-parse', '--short', 'HEAD'], capture: true).stdout().strip()

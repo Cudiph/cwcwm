@@ -506,6 +506,7 @@ static void on_toplevel_destroy(struct wl_listener *listener, void *data)
         wl_list_remove(&toplevel->map_l.link);
         wl_list_remove(&toplevel->unmap_l.link);
         wl_list_remove(&toplevel->commit_l.link);
+        wl_list_remove(&toplevel->popup_l.link);
         free(toplevel->xdg_tag);
         free(toplevel->xdg_description);
     }
@@ -633,11 +634,13 @@ static void on_new_xdg_toplevel(struct wl_listener *listener, void *data)
     toplevel->map_l.notify    = on_surface_map;
     toplevel->unmap_l.notify  = on_surface_unmap;
     toplevel->commit_l.notify = on_surface_commit;
+    toplevel->popup_l.notify  = on_new_xdg_popup;
     wl_signal_add(&xdg_toplevel->base->surface->events.map, &toplevel->map_l);
     wl_signal_add(&xdg_toplevel->base->surface->events.unmap,
                   &toplevel->unmap_l);
     wl_signal_add(&xdg_toplevel->base->surface->events.commit,
                   &toplevel->commit_l);
+    wl_signal_add(&xdg_toplevel->base->events.new_popup, &toplevel->popup_l);
 
     cwc_toplevel_init_common_stuff(toplevel);
 }
@@ -650,8 +653,38 @@ static void on_popup_destroy(struct wl_listener *listener, void *data)
 
     wl_list_remove(&popup->popup_commit_l.link);
     wl_list_remove(&popup->popup_destroy_l.link);
+    wl_list_remove(&popup->popup_reposition_l.link);
+    wl_list_remove(&popup->popup_new_popup_l.link);
 
     free(popup);
+}
+
+static void unconstraint_popup(struct cwc_popup *popup,
+                               struct wlr_surface *parent)
+{
+    struct cwc_toplevel *toplevel = cwc_toplevel_try_from_wlr_surface(parent);
+    struct wlr_layer_surface_v1 *layersurf =
+        wlr_layer_surface_v1_try_from_wlr_surface(parent);
+
+    struct wlr_box box = {0};
+    struct wlr_scene_node *node;
+    if (toplevel) {
+        box  = toplevel->container->output->output_layout_box;
+        node = &toplevel->container->tree->node;
+    } else if (layersurf) {
+        struct cwc_layer_surface *l = layersurf->data;
+        node                        = &l->scene_layer->tree->node;
+        box                         = l->output->output_layout_box;
+        box.x                       = 0;
+        box.y                       = 0;
+    } else {
+        unreachable_();
+        return;
+    }
+    box.x -= node->x;
+    box.y -= node->y;
+
+    wlr_xdg_popup_unconstrain_from_box(popup->xdg_popup, &box);
 }
 
 static void on_popup_commit(struct wl_listener *listener, void *data)
@@ -675,7 +708,7 @@ static void on_popup_commit(struct wl_listener *listener, void *data)
     struct wlr_layer_surface_v1 *layersurf = NULL;
 
     // TODO: also unconstraint if parent is the popup
-    struct wlr_scene_tree *parent_stree;
+    struct wlr_scene_tree *parent_stree         = NULL;
     struct wlr_scene_tree *parent_stree_capture = NULL;
     if (parent_popup) {
         struct cwc_popup *parent_popup_cwc = parent_popup->base->data;
@@ -688,28 +721,17 @@ static void on_popup_commit(struct wl_listener *listener, void *data)
     toplevel  = cwc_toplevel_try_from_wlr_surface(xdg_popup->parent);
     layersurf = wlr_layer_surface_v1_try_from_wlr_surface(xdg_popup->parent);
 
-    struct wlr_box box = {0};
-    struct wlr_scene_node *node;
     if (toplevel) {
         parent_stree         = toplevel->container->popup_tree;
         parent_stree_capture = toplevel->capture_scene_tree;
-        box                  = toplevel->container->output->output_layout_box;
-        node                 = &toplevel->container->tree->node;
     } else if (layersurf) {
         struct cwc_layer_surface *l = layersurf->data;
-        node                        = &l->scene_layer->tree->node;
         parent_stree                = l->popup_tree;
-        box                         = l->output->output_layout_box;
-        box.x                       = 0;
-        box.y                       = 0;
     } else {
-        unreachable_();
         return;
     }
-    box.x -= node->x;
-    box.y -= node->y;
 
-    wlr_xdg_popup_unconstrain_from_box(xdg_popup, &box);
+    unconstraint_popup(popup, xdg_popup->parent);
 
 create_popup:
     popup->scene_tree =
@@ -724,6 +746,17 @@ create_popup:
     wlr_xdg_surface_schedule_configure(xdg_popup->base);
 }
 
+static void on_popup_reposition(struct wl_listener *listener, void *data)
+{
+    struct cwc_popup *popup =
+        wl_container_of(listener, popup, popup_reposition_l);
+
+    if (!popup->xdg_popup->parent)
+        return;
+
+    unconstraint_popup(popup, popup->xdg_popup->parent);
+}
+
 void on_new_xdg_popup(struct wl_listener *listener, void *data)
 {
     struct wlr_xdg_popup *xdg_popup = data;
@@ -736,11 +769,17 @@ void on_new_xdg_popup(struct wl_listener *listener, void *data)
     cwc_log(CWC_DEBUG, "new xdg_popup for parent %p: %p", xdg_popup->parent,
             popup);
 
-    popup->popup_destroy_l.notify = on_popup_destroy;
-    popup->popup_commit_l.notify  = on_popup_commit;
+    popup->popup_destroy_l.notify    = on_popup_destroy;
+    popup->popup_commit_l.notify     = on_popup_commit;
+    popup->popup_new_popup_l.notify  = on_new_xdg_popup;
+    popup->popup_reposition_l.notify = on_popup_reposition;
     wl_signal_add(&popup->xdg_popup->events.destroy, &popup->popup_destroy_l);
     wl_signal_add(&popup->xdg_popup->base->surface->events.commit,
                   &popup->popup_commit_l);
+    wl_signal_add(&popup->xdg_popup->base->events.new_popup,
+                  &popup->popup_new_popup_l);
+    wl_signal_add(&popup->xdg_popup->events.reposition,
+                  &popup->popup_reposition_l);
 }
 
 struct cwc_toplevel *wlr_xdg_popup_get_cwc_toplevel(struct wlr_xdg_popup *popup)
@@ -827,9 +866,7 @@ void setup_xdg_shell(struct cwc_server *s)
 {
     s->xdg_shell                 = wlr_xdg_shell_create(s->wl_display, 7);
     s->new_xdg_toplevel_l.notify = on_new_xdg_toplevel;
-    s->new_xdg_popup_l.notify    = on_new_xdg_popup;
     wl_signal_add(&s->xdg_shell->events.new_toplevel, &s->new_xdg_toplevel_l);
-    wl_signal_add(&s->xdg_shell->events.new_popup, &s->new_xdg_popup_l);
 
     s->xdg_activation            = wlr_xdg_activation_v1_create(s->wl_display);
     s->request_activate_l.notify = on_activation_request_activate;
@@ -858,7 +895,6 @@ void setup_xdg_shell(struct cwc_server *s)
 void cleanup_xdg_shell(struct cwc_server *s)
 {
     wl_list_remove(&s->new_xdg_toplevel_l.link);
-    wl_list_remove(&s->new_xdg_popup_l.link);
 
     wl_list_remove(&s->request_activate_l.link);
 

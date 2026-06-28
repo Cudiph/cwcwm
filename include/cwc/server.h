@@ -49,7 +49,6 @@ struct cwc_server {
 
     struct wlr_xdg_shell *xdg_shell;
     struct wl_listener new_xdg_toplevel_l;
-    struct wl_listener new_xdg_popup_l;
 
 #ifdef CWC_XWAYLAND
     struct wlr_xwayland *xwayland;
