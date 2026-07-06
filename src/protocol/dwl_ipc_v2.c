@@ -287,6 +287,12 @@ dwl_ipc_manager_handle_get_output(struct wl_client *client,
     struct cwc_dwl_ipc_manager_v2 *manager =
         dwl_ipc_manager_from_resource(manager_resource);
 
+    struct wlr_output *output = wlr_output_from_resource(output_resource);
+    if (!output) {
+        wl_client_post_implementation_error(client, "output doesn't exist");
+        return;
+    }
+
     struct cwc_dwl_ipc_output_v2 *ipc_output = cwc_dwl_ipc_output_v2_create(
         client, manager_resource, id, output_resource);
     if (!ipc_output) {
