@@ -6,6 +6,7 @@
 #include <wlr/types/wlr_output_layout.h>
 #include <wlr/util/box.h>
 
+#include "cwc/config.h"
 #include "cwc/types.h"
 
 struct cwc_server;

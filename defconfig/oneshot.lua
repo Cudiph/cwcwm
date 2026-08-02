@@ -4,7 +4,7 @@ local cwc = cwc
 
 -- autostart app
 cwc.spawn_with_shell("swaybg --output '*' --color '#222222'")
-cwc.spawn_with_shell("waybar")
+cwc.spawn_with_shell("qs")
 cwc.spawn_with_shell("playerctld daemon")
 
 local idle_cmd = "playerctl pause; cwctl screen --filter '*' set dpms false"

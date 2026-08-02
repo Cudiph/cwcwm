@@ -6,11 +6,6 @@
 #include <stdint.h>
 #include <wayland-util.h>
 
-// hard limit of minimum toplevel width
-#define MIN_WIDTH 20
-
-// max 30 workspace/tags because the tag is using uint32_t
-#define MAX_WORKSPACE 30
 typedef uint32_t tag_bitfield_t;
 typedef uint32_t container_state_bitfield_t;
 

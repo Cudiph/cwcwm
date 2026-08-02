@@ -323,17 +323,14 @@ static bool cwc_cursor_check_interactive(struct cwc_cursor *cursor,
         return true;
     case CWC_CURSOR_STATE_RESIZE:
         // skip synchronization otherwise it'll make resizing sluggish
-        server.resize_count = -1e6;
         wlr_cursor_move(wlr_cursor, device, dx, dy);
         process_cursor_resize(cursor);
         return true;
     case CWC_CURSOR_STATE_RESIZE_BSP:
-        server.resize_count = -1e6;
         wlr_cursor_move(wlr_cursor, device, dx, dy);
         process_cursor_resize_bsp(cursor);
         return true;
     case CWC_CURSOR_STATE_RESIZE_MASTER:
-        server.resize_count = -1e6;
         wlr_cursor_move(wlr_cursor, device, dx, dy);
         process_cursor_resize_master(cursor);
         return true;

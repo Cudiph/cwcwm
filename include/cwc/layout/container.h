@@ -62,6 +62,11 @@ void cwc_border_set_thickness(struct cwc_border *border, int thickness);
 /* noop if the surface width unchanged */
 void cwc_border_resize(struct cwc_border *border, int rect_w, int rect_h);
 
+struct _idk {
+    struct wlr_box geom;
+    struct wlr_box clip;
+};
+
 struct cwc_container {
     enum cwc_data_type type;
     struct wl_list link;
@@ -96,6 +101,9 @@ struct cwc_container {
     struct wl_list link_output_container; // cwc_output_state.containers
     struct wl_list link_output_fstack;    // cwc_output.state.focus_stack
     struct wl_list link_output_minimized; // cwc_output.state.minimized
+
+    struct _idk pending;
+    struct _idk current;
 };
 
 void cwc_container_init(struct cwc_output *output,

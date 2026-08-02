@@ -73,6 +73,10 @@ struct cwc_toplevel {
     struct wl_list link_output_toplevels; // cwc_output.toplevels
     struct wl_list link_container;        // cwc_container.toplevels
 
+    struct _idk pending;
+    struct _idk current;
+    uint64_t last_resize;
+
     struct wl_listener map_l;
     struct wl_listener unmap_l;
     struct wl_listener commit_l;

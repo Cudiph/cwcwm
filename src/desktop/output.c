@@ -291,31 +291,6 @@ static bool output_can_tear(struct cwc_output *output)
     return false;
 }
 
-static bool allow_render(struct cwc_output *output, struct timespec *now)
-{
-    bool is_waiting = output->waiting_since.tv_sec;
-    if (is_waiting) {
-        uint64_t delta_waiting =
-            timespec_to_msec(now) - timespec_to_msec(&output->waiting_since);
-
-        if (delta_waiting > 500) {
-            server.resize_count = -1;
-            goto reset;
-        }
-    }
-
-    if (server.resize_count > 0) {
-        if (!is_waiting)
-            clock_gettime(CLOCK_MONOTONIC, &output->waiting_since);
-
-        return false;
-    }
-
-reset:
-    output->waiting_since.tv_sec = 0;
-    return true;
-}
-
 static void output_repaint(struct cwc_output *output,
                            struct wlr_scene_output *scene_output,
                            struct timespec *now)
@@ -326,8 +301,6 @@ static void output_repaint(struct cwc_output *output,
         return;
 
     bool can_tear = output_can_tear(output);
-    if (!allow_render(output, now) && !can_tear)
-        return;
 
     struct wlr_output_state pending;
     wlr_output_state_init(&pending);

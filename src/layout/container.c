@@ -564,6 +564,8 @@ void cwc_container_init(struct cwc_output *output,
     cont->floating_box       = output->output_layout_box;
     cont->floating_box.width = cont->width;
     cont->floating_box.height = cont->height;
+    cont->current.geom.width  = cont->width;
+    cont->current.geom.height = cont->height;
 
     _update_to_current_active_tag_and_worskpace(cont);
     _cwc_container_set_initial_state(cont, toplevel);
@@ -1373,18 +1375,21 @@ static void all_toplevel_set_size(struct cwc_toplevel *toplevel, void *data)
 
         clip.x = geom.x;
         clip.y = geom.y;
-
-        if (visible && !toplevel->resize_serial)
-            server.resize_count = MAX(1, server.resize_count + 1);
     }
 
+    if (!toplevel->resize_serial)
+        toplevel->last_resize = get_current_time_msec();
     uint32_t resize_serial = cwc_toplevel_set_size(toplevel, surf_w, surf_h);
     if (visible)
         toplevel->resize_serial = resize_serial;
 
-    wlr_scene_subsurface_tree_set_clip(&toplevel->surf_tree->node, &clip);
-    box->width  = surf_w;
-    box->height = surf_h;
+    // wlr_scene_subsurface_tree_set_clip(&toplevel->surf_tree->node, &clip);
+    toplevel->pending.clip        = clip;
+    toplevel->pending.geom        = geom;
+    toplevel->pending.geom.width  = surf_w;
+    toplevel->pending.geom.height = surf_h;
+    box->width                    = surf_w;
+    box->height                   = surf_h;
 }
 
 static inline bool
@@ -1444,14 +1449,16 @@ void cwc_container_set_size(struct cwc_container *container, int w, int h)
     int cont_w = rect.width + bw * 2;
     int cont_h = rect.height + bw * 2;
 
-    cwc_border_resize(&container->border, cont_w, cont_h);
+    // cwc_border_resize(&container->border, cont_w, cont_h);
     save_floating_box_size(container, w, h);
 
     cont_w += gaps * 2;
     cont_h += gaps * 2;
 
-    container->width  = cont_w;
-    container->height = cont_h;
+    container->width               = cont_w;
+    container->height              = cont_h;
+    container->pending.geom.width  = cont_w;
+    container->pending.geom.height = cont_h;
 }
 
 #ifdef CWC_XWAYLAND
@@ -1471,7 +1478,12 @@ void cwc_container_set_position_global(struct cwc_container *container,
                                        int x,
                                        int y)
 {
-    wlr_scene_node_set_position(&container->tree->node, x, y);
+    if (cwc_container_get_front_toplevel(container)->resize_serial) {
+        container->pending.geom.x = x;
+        container->pending.geom.y = y;
+    } else {
+        wlr_scene_node_set_position(&container->tree->node, x, y);
+    }
 
     struct wlr_box xy = {.x = x, .y = y};
 #ifdef CWC_XWAYLAND
@@ -1507,7 +1519,9 @@ void cwc_container_set_box_global(struct cwc_container *container,
     int x = box->x;
     int y = box->y;
 
-    wlr_scene_node_set_position(&container->tree->node, x, y);
+    // wlr_scene_node_set_position(&container->tree->node, x, y);
+    container->pending.geom.x = x;
+    container->pending.geom.y = y;
     cwc_container_set_size(container, box->width, box->height);
 
     save_floating_box_position(container, x, y);
@@ -1521,7 +1535,9 @@ void cwc_container_set_box_global_gap(struct cwc_container *container,
     int pos_x = box->x + gaps;
     int pos_y = box->y + gaps;
 
-    wlr_scene_node_set_position(&container->tree->node, pos_x, pos_y);
+    // wlr_scene_node_set_position(&container->tree->node, pos_x, pos_y);
+    container->pending.geom.x = pos_x;
+    container->pending.geom.y = pos_y;
     cwc_container_set_size(container, box->width, box->height);
 
     save_floating_box_position(container, pos_x, pos_y);
