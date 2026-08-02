@@ -356,6 +356,28 @@ static void _surface_initial_commit(struct cwc_toplevel *toplevel)
                                      g_config.default_decoration_mode);
 }
 
+static void _commit_toplevel(struct cwc_toplevel *toplevel)
+{
+    struct cwc_container *container = toplevel->container;
+    wlr_scene_node_set_position(&container->tree->node,
+                                container->pending.geom.x,
+                                container->pending.geom.y);
+    int gaps = cwc_container_get_gaps(container);
+    cwc_border_resize(&container->border,
+                      container->pending.geom.width - gaps * 2,
+                      container->pending.geom.height - gaps * 2);
+
+    wlr_scene_subsurface_tree_set_clip(&toplevel->surf_tree->node,
+                                       &toplevel->pending.clip);
+
+    container->current      = container->pending;
+    toplevel->current       = toplevel->pending;
+    toplevel->pending       = (struct cwc_container_state){0};
+    container->pending      = (struct cwc_container_state){0};
+    toplevel->resize_serial = 0;
+    toplevel->last_resize   = get_current_time_msec();
+}
+
 static void on_surface_commit(struct wl_listener *listener, void *data)
 {
     struct cwc_toplevel *toplevel =
@@ -371,6 +393,7 @@ static void on_surface_commit(struct wl_listener *listener, void *data)
         return;
 
     struct wlr_box geom = cwc_toplevel_get_geometry(toplevel);
+    int thickness       = cwc_border_get_thickness(&container->border);
     // printf("[1] %p j%d %d %d %d\n", toplevel, geom.x, geom.y,
     //        toplevel->xdg_toplevel->current.width,
     //        toplevel->xdg_toplevel->current.height);
@@ -387,24 +410,7 @@ static void on_surface_commit(struct wl_listener *listener, void *data)
         if (timediff > RESIZE_TIMEOUT
             || toplevel->resize_serial
                    == toplevel->xdg_toplevel->base->current.configure_serial) {
-
-            wlr_scene_node_set_position(&container->tree->node,
-                                        container->pending.geom.x,
-                                        container->pending.geom.y);
-            int gaps = cwc_container_get_gaps(container);
-            cwc_border_resize(&container->border,
-                              container->pending.geom.width - gaps * 2,
-                              container->pending.geom.height - gaps * 2);
-
-            wlr_scene_subsurface_tree_set_clip(&toplevel->surf_tree->node,
-                                               &toplevel->pending.clip);
-
-            container->current      = container->pending;
-            toplevel->current       = toplevel->pending;
-            toplevel->pending       = (struct _idk){0};
-            container->pending      = (struct _idk){0};
-            toplevel->resize_serial = 0;
-            toplevel->last_resize   = get_current_time_msec();
+            _commit_toplevel(toplevel);
         } else {
             int gaps         = cwc_container_get_gaps(container);
             int *cont_x      = &container->current.geom.x;
@@ -433,19 +439,15 @@ static void on_surface_commit(struct wl_listener *listener, void *data)
                                                &toplevel->current.clip);
         }
     } else if (cwc_toplevel_is_floating(toplevel)) {
-        int thickness = cwc_border_get_thickness(&container->border);
 
         /* follow geometry when floating */
         cwc_toplevel_set_size_surface(toplevel, geom.width, geom.height);
         wlr_scene_subsurface_tree_set_clip(&toplevel->surf_tree->node, &geom);
         cwc_border_resize(&container->border, geom.width + thickness * 2,
                           geom.height + thickness * 2);
+    } else if (!wlr_box_empty(&container->pending.geom)) {
+        _commit_toplevel(toplevel);
     }
-
-    /* nothing to do when geometry is unchanged */
-    if (wlr_box_equal(&geom, &toplevel->geometry))
-        return;
-    toplevel->geometry = geom;
 
     // if (!container || cwc_container_get_front_toplevel(container) != toplevel
     //     || !cwc_output_is_exist(container->output)
@@ -522,9 +524,12 @@ static void on_request_resize(struct wl_listener *listener, void *data)
         wl_container_of(listener, toplevel, request_resize_l);
 
     uint32_t edges = 0;
+#ifdef CWC_XWAYLAND
+
     if (cwc_toplevel_is_x11(toplevel))
         edges = ((struct wlr_xwayland_resize_event *)data)->edges;
     else
+#endif /* ifdef CWC_XWAYLAND */
         edges = ((struct wlr_xdg_toplevel_resize_event *)data)->edges;
 
     cwc_toplevel_focus(toplevel, true);

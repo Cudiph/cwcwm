@@ -53,9 +53,7 @@ struct cwc_toplevel {
     struct wlr_scene *capture_scene;
     struct wlr_scene_tree *capture_scene_tree;
     struct wlr_scene_tree *surf_tree;
-
     struct cwc_container *container;
-    struct wlr_box geometry;
 
     struct wlr_ext_foreign_toplevel_handle_v1 *ext_foreign_handle;
     struct wlr_foreign_toplevel_handle_v1 *wlr_foreign_handle;
@@ -73,8 +71,8 @@ struct cwc_toplevel {
     struct wl_list link_output_toplevels; // cwc_output.toplevels
     struct wl_list link_container;        // cwc_container.toplevels
 
-    struct _idk pending;
-    struct _idk current;
+    struct cwc_container_state pending;
+    struct cwc_container_state current;
     uint64_t last_resize;
 
     struct wl_listener map_l;
@@ -268,7 +266,11 @@ static inline void cwc_toplevel_set_opacity(struct cwc_toplevel *toplevel,
 
 static inline bool cwc_toplevel_is_x11(struct cwc_toplevel *toplevel)
 {
+#ifdef CWC_XWAYLAND
     return toplevel->type == DATA_TYPE_XWAYLAND;
+#else
+    return false;
+#endif // CWC_XWAYLAND
 }
 
 static inline bool cwc_toplevel_is_unmanaged(struct cwc_toplevel *toplevel)
