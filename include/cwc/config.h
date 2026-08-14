@@ -13,7 +13,7 @@
 #define MAX_WORKSPACE 30
 
 // force resize if interactive resizing doesn't meet the max time in ms
-#define RESIZE_TIMEOUT 100
+#define RESIZE_TIMEOUT 250
 
 struct cwc_config {
     // cwc

@@ -1185,7 +1185,7 @@ static void all_toplevel_set_fullscreen(struct cwc_toplevel *toplevel,
         cwc_toplevel_set_size_surface(toplevel, output->output_layout_box.width,
                                       output->output_layout_box.height);
         cwc_toplevel_set_position(toplevel, 0, 0);
-        wlr_scene_subsurface_tree_set_clip(&toplevel->surf_tree->node, NULL);
+        toplevel->pending.clip = (struct wlr_box){0};
     }
 
     __cwc_toplevel_set_fullscreen(toplevel, set);
@@ -1251,7 +1251,7 @@ static void all_toplevel_set_maximized(struct cwc_toplevel *toplevel,
         cwc_toplevel_set_size_surface(toplevel, usable_area.width,
                                       usable_area.height);
         cwc_toplevel_set_position(toplevel, usable_area.x, usable_area.y);
-        wlr_scene_subsurface_tree_set_clip(&toplevel->surf_tree->node, NULL);
+        toplevel->pending.clip = (struct wlr_box){0};
     }
 
     if (toplevel->wlr_foreign_handle)
@@ -1454,7 +1454,7 @@ void cwc_container_set_size(struct cwc_container *container, int w, int h)
 
     if (cwc_toplevel_is_x11(cwc_container_get_front_toplevel(container)))
         cwc_border_resize(&container->border, cont_w, cont_h);
-    save_floating_box_size(container, w, h);
+    save_floating_box_size(container, surface_w, surface_h);
 
     cont_w += gaps * 2;
     cont_h += gaps * 2;
@@ -1573,8 +1573,10 @@ void cwc_container_set_box_gap(struct cwc_container *container,
 void cwc_container_restore_floating_box(struct cwc_container *container)
 {
     struct wlr_box *float_box = &container->floating_box;
-    cwc_container_set_position_global(container, float_box->x, float_box->y);
-    cwc_container_set_size(container, float_box->width, float_box->height);
+    int decorator_width       = cwc_container_get_decorator_width(container);
+    float_box->width += decorator_width;
+    float_box->height += decorator_width;
+    cwc_container_set_box_global(container, &container->floating_box);
 }
 
 bool cwc_container_is_visible(struct cwc_container *container)

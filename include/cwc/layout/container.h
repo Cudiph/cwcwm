@@ -251,4 +251,14 @@ static inline float cwc_container_get_opacity(struct cwc_container *container)
 
 void cwc_container_set_opacity(struct cwc_container *container, float opacity);
 
+static inline int
+cwc_container_get_decorator_width(struct cwc_container *container)
+{
+    int gaps = cwc_container_get_gaps(container);
+    int decorator_width =
+        (cwc_border_get_thickness(&container->border) + gaps) * 2;
+
+    return decorator_width;
+}
+
 #endif // !_CWC_CONTAINER_H
