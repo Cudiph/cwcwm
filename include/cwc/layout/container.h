@@ -74,7 +74,6 @@ struct cwc_container {
     struct wlr_scene_tree *popup_tree; // or anything that should above toplevel
     struct wlr_scene_rect *fullscreen_bg;
     struct cwc_border border;
-    int width, height;
     float opacity;
     float wfact;
 

@@ -108,6 +108,11 @@ static inline void bsp_node_leaf_configure(
                == CWC_LAYOUT_BSP) {
         struct wlr_box box = {x, y, width, height};
         cwc_container_set_box_gap(container, &box);
+
+        struct cwc_toplevel *front =
+            cwc_container_get_front_toplevel(container);
+        if (!cwc_toplevel_is_x11(front) && !front->resize_serial)
+            wlr_xdg_surface_schedule_configure(front->xdg_toplevel->base);
     }
 
     bsp_node_set_position(node, x, y);

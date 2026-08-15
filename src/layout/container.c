@@ -20,6 +20,7 @@
 #include <drm_fourcc.h>
 #include <limits.h>
 #include <math.h>
+#include <signal.h>
 #include <stdlib.h>
 #include <wayland-server-core.h>
 #include <wayland-util.h>
@@ -558,14 +559,17 @@ void cwc_container_init(struct cwc_output *output,
     cont->wfact                = 1.0f;
 
     int gaps = cwc_output_get_current_tag_info(cont->output)->useless_gaps;
-    struct wlr_box geom      = cwc_toplevel_get_geometry(toplevel);
-    cont->width              = geom.width + (g_config.border_width + gaps) * 2;
-    cont->height             = geom.height + (g_config.border_width + gaps) * 2;
-    cont->floating_box       = output->output_layout_box;
-    cont->floating_box.width = cont->width;
-    cont->floating_box.height = cont->height;
-    cont->current.geom.width  = cont->width;
-    cont->current.geom.height = cont->height;
+    struct wlr_box geom = cwc_toplevel_get_geometry(toplevel);
+    int width           = geom.width + (g_config.border_width + gaps) * 2;
+    int height          = geom.height + (g_config.border_width + gaps) * 2;
+
+    cont->floating_box        = output->output_layout_box;
+    cont->floating_box.width  = width;
+    cont->floating_box.height = height;
+    cont->current.geom.width  = width;
+    cont->current.geom.height = height;
+    cont->pending.geom.width  = width;
+    cont->pending.geom.height = height;
 
     _update_to_current_active_tag_and_worskpace(cont);
     _cwc_container_set_initial_state(cont, toplevel);
@@ -586,7 +590,7 @@ void cwc_container_init(struct cwc_output *output,
             cairo_pattern_reference(*(cairo_pattern_t **)lua_touserdata(L, -1));
 
     cwc_border_init(&cont->border, pattern, g_config.border_color_rotation,
-                    cont->width, cont->height, border_w);
+                    width, height, border_w);
     cairo_pattern_destroy(pattern);
 
     cwc_border_attach_to_scene(&cont->border, cont->tree);
@@ -643,7 +647,7 @@ static void _cwc_container_insert_toplevel(struct cwc_container *c,
     int bw = cwc_border_get_thickness(&c->border);
     wlr_scene_node_set_position(&toplevel->surf_tree->node, bw, bw);
 
-    cwc_container_set_size(c, c->width, c->height);
+    cwc_container_set_size(c, c->current.geom.width, c->current.geom.width);
 
     if (emit_signal)
         cwc_object_emit_signal_varr("container::insert",
@@ -944,8 +948,8 @@ struct wlr_box cwc_container_get_box(struct cwc_container *container)
     return (struct wlr_box){
         .x      = container->tree->node.x,
         .y      = container->tree->node.y,
-        .width  = container->width,
-        .height = container->height,
+        .width  = container->current.geom.width,
+        .height = container->current.geom.height,
     };
 }
 
@@ -970,14 +974,16 @@ cwc_container_get_front_toplevel(struct cwc_container *cont)
 
 void cwc_container_set_front_toplevel(struct cwc_toplevel *toplevel)
 {
-    if (!toplevel)
+    if (!toplevel
+        || cwc_container_get_front_toplevel(toplevel->container) == toplevel)
         return;
 
     wlr_scene_node_set_enabled(&toplevel->surf_tree->node, true);
     __cwc_toplevel_set_minimized(toplevel, false);
 
     struct cwc_container *container = toplevel->container;
-    cwc_container_set_size(container, container->width, container->height);
+    cwc_container_set_size(container, container->current.geom.width,
+                           container->current.geom.height);
     wlr_scene_node_place_below(&toplevel->surf_tree->node,
                                &container->popup_tree->node);
 
@@ -1461,8 +1467,6 @@ void cwc_container_set_size(struct cwc_container *container, int w, int h)
     cont_w += gaps * 2;
     cont_h += gaps * 2;
 
-    container->width               = cont_w;
-    container->height              = cont_h;
     container->pending.geom.width  = cont_w;
     container->pending.geom.height = cont_h;
 }
@@ -1484,12 +1488,12 @@ void cwc_container_set_position_global(struct cwc_container *container,
                                        int x,
                                        int y)
 {
-    if (cwc_container_get_front_toplevel(container)->resize_serial) {
-        container->pending.geom.x = x;
-        container->pending.geom.y = y;
-    } else {
+    container->pending.geom.x = x;
+    container->pending.geom.y = y;
+
+    // apply instantly when no resize
+    if (!cwc_container_get_front_toplevel(container)->resize_serial)
         wlr_scene_node_set_position(&container->tree->node, x, y);
-    }
 
     struct wlr_box xy = {.x = x, .y = y};
 #ifdef CWC_XWAYLAND
@@ -1670,10 +1674,10 @@ void cwc_container_to_center(struct cwc_container *container)
         return;
 
     struct wlr_box usable_area = container->output->usable_area;
-    int x                      = usable_area.width / 2 - container->width / 2;
-    int y                      = usable_area.height / 2 - container->height / 2;
-    x                          = x < usable_area.x ? usable_area.x : x;
-    y                          = y < usable_area.y ? usable_area.y : y;
+    int x = usable_area.width / 2 - container->current.geom.width / 2;
+    int y = usable_area.height / 2 - container->current.geom.height / 2;
+    x     = x < usable_area.x ? usable_area.x : x;
+    y     = y < usable_area.y ? usable_area.y : y;
     cwc_container_set_position(container, x, y);
 }
 

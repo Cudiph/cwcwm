@@ -274,6 +274,9 @@ static int get_tiled_toplevel_array(struct cwc_output *output,
         if (cwc_toplevel_is_tileable(front))
             toplevels[i++] = front;
 
+        if (!cwc_toplevel_is_x11(front) && !front->resize_serial)
+            wlr_xdg_surface_schedule_configure(front->xdg_toplevel->base);
+
         // sanity check
         if (i >= array_len - 1)
             break;

@@ -371,6 +371,11 @@ static void _commit_toplevel(struct cwc_toplevel *toplevel)
                       container->pending.geom.width - gaps * 2,
                       container->pending.geom.height - gaps * 2);
 
+    printf("[4] %s %d %d %d %d\n", cwc_toplevel_get_title(toplevel),
+           container->pending.geom.x, container->pending.geom.y,
+           toplevel->xdg_toplevel->pending.width,
+           toplevel->xdg_toplevel->pending.height);
+
     if (wlr_box_empty(&toplevel->pending.clip)) {
         wlr_scene_subsurface_tree_set_clip(&toplevel->surf_tree->node, NULL);
     } else {
@@ -409,8 +414,9 @@ static void on_surface_commit(struct wl_listener *listener, void *data)
     //        toplevel->pending.geom.y, toplevel->pending.geom.width,
     //        toplevel->pending.geom.height, toplevel->resize_serial,
     //        toplevel->xdg_toplevel->base->current.configure_serial);
-    // printf("[3] %p j%d %d %d %d\n", toplevel, toplevel->pending.geom.x,
-    //        toplevel->pending.geom.y, toplevel->xdg_toplevel->pending.width,
+    // printf("[3] %s j%d %d %d %d\n", cwc_toplevel_get_title(toplevel),
+    //        toplevel->pending.geom.x, toplevel->pending.geom.y,
+    //        toplevel->xdg_toplevel->pending.width,
     //        toplevel->xdg_toplevel->pending.height);
 
     if (toplevel->resize_serial) {
@@ -1446,7 +1452,8 @@ struct wlr_box cwc_toplevel_get_geometry(struct cwc_toplevel *toplevel)
 
 void cwc_toplevel_set_size_surface(struct cwc_toplevel *toplevel, int w, int h)
 {
-    int decorator_width = cwc_container_get_decorator_width(toplevel->container);
+    int decorator_width =
+        cwc_container_get_decorator_width(toplevel->container);
 
     cwc_container_set_size(toplevel->container, w + decorator_width,
                            h + decorator_width);
