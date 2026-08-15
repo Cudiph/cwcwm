@@ -1084,6 +1084,8 @@ void cwc_container_swap(struct cwc_container *source,
     wl_array_release(&source_temp_array);
     wl_array_release(&target_temp_array);
 
+    wl_list_swap(&source->tree->node.link, &target->tree->node.link);
+
     cwc_object_emit_signal_varr("container::swap", g_config_get_lua_State(), 2,
                                 source, target);
 }
