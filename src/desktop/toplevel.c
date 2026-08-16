@@ -57,6 +57,7 @@
 #include "cwc/signal.h"
 #include "cwc/types.h"
 #include "cwc/util.h"
+#include "private/container.h"
 
 static struct wl_listener config_commit_l;
 
@@ -362,19 +363,10 @@ static void _commit_toplevel(struct cwc_toplevel *toplevel)
     wlr_scene_node_set_position(&container->tree->node,
                                 container->pending.geom.x,
                                 container->pending.geom.y);
-    printf("[3] %s %d %d %d %d\n", cwc_toplevel_get_title(toplevel),
-           container->pending.geom.x, container->pending.geom.y,
-           toplevel->xdg_toplevel->pending.width,
-           toplevel->xdg_toplevel->pending.height);
     int gaps = cwc_container_get_gaps(container);
     cwc_border_resize(&container->border,
                       container->pending.geom.width - gaps * 2,
                       container->pending.geom.height - gaps * 2);
-
-    printf("[4] %s %d %d %d %d\n", cwc_toplevel_get_title(toplevel),
-           container->pending.geom.x, container->pending.geom.y,
-           toplevel->xdg_toplevel->pending.width,
-           toplevel->xdg_toplevel->pending.height);
 
     if (wlr_box_empty(&toplevel->pending.clip)) {
         wlr_scene_subsurface_tree_set_clip(&toplevel->surf_tree->node, NULL);
@@ -389,6 +381,8 @@ static void _commit_toplevel(struct cwc_toplevel *toplevel)
     container->pending      = (struct cwc_container_state){0};
     toplevel->resize_serial = 0;
     toplevel->last_resize   = get_current_time_msec();
+
+    cwc_container_update_output(container);
 }
 
 static void on_surface_commit(struct wl_listener *listener, void *data)

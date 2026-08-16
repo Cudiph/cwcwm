@@ -1430,19 +1430,6 @@ save_floating_box_size(struct cwc_container *container, int w, int h)
     }
 }
 
-static inline void update_container_output(struct cwc_container *container)
-{
-    struct wlr_box box        = cwc_container_get_box(container);
-    int x                     = box.x + (box.width / 2);
-    int y                     = box.y + (box.height / 2);
-    struct cwc_output *output = cwc_output_at(server.output_layout, x, y);
-
-    if (!output || output == container->output)
-        return;
-
-    cwc_container_move_to_output_without_translate(container, output);
-}
-
 void cwc_container_set_size(struct cwc_container *container, int w, int h)
 {
     int gaps = cwc_container_get_gaps(container);
@@ -1484,6 +1471,33 @@ static void all_toplevel_update_xwsurface(struct cwc_toplevel *toplevel,
 }
 #endif // CWC_XWAYLAND
 
+void cwc_container_update_output(struct cwc_container *container)
+{
+    struct wlr_box box        = cwc_container_get_box(container);
+    int x                     = box.x + (box.width / 2);
+    int y                     = box.y + (box.height / 2);
+    struct cwc_output *output = cwc_output_at(server.output_layout, x, y);
+
+    if (!output || output == container->output)
+        return;
+
+    cwc_container_move_to_output_without_translate(container, output);
+}
+
+static inline void apply_position_instantly_if_no_resize(
+    struct cwc_container *container, int x, int y)
+{
+    if (cwc_container_get_front_toplevel(container)->resize_serial)
+        return;
+
+    wlr_scene_node_set_position(&container->tree->node, x, y);
+    container->current.geom.x = x;
+    container->current.geom.y = y;
+
+    if (cwc_container_is_floating(container))
+        cwc_container_update_output(container);
+}
+
 void cwc_container_set_position_global(struct cwc_container *container,
                                        int x,
                                        int y)
@@ -1491,9 +1505,7 @@ void cwc_container_set_position_global(struct cwc_container *container,
     container->pending.geom.x = x;
     container->pending.geom.y = y;
 
-    // apply instantly when no resize
-    if (!cwc_container_get_front_toplevel(container)->resize_serial)
-        wlr_scene_node_set_position(&container->tree->node, x, y);
+    apply_position_instantly_if_no_resize(container, x, y);
 
     struct wlr_box xy = {.x = x, .y = y};
 #ifdef CWC_XWAYLAND
@@ -1502,7 +1514,6 @@ void cwc_container_set_position_global(struct cwc_container *container,
 #endif // CWC_XWAYLAND
 
     save_floating_box_position(container, x, y);
-    update_container_output(container);
 }
 
 void cwc_container_set_position_gap(struct cwc_container *container,
@@ -1528,15 +1539,14 @@ static void _set_box_global(struct cwc_container *container,
 {
     int x = box->x;
     int y = box->y;
-    if (cwc_toplevel_is_x11(cwc_container_get_front_toplevel(container)))
-        wlr_scene_node_set_position(&container->tree->node, x, y);
+
+    apply_position_instantly_if_no_resize(container, x, y);
 
     container->pending.geom.x = x;
     container->pending.geom.y = y;
     cwc_container_set_size(container, box->width, box->height);
 
     save_floating_box_position(container, x, y);
-    update_container_output(container);
 }
 
 void cwc_container_set_box_global(struct cwc_container *container,
