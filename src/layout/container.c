@@ -1391,9 +1391,13 @@ static void all_toplevel_set_size(struct cwc_toplevel *toplevel, void *data)
     if (visible)
         toplevel->resize_serial = resize_serial;
 
-    if (cwc_toplevel_is_x11(toplevel))
+    if (cwc_toplevel_is_x11(toplevel)) {
         wlr_scene_subsurface_tree_set_clip(&toplevel->surf_tree->node, &clip);
-    else {
+        toplevel->current.clip        = clip;
+        toplevel->current.geom        = geom;
+        toplevel->current.geom.width  = surf_w;
+        toplevel->current.geom.height = surf_h;
+    } else {
         toplevel->pending.clip        = clip;
         toplevel->pending.geom        = geom;
         toplevel->pending.geom.width  = surf_w;
@@ -1447,15 +1451,22 @@ void cwc_container_set_size(struct cwc_container *container, int w, int h)
     int cont_w = rect.width + bw * 2;
     int cont_h = rect.height + bw * 2;
 
-    if (cwc_toplevel_is_x11(cwc_container_get_front_toplevel(container)))
+    bool is_x11 =
+        cwc_toplevel_is_x11(cwc_container_get_front_toplevel(container));
+    if (is_x11)
         cwc_border_resize(&container->border, cont_w, cont_h);
     save_floating_box_size(container, surface_w, surface_h);
 
     cont_w += gaps * 2;
     cont_h += gaps * 2;
 
-    container->pending.geom.width  = cont_w;
-    container->pending.geom.height = cont_h;
+    if (is_x11) {
+        container->current.geom.width  = cont_w;
+        container->current.geom.height = cont_h;
+    } else {
+        container->pending.geom.width  = cont_w;
+        container->pending.geom.height = cont_h;
+    }
 }
 
 #ifdef CWC_XWAYLAND
@@ -1540,7 +1551,8 @@ static void _set_box_global(struct cwc_container *container,
     int x = box->x;
     int y = box->y;
 
-    apply_position_instantly_if_no_resize(container, x, y);
+    if (cwc_toplevel_is_x11(cwc_container_get_front_toplevel(container)))
+        apply_position_instantly_if_no_resize(container, x, y);
 
     container->pending.geom.x = x;
     container->pending.geom.y = y;
