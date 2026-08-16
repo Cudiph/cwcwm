@@ -143,6 +143,19 @@ static void process_cursor_move_floating(struct cwc_cursor *cursor)
                                 overlay_rect.y);
 }
 
+static int get_interval_msec_based_on_output_hz(struct cwc_toplevel *toplevel)
+{
+    int interval_msec = 8; // default to 120hz
+    int refresh_rate  = toplevel->container->output->wlr_output->refresh;
+    if (refresh_rate) {
+        refresh_rate /= 1000;
+        refresh_rate  = MAX(refresh_rate, 1);
+        interval_msec = 1000.0 / refresh_rate;
+    }
+
+    return interval_msec;
+}
+
 /* scheduling the resize will prevent the compositor flooding configure request.
  * While it is not a problem in wayland, it is an issue for xwayland windows in
  * my case it's chromium that has the issue.
@@ -153,13 +166,7 @@ static inline void schedule_resize(struct cwc_toplevel *toplevel,
 {
     struct timespec now;
     clock_gettime(CLOCK_MONOTONIC, &now);
-    int interval_msec = 8; // default to 120hz
-    int refresh_rate  = toplevel->container->output->wlr_output->refresh;
-    if (refresh_rate) {
-        refresh_rate /= 1000;
-        refresh_rate  = MAX(refresh_rate, 1);
-        interval_msec = 1000.0 / refresh_rate;
-    }
+    int interval_msec = get_interval_msec_based_on_output_hz(toplevel);
 
     uint64_t delta_t_msec =
         timespec_to_msec(&now) - cursor->last_resize_time_msec;
@@ -252,7 +259,20 @@ static void process_cursor_resize_bsp(struct cwc_cursor *cursor)
 static void process_cursor_resize_master(struct cwc_cursor *cursor)
 {
     struct cwc_output *output = cursor->grabbed_toplevel->container->output;
-    master_resize_update(output, cursor);
+
+    struct timespec now;
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    int interval_msec =
+        get_interval_msec_based_on_output_hz(cursor->grabbed_toplevel);
+
+    uint64_t delta_t_msec =
+        timespec_to_msec(&now) - cursor->last_resize_time_msec;
+
+    if (delta_t_msec > interval_msec) {
+        master_resize_update(output, cursor);
+
+        cursor->last_resize_time_msec = timespec_to_msec(&now);
+    }
 }
 
 static void cwc_cursor_unhide(struct cwc_cursor *cursor)
