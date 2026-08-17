@@ -647,7 +647,7 @@ static void _cwc_container_insert_toplevel(struct cwc_container *c,
     int bw = cwc_border_get_thickness(&c->border);
     wlr_scene_node_set_position(&toplevel->surf_tree->node, bw, bw);
 
-    cwc_container_set_size(c, c->current.geom.width, c->current.geom.width);
+    cwc_container_set_size(c, c->current.geom.width, c->current.geom.height);
 
     if (emit_signal)
         cwc_object_emit_signal_varr("container::insert",
