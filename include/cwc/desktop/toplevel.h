@@ -41,6 +41,10 @@ struct cwc_toplevel_decoration {
     struct wl_listener set_decoration_mode_l;
     struct wl_listener destroy_l;
 };
+struct cwc_toplevel_state {
+    struct wlr_box clip;
+    struct wlr_box geom;
+};
 
 struct cwc_toplevel {
     enum cwc_data_type type;
@@ -71,8 +75,8 @@ struct cwc_toplevel {
     struct wl_list link_output_toplevels; // cwc_output.toplevels
     struct wl_list link_container;        // cwc_container.toplevels
 
-    struct cwc_container_state pending;
-    struct cwc_container_state current;
+    struct cwc_toplevel_state pending;
+    struct cwc_toplevel_state current;
     uint64_t last_resize;
 
     struct wl_listener map_l;

@@ -64,7 +64,6 @@ void cwc_border_resize(struct cwc_border *border, int rect_w, int rect_h);
 
 struct cwc_container_state {
     struct wlr_box geom;
-    struct wlr_box clip;
 };
 
 struct cwc_container {
@@ -95,14 +94,19 @@ struct cwc_container {
         int workspace;
     } old_prop;
 
+    struct cwc_container_state pending;
+    struct cwc_container_state current;
+
+    struct {
+        bool initializing;
+        float opacity_before;
+    } CWC_PRIVATE;
+
     struct wl_list toplevels;
 
     struct wl_list link_output_container; // cwc_output_state.containers
     struct wl_list link_output_fstack;    // cwc_output.state.focus_stack
     struct wl_list link_output_minimized; // cwc_output.state.minimized
-
-    struct cwc_container_state pending;
-    struct cwc_container_state current;
 };
 
 void cwc_container_init(struct cwc_output *output,

@@ -229,6 +229,12 @@ static void _decide_should_tiled_part2(struct cwc_toplevel *toplevel)
         || cwc_toplevel_is_floating(toplevel))
         return;
 
+    if (cwc_toplevel_is_visible(toplevel)) {
+        cont->opacity_before = cont->opacity;
+        cwc_container_set_opacity(cont, 0);
+        cont->initializing = true;
+    }
+
     switch (cont->output->state->tag_info[cont->workspace].layout_mode) {
     case CWC_LAYOUT_FLOATING:
         return;
@@ -375,9 +381,14 @@ static void _commit_toplevel(struct cwc_toplevel *toplevel)
                                            &toplevel->pending.clip);
     }
 
+    if (container->initializing && cwc_toplevel_is_visible(toplevel)) {
+        cwc_container_set_opacity(container, container->opacity_before);
+        container->initializing = false;
+    }
+
     container->current      = container->pending;
     toplevel->current       = toplevel->pending;
-    toplevel->pending       = (struct cwc_container_state){0};
+    toplevel->pending       = (struct cwc_toplevel_state){0};
     container->pending      = (struct cwc_container_state){0};
     toplevel->resize_serial = 0;
     toplevel->last_resize   = get_current_time_msec();
@@ -427,6 +438,11 @@ static void on_surface_commit(struct wl_listener *listener, void *data)
     if (!container)
         return;
 
+    if (container->initializing && !toplevel->resize_serial) {
+        cwc_container_set_opacity(container, container->opacity_before);
+        container->initializing = false;
+    }
+
     struct wlr_box geom = cwc_toplevel_get_geometry(toplevel);
     int thickness       = cwc_border_get_thickness(&container->border);
 
@@ -439,19 +455,26 @@ static void on_surface_commit(struct wl_listener *listener, void *data)
         } else {
             _resize_early_if_shrink(toplevel, container);
         }
-    } else if (cwc_toplevel_is_floating(toplevel)) {
-        /* follow geometry when floating */
+        return;
+    }
+
+    /* follow geometry when floating */
+    if (cwc_toplevel_is_floating(toplevel)) {
         cwc_toplevel_set_size_surface(toplevel, geom.width, geom.height);
         wlr_scene_subsurface_tree_set_clip(&toplevel->surf_tree->node, &geom);
         cwc_border_resize(&container->border, geom.width + thickness * 2,
                           geom.height + thickness * 2);
-    } else if (!wlr_box_empty(&container->pending.geom)) {
-        _commit_toplevel(toplevel);
-    } else {
-        geom.width  = toplevel->current.geom.width;
-        geom.height = toplevel->current.geom.height;
-        wlr_scene_subsurface_tree_set_clip(&toplevel->surf_tree->node, &geom);
+        return;
     }
+
+    if (!wlr_box_empty(&container->pending.geom)) {
+        _commit_toplevel(toplevel);
+        return;
+    }
+
+    geom.width  = toplevel->current.geom.width;
+    geom.height = toplevel->current.geom.height;
+    wlr_scene_subsurface_tree_set_clip(&toplevel->surf_tree->node, &geom);
 }
 
 static void on_request_maximize(struct wl_listener *listener, void *data)
