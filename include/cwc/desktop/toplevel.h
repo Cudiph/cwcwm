@@ -520,7 +520,8 @@ cwc_toplevel_surface_send_frame_done(struct cwc_toplevel *toplevel)
 
 #ifdef CWC_XWAYLAND
     if (cwc_toplevel_is_x11(toplevel))
-        wlr_surface_send_frame_done(toplevel->xwsurface->surface, &now);
+        return wlr_surface_send_frame_done(toplevel->xwsurface->surface, &now);
+
 #endif // CWC_XWAYLAND
 
     wlr_surface_send_frame_done(toplevel->xdg_toplevel->base->surface, &now);

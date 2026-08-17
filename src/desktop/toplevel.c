@@ -229,7 +229,7 @@ static void _decide_should_tiled_part2(struct cwc_toplevel *toplevel)
         || cwc_toplevel_is_floating(toplevel))
         return;
 
-    if (cwc_toplevel_is_visible(toplevel)) {
+    if (cwc_toplevel_is_visible(toplevel) && !cwc_toplevel_is_x11(toplevel)) {
         cont->opacity_before = cont->opacity;
         cwc_container_set_opacity(cont, 0);
         cont->initializing = true;
