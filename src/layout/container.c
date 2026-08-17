@@ -1495,7 +1495,7 @@ void cwc_container_update_output(struct cwc_container *container)
     cwc_container_move_to_output_without_translate(container, output);
 }
 
-static inline void apply_position_instantly_if_no_resize(
+static inline void _apply_position_instantly_if_no_resize(
     struct cwc_container *container, int x, int y)
 {
     if (cwc_container_get_front_toplevel(container)->resize_serial)
@@ -1516,7 +1516,7 @@ void cwc_container_set_position_global(struct cwc_container *container,
     container->pending.geom.x = x;
     container->pending.geom.y = y;
 
-    apply_position_instantly_if_no_resize(container, x, y);
+    _apply_position_instantly_if_no_resize(container, x, y);
 
     struct wlr_box xy = {.x = x, .y = y};
 #ifdef CWC_XWAYLAND
@@ -1551,14 +1551,12 @@ static void _set_box_global(struct cwc_container *container,
     int x = box->x;
     int y = box->y;
 
-    if (cwc_toplevel_is_x11(cwc_container_get_front_toplevel(container)))
-        apply_position_instantly_if_no_resize(container, x, y);
-
     container->pending.geom.x = x;
     container->pending.geom.y = y;
     cwc_container_set_size(container, box->width, box->height);
 
-    save_floating_box_position(container, x, y);
+    /* must after set size so that it can decide whether to apply instantly  */
+    cwc_container_set_position_global(container, x, y);
 }
 
 void cwc_container_set_box_global(struct cwc_container *container,
