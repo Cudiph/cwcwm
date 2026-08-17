@@ -707,13 +707,25 @@ static void on_popup_commit(struct wl_listener *listener, void *data)
     struct cwc_toplevel *toplevel          = NULL;
     struct wlr_layer_surface_v1 *layersurf = NULL;
 
-    // TODO: also unconstraint if parent is the popup
     struct wlr_scene_tree *parent_stree         = NULL;
     struct wlr_scene_tree *parent_stree_capture = NULL;
     if (parent_popup) {
         struct cwc_popup *parent_popup_cwc = parent_popup->base->data;
         parent_stree                       = parent_popup_cwc->scene_tree;
         parent_stree_capture = parent_popup_cwc->capture_scene_tree;
+
+        /* walk through all the parent until it found layershell/toplevel */
+        struct wlr_surface *ancestor = xdg_popup->parent;
+        while (ancestor) {
+            struct wlr_xdg_popup *parent_popup_temp =
+                wlr_xdg_popup_try_from_wlr_surface(ancestor);
+            if (parent_popup_temp) {
+                ancestor = parent_popup_temp->parent;
+            } else {
+                unconstraint_popup(popup, ancestor);
+                break;
+            }
+        }
 
         goto create_popup;
     }
