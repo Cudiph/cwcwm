@@ -448,7 +448,9 @@ static void on_surface_commit(struct wl_listener *listener, void *data)
 
     if (toplevel->resize_serial) {
         uint64_t timediff = get_current_time_msec() - toplevel->last_resize;
-        if (timediff > RESIZE_TIMEOUT
+        if ((toplevel->current.geom.width == toplevel->pending.geom.width
+             && toplevel->current.geom.height == toplevel->pending.geom.height)
+            || timediff > RESIZE_TIMEOUT
             || toplevel->resize_serial
                    == toplevel->xdg_toplevel->base->current.configure_serial) {
             _commit_toplevel(toplevel);

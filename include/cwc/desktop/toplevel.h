@@ -511,4 +511,19 @@ static inline bool cwc_toplevel_is_allow_tearing(struct cwc_toplevel *toplevel)
     return toplevel->tearing_hint;
 }
 
+static inline void
+cwc_toplevel_surface_send_frame_done(struct cwc_toplevel *toplevel)
+{
+
+    struct timespec now;
+    clock_gettime(CLOCK_MONOTONIC, &now);
+
+#ifdef CWC_XWAYLAND
+    if (cwc_toplevel_is_x11(toplevel))
+        wlr_surface_send_frame_done(toplevel->xwsurface->surface, &now);
+#endif // CWC_XWAYLAND
+
+    wlr_surface_send_frame_done(toplevel->xdg_toplevel->base->surface, &now);
+}
+
 #endif // !_CWC_TOPLEVEL_H
