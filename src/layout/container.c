@@ -1352,11 +1352,6 @@ static void all_toplevel_set_size(struct cwc_toplevel *toplevel, void *data)
     int surf_w = box->width;
     int surf_h = box->height;
 
-    /* this prevent unnecessary frame synchronization */
-    if (!cwc_toplevel_is_x11(toplevel) && geom.width == surf_w
-        && geom.height == surf_h)
-        return;
-
     if (cwc_toplevel_is_floating(toplevel)) {
         cwc_toplevel_set_tiled(toplevel, 0);
     } else {
@@ -1723,4 +1718,30 @@ void cwc_container_set_opacity(struct cwc_container *container, float opacity)
     container->opacity = opacity;
 
     wlr_output_schedule_frame(container->output->wlr_output);
+}
+
+static void send_frame_done_iterator(struct wlr_scene_buffer *scene_buffer,
+                                     int x,
+                                     int y,
+                                     void *data)
+{
+    struct timespec *when = data;
+    struct wlr_scene_surface *scene_surface =
+        wlr_scene_surface_try_from_buffer(scene_buffer);
+    if (scene_surface == NULL) {
+        return;
+    }
+    wlr_surface_send_frame_done(scene_surface->surface, when);
+}
+
+void cwc_container_send_frame_done(struct cwc_container *container)
+{
+    struct timespec when;
+    clock_gettime(CLOCK_MONOTONIC, &when);
+
+    struct wlr_scene_node *node;
+    wl_list_for_each(node, &container->tree->children, link)
+    {
+        wlr_scene_node_for_each_buffer(node, send_frame_done_iterator, &when);
+    }
 }

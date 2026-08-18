@@ -393,6 +393,10 @@ static void _commit_toplevel(struct cwc_toplevel *toplevel)
     toplevel->resize_serial = 0;
     toplevel->last_resize   = get_current_time_msec();
 
+    /* when only resize the position is all zero, so set it again*/
+    container->pending.geom.x = container->current.geom.x;
+    container->pending.geom.y = container->current.geom.y;
+
     cwc_container_update_output(container);
 }
 
@@ -443,9 +447,6 @@ static void on_surface_commit(struct wl_listener *listener, void *data)
         container->initializing = false;
     }
 
-    struct wlr_box geom = cwc_toplevel_get_geometry(toplevel);
-    int thickness       = cwc_border_get_thickness(&container->border);
-
     if (toplevel->resize_serial) {
         uint64_t timediff = get_current_time_msec() - toplevel->last_resize;
         if ((toplevel->current.geom.width == toplevel->pending.geom.width
@@ -457,26 +458,21 @@ static void on_surface_commit(struct wl_listener *listener, void *data)
         } else {
             _resize_early_if_shrink(toplevel, container);
         }
+
+        cwc_container_send_frame_done(container);
         return;
     }
+
+    struct wlr_box geom = cwc_toplevel_get_geometry(toplevel);
+    if (wlr_box_equal(&geom, &toplevel->current.geom))
+        return;
+    toplevel->current.geom = geom;
 
     /* follow geometry when floating */
     if (cwc_toplevel_is_floating(toplevel)) {
         cwc_toplevel_set_size_surface(toplevel, geom.width, geom.height);
-        wlr_scene_subsurface_tree_set_clip(&toplevel->surf_tree->node, &geom);
-        cwc_border_resize(&container->border, geom.width + thickness * 2,
-                          geom.height + thickness * 2);
         return;
     }
-
-    if (!wlr_box_empty(&container->pending.geom)) {
-        _commit_toplevel(toplevel);
-        return;
-    }
-
-    geom.width  = toplevel->current.geom.width;
-    geom.height = toplevel->current.geom.height;
-    wlr_scene_subsurface_tree_set_clip(&toplevel->surf_tree->node, &geom);
 }
 
 static void on_request_maximize(struct wl_listener *listener, void *data)

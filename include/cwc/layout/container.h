@@ -197,6 +197,8 @@ void cwc_container_for_each_bottom_to_top(
     void (*f)(struct cwc_toplevel *toplevel, void *data),
     void *data);
 
+void cwc_container_send_frame_done(struct cwc_container *container);
+
 // ======================= MACRO =================================
 
 static inline bool cwc_container_is_unmanaged(struct cwc_container *cont)
