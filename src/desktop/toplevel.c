@@ -363,9 +363,10 @@ static void _surface_initial_commit(struct cwc_toplevel *toplevel)
                                      g_config.default_decoration_mode);
 }
 
-static void _commit_toplevel(struct cwc_toplevel *toplevel)
+static void _apply_transaction(struct cwc_toplevel *toplevel)
 {
     struct cwc_container *container = toplevel->container;
+
     wlr_scene_node_set_position(&container->tree->node,
                                 container->pending.geom.x,
                                 container->pending.geom.y);
@@ -386,6 +387,10 @@ static void _commit_toplevel(struct cwc_toplevel *toplevel)
         container->initializing = false;
     }
 
+    // wlr_scene_node_destroy(&container->saved_tree->node);
+    // container->saved_tree = NULL;
+    // wlr_scene_node_set_enabled(&toplevel->surf_tree->node, true);
+
     container->current      = container->pending;
     toplevel->current       = toplevel->pending;
     toplevel->pending       = (struct cwc_toplevel_state){0};
@@ -393,39 +398,7 @@ static void _commit_toplevel(struct cwc_toplevel *toplevel)
     toplevel->resize_serial = 0;
     toplevel->last_resize   = get_current_time_msec();
 
-    /* when only resize the position is all zero, so set it again*/
-    container->pending.geom.x = container->current.geom.x;
-    container->pending.geom.y = container->current.geom.y;
-
     cwc_container_update_output(container);
-}
-
-static void _resize_early_if_shrink(struct cwc_toplevel *toplevel,
-                                    struct cwc_container *container)
-{
-    int gaps         = cwc_container_get_gaps(container);
-    int *cont_x      = &container->current.geom.x;
-    int *cont_y      = &container->current.geom.y;
-    int *cont_width  = &container->current.geom.width;
-    int *cont_height = &container->current.geom.height;
-
-    if (container->current.geom.width > container->pending.geom.width) {
-        *cont_x                      = container->pending.geom.x;
-        *cont_width                  = container->pending.geom.width;
-        toplevel->current.clip.width = toplevel->pending.clip.width;
-    }
-
-    if (container->current.geom.height > container->pending.geom.height) {
-        *cont_y                       = container->pending.geom.y;
-        *cont_height                  = container->pending.geom.height;
-        toplevel->current.clip.height = toplevel->pending.clip.height;
-    }
-
-    wlr_scene_node_set_position(&container->tree->node, *cont_x, *cont_y);
-    cwc_border_resize(&container->border, *cont_width - gaps * 2,
-                      *cont_height - gaps * 2);
-    wlr_scene_subsurface_tree_set_clip(&toplevel->surf_tree->node,
-                                       &toplevel->current.clip);
 }
 
 static void on_surface_commit(struct wl_listener *listener, void *data)
@@ -453,10 +426,8 @@ static void on_surface_commit(struct wl_listener *listener, void *data)
              && toplevel->current.geom.height == toplevel->pending.geom.height)
             || timediff > RESIZE_TIMEOUT
             || toplevel->resize_serial
-                   == toplevel->xdg_toplevel->base->current.configure_serial) {
-            _commit_toplevel(toplevel);
-        } else {
-            _resize_early_if_shrink(toplevel, container);
+                   <= toplevel->xdg_toplevel->base->current.configure_serial) {
+            _apply_transaction(toplevel);
         }
 
         cwc_container_send_frame_done(container);

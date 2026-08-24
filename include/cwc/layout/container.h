@@ -64,12 +64,14 @@ void cwc_border_resize(struct cwc_border *border, int rect_w, int rect_h);
 
 struct cwc_container_state {
     struct wlr_box geom;
+    bool position;
 };
 
 struct cwc_container {
     enum cwc_data_type type;
     struct wl_list link;
     struct wlr_scene_tree *tree;
+    struct wlr_scene_tree *saved_tree;
     struct wlr_scene_tree *popup_tree; // or anything that should above toplevel
     struct wlr_scene_rect *fullscreen_bg;
     struct cwc_border border;
@@ -98,8 +100,8 @@ struct cwc_container {
     struct cwc_container_state current;
 
     struct {
-        bool initializing;
         float opacity_before;
+        bool initializing;
     } CWC_PRIVATE;
 
     struct wl_list toplevels;
@@ -198,6 +200,7 @@ void cwc_container_for_each_bottom_to_top(
     void *data);
 
 void cwc_container_send_frame_done(struct cwc_container *container);
+void cwc_container_save_buffer(struct cwc_container *container);
 
 // ======================= MACRO =================================
 
