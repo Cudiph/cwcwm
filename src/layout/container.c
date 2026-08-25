@@ -1145,8 +1145,8 @@ void cwc_container_set_floating(struct cwc_container *container, bool set)
         return;
 
     if (set) {
-        cwc_container_restore_floating_box(container);
         container->state |= CONTAINER_STATE_FLOATING;
+        cwc_container_restore_floating_box(container);
 
         if (container->bsp_node)
             bsp_node_disable(container->bsp_node);
