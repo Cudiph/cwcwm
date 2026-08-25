@@ -45,6 +45,7 @@
 #include "cwc/desktop/layer_shell.h"
 #include "cwc/desktop/output.h"
 #include "cwc/desktop/toplevel.h"
+#include "cwc/desktop/transaction.h"
 #include "cwc/input/cursor.h"
 #include "cwc/input/keyboard.h"
 #include "cwc/input/seat.h"
@@ -57,7 +58,6 @@
 #include "cwc/signal.h"
 #include "cwc/types.h"
 #include "cwc/util.h"
-#include "private/container.h"
 
 static struct wl_listener config_commit_l;
 
@@ -363,44 +363,6 @@ static void _surface_initial_commit(struct cwc_toplevel *toplevel)
                                      g_config.default_decoration_mode);
 }
 
-static void _apply_transaction(struct cwc_toplevel *toplevel)
-{
-    struct cwc_container *container = toplevel->container;
-
-    wlr_scene_node_set_position(&container->tree->node,
-                                container->pending.geom.x,
-                                container->pending.geom.y);
-    int gaps = cwc_container_get_gaps(container);
-    cwc_border_resize(&container->border,
-                      container->pending.geom.width - gaps * 2,
-                      container->pending.geom.height - gaps * 2);
-
-    if (wlr_box_empty(&toplevel->pending.clip)) {
-        wlr_scene_subsurface_tree_set_clip(&toplevel->surf_tree->node, NULL);
-    } else {
-        wlr_scene_subsurface_tree_set_clip(&toplevel->surf_tree->node,
-                                           &toplevel->pending.clip);
-    }
-
-    if (container->initializing && cwc_toplevel_is_visible(toplevel)) {
-        cwc_container_set_opacity(container, container->opacity_before);
-        container->initializing = false;
-    }
-
-    // wlr_scene_node_destroy(&container->saved_tree->node);
-    // container->saved_tree = NULL;
-    // wlr_scene_node_set_enabled(&toplevel->surf_tree->node, true);
-
-    container->current      = container->pending;
-    toplevel->current       = toplevel->pending;
-    toplevel->pending       = (struct cwc_toplevel_state){0};
-    container->pending      = (struct cwc_container_state){0};
-    toplevel->resize_serial = 0;
-    toplevel->last_resize   = get_current_time_msec();
-
-    cwc_container_update_output(container);
-}
-
 static void on_surface_commit(struct wl_listener *listener, void *data)
 {
     struct cwc_toplevel *toplevel =
@@ -422,12 +384,10 @@ static void on_surface_commit(struct wl_listener *listener, void *data)
 
     if (toplevel->resize_serial) {
         uint64_t timediff = get_current_time_msec() - toplevel->last_resize;
-        if ((toplevel->current.geom.width == toplevel->pending.geom.width
-             && toplevel->current.geom.height == toplevel->pending.geom.height)
-            || timediff > RESIZE_TIMEOUT
+        if (timediff > RESIZE_TIMEOUT
             || toplevel->resize_serial
                    <= toplevel->xdg_toplevel->base->current.configure_serial) {
-            _apply_transaction(toplevel);
+            transaction_commit(toplevel);
         }
 
         cwc_container_send_frame_done(container);

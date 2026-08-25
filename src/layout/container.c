@@ -545,6 +545,15 @@ _cwc_container_set_initial_state(struct cwc_container *cont,
         cont->state |= CONTAINER_STATE_MINIMIZED;
 }
 
+static int _commit_new_size(void *data)
+{
+    struct cwc_container *cont    = data;
+    struct cwc_toplevel *toplevel = cwc_container_get_front_toplevel(cont);
+
+    transaction_commit(toplevel);
+    return 0;
+}
+
 void cwc_container_init(struct cwc_output *output,
                         struct cwc_toplevel *toplevel,
                         int border_w)
@@ -557,6 +566,8 @@ void cwc_container_init(struct cwc_output *output,
     cont->tree->node.data      = cont;
     cont->opacity              = 1.0f;
     cont->wfact                = 1.0f;
+    cont->resize_timer =
+        wl_event_loop_add_timer(server.wl_event_loop, _commit_new_size, cont);
 
     int gaps = cwc_output_get_current_tag_info(cont->output)->useless_gaps;
     struct wlr_box geom = cwc_toplevel_get_geometry(toplevel);
@@ -698,6 +709,8 @@ static void cwc_container_fini(struct cwc_container *container)
     cwc_border_destroy(&container->border);
     wlr_scene_node_destroy(&container->popup_tree->node);
     wlr_scene_node_destroy(&container->tree->node);
+
+    wl_event_source_remove(container->resize_timer);
 
     wl_list_remove(&container->link);
     free(container);
@@ -1473,8 +1486,12 @@ void cwc_container_set_size(struct cwc_container *container, int w, int h)
             container->pending.geom.y = container->current.geom.y;
         }
 
-        // cwc_container_save_buffer(container);
+        if (cwc_toplevel_is_visible(toplevel)
+            && !cwc_toplevel_is_floating(toplevel))
+            cwc_container_save_buffer(container);
     }
+
+    wl_event_source_timer_update(container->resize_timer, RESIZE_TIMEOUT * 2);
 }
 
 #ifdef CWC_XWAYLAND

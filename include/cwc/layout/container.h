@@ -99,6 +99,8 @@ struct cwc_container {
     struct cwc_container_state pending;
     struct cwc_container_state current;
 
+    struct wl_event_source *resize_timer;
+
     struct {
         float opacity_before;
         bool initializing;
