@@ -1397,9 +1397,8 @@ static void all_toplevel_set_size(struct cwc_toplevel *toplevel, void *data)
 
     if (!toplevel->resize_serial)
         toplevel->last_resize = get_current_time_msec();
-    uint32_t resize_serial = cwc_toplevel_set_size(toplevel, surf_w, surf_h);
-    if (visible)
-        toplevel->resize_serial = resize_serial;
+    uint32_t resize_serial  = cwc_toplevel_set_size(toplevel, surf_w, surf_h);
+    toplevel->resize_serial = resize_serial;
 
     if (cwc_toplevel_is_x11(toplevel)) {
         wlr_scene_subsurface_tree_set_clip(&toplevel->surf_tree->node, &clip);

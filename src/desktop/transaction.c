@@ -183,3 +183,59 @@ void transaction_commit(struct cwc_toplevel *toplevel)
     cwc_container_update_output(container);
     wl_event_source_timer_update(container->resize_timer, 0);
 }
+
+static bool is_toplevel_ready(struct cwc_toplevel *toplevel)
+{
+    uint64_t timediff = get_current_time_msec() - toplevel->last_resize;
+    if (timediff > RESIZE_TIMEOUT
+        || toplevel->resize_serial
+               <= toplevel->xdg_toplevel->base->current.configure_serial)
+        return true;
+
+    return false;
+}
+
+void transaction_check_commit(struct cwc_toplevel *toplevel)
+{
+    if (!is_toplevel_ready(toplevel))
+        return;
+
+    if ((!cwc_container_is_visible(toplevel->container)
+         || cwc_toplevel_is_floating(toplevel)
+         || !cwc_toplevel_is_configure_allowed(toplevel))) {
+        transaction_commit(toplevel);
+        return;
+    }
+
+    int resize_count = 0;
+    struct cwc_vec *list_resize =
+        cwc_vec_create(sizeof(struct cwc_toplevel *), 4);
+
+    struct cwc_container *c;
+    wl_list_for_each(c, &toplevel->container->output->state->containers,
+                     link_output_container)
+    {
+        struct cwc_toplevel *front = cwc_container_get_front_toplevel(c);
+        if (!front->resize_serial)
+            continue;
+
+        if (is_toplevel_ready(front)) {
+            cwc_vec_push(list_resize, front);
+            continue;
+        }
+
+        resize_count++;
+        break;
+    }
+
+    if (resize_count)
+        goto cleanup;
+
+    for (int i = 0; i < list_resize->count; ++i) {
+        struct cwc_toplevel *t = cwc_vec_at(list_resize, i);
+        transaction_commit(t);
+    }
+
+cleanup:
+    cwc_vec_destroy(list_resize);
+}

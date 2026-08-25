@@ -383,13 +383,7 @@ static void on_surface_commit(struct wl_listener *listener, void *data)
     }
 
     if (toplevel->resize_serial) {
-        uint64_t timediff = get_current_time_msec() - toplevel->last_resize;
-        if (timediff > RESIZE_TIMEOUT
-            || toplevel->resize_serial
-                   <= toplevel->xdg_toplevel->base->current.configure_serial) {
-            transaction_commit(toplevel);
-        }
-
+        transaction_check_commit(toplevel);
         cwc_container_send_frame_done(container);
         return;
     }

@@ -10,5 +10,6 @@ void transaction_pause();
 void transaction_resume();
 
 void transaction_commit(struct cwc_toplevel *toplevel);
+void transaction_check_commit(struct cwc_toplevel *toplevel);
 
 #endif // !_CWC_TRANSACTION_H
