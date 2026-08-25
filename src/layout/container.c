@@ -646,6 +646,7 @@ static void _cwc_container_insert_toplevel(struct cwc_container *c,
     wlr_scene_node_set_position(&toplevel->surf_tree->node, bw, bw);
 
     cwc_container_set_size(c, c->current.geom.width, c->current.geom.height);
+    cwc_container_refresh(c);
 
     if (emit_signal)
         cwc_object_emit_signal_varr("container::insert",
@@ -972,18 +973,21 @@ cwc_container_get_front_toplevel(struct cwc_container *cont)
 
 void cwc_container_set_front_toplevel(struct cwc_toplevel *toplevel)
 {
-    if (!toplevel
-        || cwc_container_get_front_toplevel(toplevel->container) == toplevel)
+    if (!toplevel)
         return;
 
-    wlr_scene_node_set_enabled(&toplevel->surf_tree->node, true);
-    __cwc_toplevel_set_minimized(toplevel, false);
+    if (cwc_container_get_front_toplevel(toplevel->container) == toplevel)
+        goto update_visibility;
 
     struct cwc_container *container = toplevel->container;
     cwc_container_set_size(container, container->current.geom.width,
                            container->current.geom.height);
     wlr_scene_node_place_below(&toplevel->surf_tree->node,
                                &container->popup_tree->node);
+
+update_visibility:
+    wlr_scene_node_set_enabled(&toplevel->surf_tree->node, true);
+    __cwc_toplevel_set_minimized(toplevel, false);
 
     struct cwc_toplevel *t;
     wl_list_for_each(t, &toplevel->container->toplevels, link_container)
