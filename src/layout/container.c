@@ -1381,7 +1381,6 @@ static void all_toplevel_set_size(struct cwc_toplevel *toplevel, void *data)
         .height = surf_h,
     };
 
-    bool visible = cwc_toplevel_is_visible(toplevel);
     if (!cwc_toplevel_is_x11(toplevel)) {
         // when floating we respect the min width
         if (cwc_toplevel_is_floating(toplevel)) {
@@ -1397,8 +1396,13 @@ static void all_toplevel_set_size(struct cwc_toplevel *toplevel, void *data)
 
     if (!toplevel->resize_serial)
         toplevel->last_resize = get_current_time_msec();
-    uint32_t resize_serial  = cwc_toplevel_set_size(toplevel, surf_w, surf_h);
-    toplevel->resize_serial = resize_serial;
+
+    /* set resize_serial only for visible container otherwise the tabbed
+     * container will fight for each other size.
+     */
+    uint32_t resize_serial = cwc_toplevel_set_size(toplevel, surf_w, surf_h);
+    if (cwc_toplevel_is_visible(toplevel))
+        toplevel->resize_serial = resize_serial;
 
     if (cwc_toplevel_is_x11(toplevel)) {
         wlr_scene_subsurface_tree_set_clip(&toplevel->surf_tree->node, &clip);
@@ -1485,12 +1489,14 @@ void cwc_container_set_size(struct cwc_container *container, int w, int h)
             container->pending.geom.y = container->current.geom.y;
         }
 
-        if (cwc_toplevel_is_visible(toplevel)
-            && !cwc_toplevel_is_floating(toplevel))
-            cwc_container_save_buffer(container);
-    }
+        if (cwc_toplevel_is_visible(toplevel)) {
+            if (!cwc_toplevel_is_floating(toplevel))
+                cwc_container_save_buffer(container);
 
-    wl_event_source_timer_update(container->resize_timer, RESIZE_TIMEOUT * 2);
+            wl_event_source_timer_update(container->resize_timer,
+                                         RESIZE_TIMEOUT * 2);
+        }
+    }
 }
 
 #ifdef CWC_XWAYLAND
@@ -1813,8 +1819,7 @@ void cwc_container_save_buffer(struct cwc_container *container)
     }
 
     struct cwc_toplevel *toplevel = cwc_container_get_front_toplevel(container);
-    wlr_scene_node_place_below(&container->saved_tree->node,
-                               &toplevel->surf_tree->node);
+    wlr_scene_node_raise_to_top(&container->saved_tree->node);
     wlr_scene_node_set_enabled(&container->saved_tree->node, false);
 
     wlr_scene_node_for_each_buffer(&toplevel->surf_tree->node,
