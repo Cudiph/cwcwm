@@ -108,6 +108,13 @@ void cwc_output_tiling_layout_update_container(struct cwc_container *container,
         update_container_workspace ? container->workspace : 0);
 }
 
+int _clear_container(void *data)
+{
+    struct cwc_output_state *state = data;
+    cwc_output_state_clear_saved_container(state);
+    return 0;
+}
+
 static struct cwc_output_state *
 cwc_output_state_create(struct cwc_output *output)
 {
@@ -120,6 +127,9 @@ cwc_output_state_create(struct cwc_output *output)
     state->ext_workspace_group   = wlr_ext_workspace_group_handle_v1_create(
         server.ext_workspace_manager, 0);
     state->ext_workspace_group->data = output;
+    state->saved_container = cwc_vec_create(sizeof(struct cwc_container *), 4);
+    state->saved_container_timeout =
+        wl_event_loop_add_timer(server.wl_event_loop, _clear_container, state);
 
     wl_list_init(&state->focus_stack);
     wl_list_init(&state->toplevels);
@@ -239,6 +249,7 @@ static inline void cwc_output_state_destroy(struct cwc_output_state *state)
 {
     // unreg tag object
     // free(state);
+    // cwc_vec_destroy(state->saved_container);
 }
 
 static void _output_configure_scene(struct cwc_output *output,

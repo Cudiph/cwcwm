@@ -525,6 +525,8 @@ cwc_toplevel_surface_send_frame_done(struct cwc_toplevel *toplevel)
 #endif // CWC_XWAYLAND
 
     wlr_surface_send_frame_done(toplevel->xdg_toplevel->base->surface, &now);
+    if (toplevel->container)
+        cwc_container_send_frame_done(toplevel->container);
 }
 
 #endif // !_CWC_TOPLEVEL_H

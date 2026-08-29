@@ -236,6 +236,8 @@ void transaction_check_commit(struct cwc_toplevel *toplevel)
         transaction_commit(t);
     }
 
+    cwc_output_state_clear_saved_container(toplevel->container->output->state);
+
 cleanup:
     cwc_vec_destroy(list_resize);
 }

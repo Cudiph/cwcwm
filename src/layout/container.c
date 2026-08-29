@@ -676,6 +676,15 @@ static void cwc_container_insert_toplevel_silence(struct cwc_container *c,
     _cwc_container_insert_toplevel(c, toplevel, false);
 }
 
+static void __cwc_container_final(struct cwc_container *container)
+{
+    cwc_border_destroy(&container->border);
+    wlr_scene_node_destroy(&container->popup_tree->node);
+    wlr_scene_node_destroy(&container->tree->node);
+
+    free(container);
+}
+
 static void cwc_container_fini(struct cwc_container *container)
 {
     lua_State *L = g_config_get_lua_State();
@@ -706,14 +715,24 @@ static void cwc_container_fini(struct cwc_container *container)
 
     luaC_object_unregister(L, container);
 
-    cwc_border_destroy(&container->border);
-    wlr_scene_node_destroy(&container->popup_tree->node);
-    wlr_scene_node_destroy(&container->tree->node);
-
     wl_event_source_remove(container->resize_timer);
-
     wl_list_remove(&container->link);
-    free(container);
+
+    if (cwc_vec_find(container->output->state->saved_container, container)
+        == -1)
+        __cwc_container_final(container);
+}
+
+void cwc_output_state_clear_saved_container(struct cwc_output_state *state)
+{
+    struct cwc_vec *saved_container = state->saved_container;
+
+    for (int i = 0; i < saved_container->count; ++i) {
+        struct cwc_container *elem = cwc_vec_at(saved_container, i);
+        __cwc_container_final(elem);
+    }
+
+    cwc_vec_clear(saved_container);
 }
 
 static void _clear_container_stuff_in_toplevel(struct cwc_toplevel *toplevel)
@@ -734,6 +753,18 @@ static void _clear_container_stuff_in_toplevel(struct cwc_toplevel *toplevel)
 void cwc_container_remove_toplevel(struct cwc_toplevel *toplevel)
 {
     struct cwc_container *cont = toplevel->container;
+    struct cwc_output *output  = cont->output;
+
+    /* save the buffer only when there are more than 2 tiled clients */
+    struct cwc_toplevel *toplevels[3];
+    if (!wl_list_length_at_least(&cont->toplevels, 2)
+        && !cwc_container_is_floating(cont)
+        && cwc_output_get_tiled_toplevel_array(output, toplevels, 3) > 1) {
+        cwc_container_save_buffer(cont);
+        cwc_vec_push(output->state->saved_container, cont);
+        wl_event_source_timer_update(output->state->saved_container_timeout,
+                                     RESIZE_TIMEOUT);
+    }
 
     _clear_container_stuff_in_toplevel(toplevel);
 
@@ -1494,7 +1525,7 @@ void cwc_container_set_size(struct cwc_container *container, int w, int h)
                 cwc_container_save_buffer(container);
 
             wl_event_source_timer_update(container->resize_timer,
-                                         RESIZE_TIMEOUT * 2);
+                                         RESIZE_TIMEOUT);
         }
     }
 }

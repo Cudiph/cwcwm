@@ -260,9 +260,9 @@ struct layout_interface *get_default_master_layout()
     return layout_list;
 }
 
-static int get_tiled_toplevel_array(struct cwc_output *output,
-                                    struct cwc_toplevel **toplevels,
-                                    int array_len)
+int cwc_output_get_tiled_toplevel_array(struct cwc_output *output,
+                                        struct cwc_toplevel **toplevels,
+                                        int array_len)
 {
     int i = 0;
     struct cwc_container *container;
@@ -295,7 +295,7 @@ void master_arrange_update(struct cwc_output *output)
     struct master_state *state = &info->master_state;
 
     struct cwc_toplevel *tiled_visible[50];
-    int i = get_tiled_toplevel_array(output, tiled_visible, 50);
+    int i = cwc_output_get_tiled_toplevel_array(output, tiled_visible, 50);
 
     if (i >= 1)
         state->current_layout->arrange(tiled_visible, i, output, state);
@@ -310,7 +310,7 @@ static void _master_resize(struct cwc_output *output,
     struct layout_interface *layout = state->current_layout;
 
     struct cwc_toplevel *tiled_visible[50];
-    int i = get_tiled_toplevel_array(output, tiled_visible, 50);
+    int i = cwc_output_get_tiled_toplevel_array(output, tiled_visible, 50);
 
     if (layout->resize_update && stage == UPDATE)
         layout->resize_update(tiled_visible, i, cursor, state);

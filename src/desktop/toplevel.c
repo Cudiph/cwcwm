@@ -384,7 +384,7 @@ static void on_surface_commit(struct wl_listener *listener, void *data)
 
     if (toplevel->resize_serial) {
         transaction_check_commit(toplevel);
-        cwc_container_send_frame_done(container);
+        cwc_toplevel_surface_send_frame_done(toplevel);
         return;
     }
 
