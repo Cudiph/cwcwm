@@ -1114,6 +1114,11 @@ void cwc_container_swap(struct cwc_container *source,
     wl_array_init(&source_temp_array);
     wl_array_init(&target_temp_array);
 
+    if (!cwc_toplevel_is_x11(stop) && !cwc_toplevel_is_x11(ttop)) {
+        cwc_container_save_buffer(source);
+        cwc_container_save_buffer(target);
+    }
+
     cwc_container_for_each_toplevel(source, _remove_and_save_toplevel_ordering,
                                     &source_temp_array);
     cwc_container_for_each_toplevel(target, _remove_and_save_toplevel_ordering,
