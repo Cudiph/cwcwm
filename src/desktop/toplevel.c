@@ -446,7 +446,6 @@ static void on_request_resize(struct wl_listener *listener, void *data)
 
     uint32_t edges = 0;
 #ifdef CWC_XWAYLAND
-
     if (cwc_toplevel_is_x11(toplevel))
         edges = ((struct wlr_xwayland_resize_event *)data)->edges;
     else
