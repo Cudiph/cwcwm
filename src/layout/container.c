@@ -690,6 +690,8 @@ static void cwc_container_fini(struct cwc_container *container)
     lua_State *L = g_config_get_lua_State();
     cwc_object_emit_signal_simple("container::destroy", L, container);
 
+    struct cwc_output *current_output = container->output;
+
     if (server.insert_marked == container)
         server.insert_marked = NULL;
 
@@ -718,8 +720,7 @@ static void cwc_container_fini(struct cwc_container *container)
     wl_event_source_remove(container->resize_timer);
     wl_list_remove(&container->link);
 
-    if (cwc_vec_find(container->output->state->saved_container, container)
-        == -1)
+    if (cwc_vec_find(current_output->state->saved_container, container) == -1)
         __cwc_container_final(container);
 }
 
