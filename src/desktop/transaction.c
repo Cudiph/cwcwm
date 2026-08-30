@@ -147,6 +147,9 @@ void transaction_commit(struct cwc_toplevel *toplevel)
 {
     struct cwc_container *container = toplevel->container;
 
+    cwc_log(CWC_DEBUG, "committing toplevel (%p): %d %d %d %d", toplevel,
+            container->pending.geom.x, container->pending.geom.y,
+            container->pending.geom.width, container->pending.geom.height);
     wlr_scene_node_set_position(&container->tree->node,
                                 container->pending.geom.x,
                                 container->pending.geom.y);
@@ -158,6 +161,8 @@ void transaction_commit(struct cwc_toplevel *toplevel)
     if (wlr_box_empty(&toplevel->pending.clip)) {
         wlr_scene_subsurface_tree_set_clip(&toplevel->surf_tree->node, NULL);
     } else {
+        toplevel->pending.clip.x = toplevel->xdg_toplevel->base->geometry.x,
+        toplevel->pending.clip.y = toplevel->xdg_toplevel->base->geometry.y,
         wlr_scene_subsurface_tree_set_clip(&toplevel->surf_tree->node,
                                            &toplevel->pending.clip);
     }
@@ -172,6 +177,10 @@ void transaction_commit(struct cwc_toplevel *toplevel)
         container->saved_tree = NULL;
         wlr_scene_node_set_enabled(&toplevel->surf_tree->node, true);
     }
+
+    cwc_log(CWC_DEBUG, "with clip (%p): %d %d %d %d", toplevel,
+            toplevel->pending.clip.x, toplevel->pending.clip.y,
+            toplevel->pending.clip.width, toplevel->pending.clip.height);
 
     container->current      = container->pending;
     toplevel->current       = toplevel->pending;
