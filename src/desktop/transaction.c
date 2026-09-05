@@ -22,6 +22,8 @@
 #include "cwc/desktop/layer_shell.h"
 #include "cwc/desktop/toplevel.h"
 #include "cwc/desktop/transaction.h"
+#include "cwc/input/cursor.h"
+#include "cwc/input/seat.h"
 #include "cwc/layout/container.h"
 #include "cwc/server.h"
 #include "cwc/util.h"
@@ -147,9 +149,31 @@ void transaction_commit(struct cwc_toplevel *toplevel)
 {
     struct cwc_container *container = toplevel->container;
 
+    /* size correction when toplevel commit different size */
+    if (cwc_container_is_floating(container)) {
+        struct wlr_box geom = cwc_toplevel_get_geometry(toplevel);
+        int dw              = cwc_container_get_decorator_width(container);
+
+        struct cwc_cursor *cursor = server.seat->cursor;
+        if (cursor->resize_edges & WLR_EDGE_LEFT) {
+            int xdiff = geom.width - toplevel->pending.geom.width;
+            container->pending.geom.x -= xdiff;
+        }
+        if (cursor->resize_edges & WLR_EDGE_TOP) {
+            int ydiff = geom.height - toplevel->pending.geom.height;
+            container->pending.geom.y -= ydiff;
+        }
+
+        container->pending.geom.width  = geom.width + dw;
+        container->pending.geom.height = geom.height + dw;
+        toplevel->pending.geom         = geom;
+        toplevel->pending.clip         = geom;
+    }
+
     cwc_log(CWC_DEBUG, "committing toplevel (%p): %d %d %d %d", toplevel,
             container->pending.geom.x, container->pending.geom.y,
             container->pending.geom.width, container->pending.geom.height);
+
     wlr_scene_node_set_position(&container->tree->node,
                                 container->pending.geom.x,
                                 container->pending.geom.y);
