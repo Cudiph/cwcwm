@@ -219,14 +219,18 @@ static void process_cursor_resize(struct cwc_cursor *cursor)
             new_right = new_left;
     }
 
-    int min_w = MAX(toplevel->xdg_toplevel->current.min_width, MIN_WIDTH);
-    int min_h = MAX(toplevel->xdg_toplevel->current.min_height, MIN_WIDTH);
-    int dw    = cwc_container_get_decorator_width(toplevel->container);
+    if (!cwc_toplevel_is_x11(toplevel)) {
+        int min_w = MAX(toplevel->xdg_toplevel->current.min_width, MIN_WIDTH);
+        int min_h = MAX(toplevel->xdg_toplevel->current.min_height, MIN_WIDTH);
+        int dw    = cwc_container_get_decorator_width(toplevel->container);
 
-    int max_x = cursor->grab_float.x + cursor->grab_float.width - min_w - dw;
-    new_left  = MIN(new_left, max_x);
-    int max_y = cursor->grab_float.y + cursor->grab_float.height - min_h - dw;
-    new_top   = MIN(new_top, max_y);
+        int max_x =
+            cursor->grab_float.x + cursor->grab_float.width - min_w - dw;
+        new_left = MIN(new_left, max_x);
+        int max_y =
+            cursor->grab_float.y + cursor->grab_float.height - min_h - dw;
+        new_top = MIN(new_top, max_y);
+    }
 
     struct wlr_box new_box = {
         .x      = new_left,
