@@ -58,6 +58,8 @@
 #include "cwc/types.h"
 #include "cwc/util.h"
 
+static struct wl_listener config_commit_l;
+
 //=============== XDG SHELL ====================
 
 /* - */
@@ -1077,10 +1079,13 @@ static void on_decoration_destroy(struct wl_listener *listener, void *data)
 static void on_new_toplevel_decoration(struct wl_listener *listener, void *data)
 {
     struct wlr_xdg_toplevel_decoration_v1 *deco = data;
-    struct cwc_toplevel_decoration *cwc_deco    = malloc(sizeof(*cwc_deco));
     struct cwc_toplevel *toplevel =
         cwc_toplevel_try_from_wlr_surface(deco->toplevel->base->surface);
-    toplevel->decoration = cwc_deco;
+    if (!toplevel)
+        return;
+
+    struct cwc_toplevel_decoration *cwc_deco = malloc(sizeof(*cwc_deco));
+    toplevel->decoration                     = cwc_deco;
 
     cwc_deco->base                         = deco;
     cwc_deco->mode                         = g_config.default_decoration_mode;
@@ -1090,11 +1095,30 @@ static void on_new_toplevel_decoration(struct wl_listener *listener, void *data)
     wl_signal_add(&deco->events.destroy, &cwc_deco->destroy_l);
 }
 
-void setup_decoration_manager(struct cwc_server *s)
+static void on_config_commit(struct wl_listener *listener, void *data)
 {
     wlr_server_decoration_manager_set_default_mode(
+        server.server_decoration_manager, g_config.default_decoration_mode);
+}
+
+static void on_new_server_decoration(struct wl_listener *listener, void *data)
+{
+    struct wlr_server_decoration *deco = data;
+    // xxx: idk what to do yet
+}
+
+void setup_decoration_manager(struct cwc_server *s)
+{
+    s->server_decoration_manager =
         wlr_server_decoration_manager_create(s->wl_display),
-        WLR_SERVER_DECORATION_MANAGER_MODE_SERVER);
+
+    on_config_commit(NULL, NULL);
+    config_commit_l.notify = on_config_commit;
+    wl_signal_add(&g_config.events.commit, &config_commit_l);
+
+    s->new_server_decoration_l.notify = on_new_server_decoration;
+    wl_signal_add(&s->server_decoration_manager->events.new_decoration,
+                  &s->new_server_decoration_l);
 
     s->xdg_decoration_manager =
         wlr_xdg_decoration_manager_v1_create(s->wl_display);
@@ -1106,6 +1130,8 @@ void setup_decoration_manager(struct cwc_server *s)
 
 void cleanup_decoration_manager(struct cwc_server *s)
 {
+    wl_list_remove(&config_commit_l.link);
+    wl_list_remove(&s->new_server_decoration_l.link);
     wl_list_remove(&s->new_decoration_l.link);
 }
 

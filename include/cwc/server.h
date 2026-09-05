@@ -65,6 +65,9 @@ struct cwc_server {
     struct wl_event_source *xwayland_satellite_exit_source;
 #endif // CWC_XWAYLAND
 
+    struct wlr_server_decoration_manager *server_decoration_manager;
+    struct wl_listener new_server_decoration_l;
+
     struct wlr_xdg_decoration_manager_v1 *xdg_decoration_manager;
     struct wl_listener new_decoration_l;
 
