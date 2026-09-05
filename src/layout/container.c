@@ -1670,6 +1670,9 @@ void cwc_container_set_box_gap(struct cwc_container *container,
 
 void cwc_container_restore_floating_box(struct cwc_container *container)
 {
+    if (wlr_box_equal(&container->current.geom, &container->floating_box))
+        return;
+
     cwc_container_set_box_global(container, &container->floating_box);
 }
 
