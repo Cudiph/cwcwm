@@ -202,21 +202,36 @@ static void process_cursor_resize(struct cwc_cursor *cursor)
     if (cursor->resize_edges & WLR_EDGE_TOP) {
         new_top = border_y;
         if (new_top >= new_bottom)
-            new_top = new_bottom - 1;
+            new_top = new_bottom;
     } else if (cursor->resize_edges & WLR_EDGE_BOTTOM) {
         new_bottom = border_y;
         if (new_bottom <= new_top)
-            new_bottom = new_top + 1;
+            new_bottom = new_top;
     }
 
     if (cursor->resize_edges & WLR_EDGE_LEFT) {
         new_left = border_x;
         if (new_left >= new_right)
-            new_left = new_right - 1;
+            new_left = new_right;
     } else if (cursor->resize_edges & WLR_EDGE_RIGHT) {
         new_right = border_x;
         if (new_right <= new_left)
-            new_right = new_left + 1;
+            new_right = new_left;
+    }
+
+    int min_w = toplevel->xdg_toplevel->current.min_width;
+    int min_h = toplevel->xdg_toplevel->current.min_height;
+    int dw    = cwc_container_get_decorator_width(toplevel->container);
+
+    if (min_w) {
+        int max_x =
+            cursor->grab_float.x + cursor->grab_float.width - min_w - dw;
+        new_left = MIN(new_left, max_x);
+    }
+    if (min_h) {
+        int max_y =
+            cursor->grab_float.y + cursor->grab_float.height - min_h - dw;
+        new_top = MIN(new_top, max_y);
     }
 
     struct wlr_box new_box = {
