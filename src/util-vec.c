@@ -237,3 +237,10 @@ int cwc_vec_find(struct cwc_vec *vec, void *value)
 
     return -1;
 }
+
+void cwc_vec_clear(struct cwc_vec *vec)
+{
+    vec->count = 0;
+
+    check_shrink(vec);
+}

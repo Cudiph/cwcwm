@@ -6,6 +6,7 @@
 #include <wlr/types/wlr_output_layout.h>
 #include <wlr/util/box.h>
 
+#include "cwc/config.h"
 #include "cwc/types.h"
 
 struct cwc_server;
@@ -25,6 +26,9 @@ struct cwc_output_state {
 
     struct wlr_ext_workspace_group_handle_v1 *ext_workspace_group;
 
+    struct cwc_vec *saved_container; // struct cwc_container *
+    struct wl_event_source *saved_container_timeout;
+
     /* the tag used to decide if client visible */
     tag_bitfield_t active_tag;
     /* act as tag info index cuz multiple tag can be active */
@@ -35,6 +39,8 @@ struct cwc_output_state {
     /* use array for now too lazy to manage the memory */
     struct cwc_tag_info tag_info[MAX_WORKSPACE + 1];
 };
+
+void cwc_output_state_clear_saved_container(struct cwc_output_state *state);
 
 /* wlr_output.data == cwc_output */
 struct cwc_output {

@@ -51,4 +51,8 @@ struct cwc_toplevel *master_get_master(struct cwc_output *output);
 
 void master_set_master(struct cwc_toplevel *toplevel);
 
+int cwc_output_get_tiled_toplevel_array(struct cwc_output *output,
+                                        struct cwc_toplevel **toplevels,
+                                        int array_len);
+
 #endif // !_CWC_MASTER_H

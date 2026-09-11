@@ -16,13 +16,18 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <stdio.h>
 #include <wayland-server-core.h>
 #include <wayland-util.h>
 
 #include "cwc/desktop/layer_shell.h"
+#include "cwc/desktop/toplevel.h"
 #include "cwc/desktop/transaction.h"
+#include "cwc/input/cursor.h"
+#include "cwc/input/seat.h"
+#include "cwc/layout/container.h"
 #include "cwc/server.h"
+#include "cwc/util.h"
+#include "private/container.h"
 
 static struct transaction {
     struct wl_event_source *idle_source;
@@ -138,4 +143,134 @@ void transaction_schedule_tag(struct cwc_tag_info *tag)
 void setup_transaction(struct cwc_server *s)
 {
     wl_array_init(&T.tags);
+}
+
+void transaction_commit(struct cwc_toplevel *toplevel)
+{
+    struct cwc_container *container = toplevel->container;
+
+    /* size correction when toplevel commit different size */
+    if (cwc_container_is_floating(container)) {
+        struct wlr_box geom = cwc_toplevel_get_geometry(toplevel);
+        int dw              = cwc_container_get_decorator_width(container);
+
+        struct cwc_cursor *cursor = server.seat->cursor;
+        if (cursor->resize_edges & WLR_EDGE_LEFT) {
+            int xdiff = geom.width - toplevel->pending.geom.width;
+            container->pending.geom.x -= xdiff;
+        }
+        if (cursor->resize_edges & WLR_EDGE_TOP) {
+            int ydiff = geom.height - toplevel->pending.geom.height;
+            container->pending.geom.y -= ydiff;
+        }
+
+        container->pending.geom.width  = geom.width + dw;
+        container->pending.geom.height = geom.height + dw;
+        toplevel->pending.geom         = geom;
+        toplevel->pending.clip         = geom;
+    }
+
+    cwc_log(CWC_DEBUG, "committing toplevel (%p): %d %d %d %d", toplevel,
+            container->pending.geom.x, container->pending.geom.y,
+            container->pending.geom.width, container->pending.geom.height);
+
+    wlr_scene_node_set_position(&container->tree->node,
+                                container->pending.geom.x,
+                                container->pending.geom.y);
+    int gaps = cwc_container_get_gaps(container);
+    cwc_border_resize(&container->border,
+                      container->pending.geom.width - gaps * 2,
+                      container->pending.geom.height - gaps * 2);
+
+    if (wlr_box_empty(&toplevel->pending.clip)) {
+        wlr_scene_subsurface_tree_set_clip(&toplevel->surf_tree->node, NULL);
+    } else {
+        toplevel->pending.clip.x = toplevel->xdg_toplevel->base->geometry.x,
+        toplevel->pending.clip.y = toplevel->xdg_toplevel->base->geometry.y,
+        wlr_scene_subsurface_tree_set_clip(&toplevel->surf_tree->node,
+                                           &toplevel->pending.clip);
+    }
+
+    if (container->initializing && cwc_toplevel_is_visible(toplevel)) {
+        cwc_container_set_opacity(container, container->opacity_before);
+        container->initializing = false;
+    }
+
+    if (container->saved_tree) {
+        wlr_scene_node_destroy(&container->saved_tree->node);
+        container->saved_tree = NULL;
+        wlr_scene_node_set_enabled(&toplevel->surf_tree->node, true);
+    }
+
+    cwc_log(CWC_DEBUG, "with clip (%p): %d %d %d %d", toplevel,
+            toplevel->pending.clip.x, toplevel->pending.clip.y,
+            toplevel->pending.clip.width, toplevel->pending.clip.height);
+
+    container->current      = container->pending;
+    toplevel->current       = toplevel->pending;
+    toplevel->pending       = (struct cwc_toplevel_state){0};
+    container->pending      = (struct cwc_container_state){0};
+    toplevel->resize_serial = 0;
+    toplevel->last_resize   = get_current_time_msec();
+
+    cwc_container_update_output(container);
+    wl_event_source_timer_update(container->resize_timer, 0);
+}
+
+static bool is_toplevel_ready(struct cwc_toplevel *toplevel)
+{
+    uint64_t timediff = get_current_time_msec() - toplevel->last_resize;
+    if (timediff > RESIZE_TIMEOUT
+        || toplevel->resize_serial
+               <= toplevel->xdg_toplevel->base->current.configure_serial)
+        return true;
+
+    return false;
+}
+
+void transaction_check_commit(struct cwc_toplevel *toplevel)
+{
+    if (!is_toplevel_ready(toplevel))
+        return;
+
+    if ((!cwc_container_is_visible(toplevel->container)
+         || cwc_toplevel_is_floating(toplevel)
+         || !cwc_toplevel_is_configure_allowed(toplevel))) {
+        transaction_commit(toplevel);
+        return;
+    }
+
+    int resize_count = 0;
+    struct cwc_vec *list_resize =
+        cwc_vec_create(sizeof(struct cwc_toplevel *), 4);
+
+    struct cwc_container *c;
+    wl_list_for_each(c, &toplevel->container->output->state->containers,
+                     link_output_container)
+    {
+        struct cwc_toplevel *front = cwc_container_get_front_toplevel(c);
+        if (!front->resize_serial)
+            continue;
+
+        if (is_toplevel_ready(front)) {
+            cwc_vec_push(list_resize, front);
+            continue;
+        }
+
+        resize_count++;
+        break;
+    }
+
+    if (resize_count)
+        goto cleanup;
+
+    for (int i = 0; i < list_resize->count; ++i) {
+        struct cwc_toplevel *t = cwc_vec_at(list_resize, i);
+        transaction_commit(t);
+    }
+
+    cwc_output_state_clear_saved_container(toplevel->container->output->state);
+
+cleanup:
+    cwc_vec_destroy(list_resize);
 }

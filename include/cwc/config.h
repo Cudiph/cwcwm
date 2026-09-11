@@ -6,6 +6,15 @@
 #include <wayland-server-core.h>
 #include <wayland-util.h>
 
+// hard limit of minimum toplevel width
+#define MIN_WIDTH 20
+
+// max 30 workspace/tags because the tag is using uint32_t
+#define MAX_WORKSPACE 30
+
+// force resize if interactive resizing doesn't meet the max time in ms
+#define RESIZE_TIMEOUT 200
+
 struct cwc_config {
     // cwc
     bool tasklist_show_all;

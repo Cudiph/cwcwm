@@ -45,6 +45,7 @@
 #include "cwc/desktop/layer_shell.h"
 #include "cwc/desktop/output.h"
 #include "cwc/desktop/toplevel.h"
+#include "cwc/desktop/transaction.h"
 #include "cwc/input/cursor.h"
 #include "cwc/input/keyboard.h"
 #include "cwc/input/seat.h"
@@ -228,6 +229,12 @@ static void _decide_should_tiled_part2(struct cwc_toplevel *toplevel)
         || cwc_toplevel_is_floating(toplevel))
         return;
 
+    if (cwc_toplevel_is_visible(toplevel) && !cwc_toplevel_is_x11(toplevel)) {
+        cont->opacity_before = cont->opacity;
+        cwc_container_set_opacity(cont, 0);
+        cont->initializing = true;
+    }
+
     switch (cont->output->state->tag_info[cont->workspace].layout_mode) {
     case CWC_LAYOUT_FLOATING:
         return;
@@ -367,45 +374,29 @@ static void on_surface_commit(struct wl_listener *listener, void *data)
         return;
     }
 
-    if (toplevel->resize_serial
-        && toplevel->resize_serial
-               <= toplevel->xdg_toplevel->base->current.configure_serial) {
-        server.resize_count--;
-        toplevel->resize_serial = 0;
+    if (!container)
+        return;
+
+    if (container->initializing && !toplevel->resize_serial) {
+        cwc_container_set_opacity(container, container->opacity_before);
+        container->initializing = false;
     }
 
-    /* nothing to do when geometry is unchanged */
+    if (toplevel->resize_serial) {
+        transaction_check_commit(toplevel);
+        cwc_toplevel_surface_send_frame_done(toplevel);
+        return;
+    }
+
     struct wlr_box geom = cwc_toplevel_get_geometry(toplevel);
-    if (wlr_box_equal(&geom, &toplevel->geometry))
+    if (wlr_box_equal(&geom, &toplevel->current.geom))
         return;
-    toplevel->geometry = geom;
+    toplevel->current.geom = geom;
 
-    if (!container || toplevel->xdg_toplevel->current.resizing
-        || cwc_container_get_front_toplevel(container) != toplevel
-        || !cwc_output_is_exist(container->output)
-        || !cwc_toplevel_is_mapped(toplevel))
-        return;
-
-    int thickness = cwc_border_get_thickness(&container->border);
-
-    if (cwc_toplevel_is_fullscreen(toplevel))
-        return;
-
-    if (cwc_toplevel_is_maximized(toplevel)) {
-        cwc_toplevel_set_maximized(toplevel, true);
-    } else if (!cwc_toplevel_is_floating(toplevel)) {
-        /* adjust clipping to follow the tiled size */
-        int gaps          = cwc_container_get_gaps(container);
-        int outside_width = (thickness + gaps) * 2;
-        geom.width        = container->width - outside_width;
-        geom.height       = container->height - outside_width;
-        wlr_scene_subsurface_tree_set_clip(&toplevel->surf_tree->node, &geom);
-    } else {
-        /* follow geometry when floating */
+    /* follow geometry when floating */
+    if (cwc_toplevel_is_floating(toplevel)) {
         cwc_toplevel_set_size_surface(toplevel, geom.width, geom.height);
-        wlr_scene_subsurface_tree_set_clip(&toplevel->surf_tree->node, &geom);
-        cwc_border_resize(&container->border, geom.width + thickness * 2,
-                          geom.height + thickness * 2);
+        return;
     }
 }
 
@@ -454,9 +445,11 @@ static void on_request_resize(struct wl_listener *listener, void *data)
         wl_container_of(listener, toplevel, request_resize_l);
 
     uint32_t edges = 0;
+#ifdef CWC_XWAYLAND
     if (cwc_toplevel_is_x11(toplevel))
         edges = ((struct wlr_xwayland_resize_event *)data)->edges;
     else
+#endif /* ifdef CWC_XWAYLAND */
         edges = ((struct wlr_xdg_toplevel_resize_event *)data)->edges;
 
     cwc_toplevel_focus(toplevel, true);
@@ -1362,12 +1355,11 @@ struct wlr_box cwc_toplevel_get_geometry(struct cwc_toplevel *toplevel)
 
 void cwc_toplevel_set_size_surface(struct cwc_toplevel *toplevel, int w, int h)
 {
-    int gaps = cwc_container_get_gaps(toplevel->container);
-    int outside_width =
-        (cwc_border_get_thickness(&toplevel->container->border) + gaps) * 2;
+    int decorator_width =
+        cwc_container_get_decorator_width(toplevel->container);
 
-    cwc_container_set_size(toplevel->container, w + outside_width,
-                           h + outside_width);
+    cwc_container_set_size(toplevel->container, w + decorator_width,
+                           h + decorator_width);
 }
 
 void cwc_toplevel_set_position(struct cwc_toplevel *toplevel, int x, int y)

@@ -62,14 +62,19 @@ void cwc_border_set_thickness(struct cwc_border *border, int thickness);
 /* noop if the surface width unchanged */
 void cwc_border_resize(struct cwc_border *border, int rect_w, int rect_h);
 
+struct cwc_container_state {
+    struct wlr_box geom;
+    bool position;
+};
+
 struct cwc_container {
     enum cwc_data_type type;
     struct wl_list link;
     struct wlr_scene_tree *tree;
+    struct wlr_scene_tree *saved_tree;
     struct wlr_scene_tree *popup_tree; // or anything that should above toplevel
     struct wlr_scene_rect *fullscreen_bg;
     struct cwc_border border;
-    int width, height;
     float opacity;
     float wfact;
 
@@ -90,6 +95,16 @@ struct cwc_container {
         tag_bitfield_t tag;
         int workspace;
     } old_prop;
+
+    struct cwc_container_state pending;
+    struct cwc_container_state current;
+
+    struct wl_event_source *resize_timer;
+
+    struct {
+        float opacity_before;
+        bool initializing;
+    } CWC_PRIVATE;
 
     struct wl_list toplevels;
 
@@ -186,6 +201,9 @@ void cwc_container_for_each_bottom_to_top(
     void (*f)(struct cwc_toplevel *toplevel, void *data),
     void *data);
 
+void cwc_container_send_frame_done(struct cwc_container *container);
+void cwc_container_save_buffer(struct cwc_container *container);
+
 // ======================= MACRO =================================
 
 static inline bool cwc_container_is_unmanaged(struct cwc_container *cont)
@@ -242,5 +260,15 @@ static inline float cwc_container_get_opacity(struct cwc_container *container)
 }
 
 void cwc_container_set_opacity(struct cwc_container *container, float opacity);
+
+static inline int
+cwc_container_get_decorator_width(struct cwc_container *container)
+{
+    int gaps = cwc_container_get_gaps(container);
+    int decorator_width =
+        (cwc_border_get_thickness(&container->border) + gaps) * 2;
+
+    return decorator_width;
+}
 
 #endif // !_CWC_CONTAINER_H
