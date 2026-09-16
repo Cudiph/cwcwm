@@ -36,6 +36,7 @@
 #include <lua.h>
 #include <wayland-util.h>
 #include <wlr/types/wlr_content_type_v1.h>
+#include <wlr/types/wlr_xdg_decoration_v1.h>
 
 #include "content-type-v1-protocol.h"
 #include "cwc/config.h"
@@ -49,7 +50,6 @@
 #include "cwc/luaobject.h"
 #include "cwc/server.h"
 #include "cwc/util.h"
-#include "wlr/types/wlr_xdg_decoration_v1.h"
 
 /** Emitted when a client is created.
  *

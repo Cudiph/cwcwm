@@ -44,7 +44,7 @@
 #include "cwc/signal.h"
 #include "cwc/types.h"
 #include "cwc/util.h"
-#include "wlr/util/box.h"
+#include "private/layer_shell.h"
 
 static void cairo_buffer_destroy(struct wlr_buffer *wlr_buffer)
 {
@@ -1298,6 +1298,10 @@ void cwc_container_set_fullscreen(struct cwc_container *container, bool set)
         cwc_output_get_current_tag_info(container->output));
 
     EMIT_PROP_SIGNAL_FOR_FRONT_TOPLEVEL(fullscreen, container);
+
+    if (cwc_container_get_front_toplevel(container)
+        == cwc_toplevel_get_focused())
+        layer_surface_except_overlay_set_enabled(!set);
 }
 
 static void all_toplevel_set_maximized(struct cwc_toplevel *toplevel,

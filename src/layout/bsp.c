@@ -19,6 +19,7 @@
 #include <stdlib.h>
 #include <wayland-server-core.h>
 #include <wayland-util.h>
+#include <wlr/util/edges.h>
 
 #include "cwc/desktop/output.h"
 #include "cwc/desktop/toplevel.h"
@@ -26,7 +27,6 @@
 #include "cwc/layout/bsp.h"
 #include "cwc/layout/container.h"
 #include "cwc/util.h"
-#include "wlr/util/edges.h"
 
 static inline struct bsp_node *
 bsp_node_get_sibling(struct bsp_node *parent_node, struct bsp_node *me)
