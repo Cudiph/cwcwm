@@ -47,6 +47,7 @@
 #include "cwc/signal.h"
 #include "cwc/util.h"
 #include "lua.h"
+#include "private/layer_shell.h"
 
 /**
  * Returns NULL if the keyboard is not grabbed by an input method,
@@ -260,43 +261,40 @@ static void on_kbd_group_key(struct wl_listener *listener, void *data)
     process_key_event(kbd_group, event);
 }
 
-static void _notify_focus_signal(struct wlr_surface *old_surface,
-                                 struct wlr_surface *new_surface)
+static void _notify_focus_signal(struct cwc_toplevel *old_toplevel,
+                                 struct cwc_toplevel *new_toplevel)
 {
-    struct cwc_toplevel *old = cwc_toplevel_try_from_wlr_surface(old_surface);
-    struct cwc_toplevel *new = cwc_toplevel_try_from_wlr_surface(new_surface);
+    if (new_toplevel) {
+        if (new_toplevel->container->bsp_node)
+            bsp_last_focused_update(new_toplevel->container);
 
-    if (new) {
-        if (new->container->bsp_node)
-            bsp_last_focused_update(new->container);
-
-        if (new->wlr_foreign_handle)
+        if (new_toplevel->wlr_foreign_handle)
             wlr_foreign_toplevel_handle_v1_set_activated(
-                new->wlr_foreign_handle, true);
+                new_toplevel->wlr_foreign_handle, true);
 
-        if (cwc_toplevel_is_unmanaged(new))
+        if (cwc_toplevel_is_unmanaged(new_toplevel))
             return;
     }
 
-    if (old) {
-        if (old->wlr_foreign_handle)
+    if (old_toplevel) {
+        if (old_toplevel->wlr_foreign_handle)
             wlr_foreign_toplevel_handle_v1_set_activated(
-                old->wlr_foreign_handle, false);
+                old_toplevel->wlr_foreign_handle, false);
     }
 
     // only emit signal when mapped
-    if (old && cwc_toplevel_is_mapped(old)) {
-        if (cwc_toplevel_is_unmanaged(old))
+    if (old_toplevel && cwc_toplevel_is_mapped(old_toplevel)) {
+        if (cwc_toplevel_is_unmanaged(old_toplevel))
             return;
 
-        cwc_toplevel_set_activated(old, false);
+        cwc_toplevel_set_activated(old_toplevel, false);
         cwc_object_emit_signal_simple("client::unfocus",
-                                      g_config_get_lua_State(), old);
+                                      g_config_get_lua_State(), old_toplevel);
     }
 
-    if (new && cwc_toplevel_is_mapped(new)) {
+    if (new_toplevel && cwc_toplevel_is_mapped(new_toplevel)) {
         cwc_object_emit_signal_simple("client::focus", g_config_get_lua_State(),
-                                      new);
+                                      new_toplevel);
     }
 }
 
@@ -317,10 +315,19 @@ void on_keyboard_focus_change(struct wl_listener *listener, void *data)
         return;
     }
 
-    _notify_focus_signal(event->old_surface, event->new_surface);
+    struct cwc_toplevel *old =
+        cwc_toplevel_try_from_wlr_surface(event->old_surface);
+    struct cwc_toplevel *new =
+        cwc_toplevel_try_from_wlr_surface(event->new_surface);
+    _notify_focus_signal(old, new);
 
     if (seat->input_method)
         text_input_try_focus_surface(seat, event->new_surface);
+
+    if (new && cwc_toplevel_is_fullscreen(new))
+        layer_surface_except_overlay_set_enabled(false);
+    else
+        layer_surface_except_overlay_set_enabled(true);
 }
 
 static void apply_config(struct wlr_keyboard *kbd)
