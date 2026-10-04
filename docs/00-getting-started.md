@@ -35,8 +35,8 @@ The screen or output in wayland terms is a device that describes part of the com
 
 ### The container
 
-A container is a group of clients which live inside of a single rectangular area. 
-Only one client out of the group is displayed at a time. Cycle to the next / previous client in the group by pressing 
+A container is a group of clients which live inside of a single rectangular area.
+Only one client out of the group is displayed at a time. Cycle to the next / previous client in the group by pressing
 `Super + Tab` or `Super + Shift + Tab`.
 This can be used to simulate window swallowing or a tabbed layout. Every client operation like resizing
 will be applied to every client in the container.
@@ -94,7 +94,7 @@ end, { description = "focus down" })
 ```
 
 Some of the object have functions for configuration. To set a configuration just call the function
-with value you want to set. Here is an example when user want to set mouse sensitivity to very low, keyboard
+with value you want to set. Here is an example when user want to set the cursor size, keyboard
 repeat rate to 30hz, and set the normal client border to dark grey.
 
 ```lua
