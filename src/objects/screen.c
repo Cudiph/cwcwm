@@ -628,6 +628,72 @@ static int luaC_screen_set_max_general_workspace(lua_State *L)
     return 0;
 }
 
+/** Empty space at the edge of the screen.
+ *
+ * @property padding
+ * @tparam table|integer padding
+ * @tparam integer padding.left
+ * @tparam integer padding.right
+ * @tparam integer padding.top
+ * @tparam integer padding.bottom
+ * @propertydefault 0
+ */
+static int luaC_screen_get_padding(lua_State *L)
+{
+    struct cwc_output *output = luaC_screen_checkudata(L, 1);
+
+    lua_createtable(L, 0, 4);
+    lua_pushnumber(L, output->state->padding.left);
+    lua_setfield(L, -2, "left");
+    lua_pushnumber(L, output->state->padding.right);
+    lua_setfield(L, -2, "right");
+    lua_pushnumber(L, output->state->padding.top);
+    lua_setfield(L, -2, "top");
+    lua_pushnumber(L, output->state->padding.bottom);
+    lua_setfield(L, -2, "bottom");
+
+    return 1;
+}
+
+static int luaC_screen_set_padding(lua_State *L)
+{
+    struct cwc_output *output = luaC_screen_checkudata(L, 1);
+
+    if (!lua_istable(L, 2) && !lua_isnumber(L, 2))
+        luaL_error(L, "padding value is not a number nor table");
+
+    if (lua_isnumber(L, 2)) {
+        int val                       = luaL_checkint(L, 2);
+        output->state->padding.top    = val;
+        output->state->padding.left   = val;
+        output->state->padding.right  = val;
+        output->state->padding.bottom = val;
+        return 0;
+    }
+
+    lua_getfield(L, 2, "top");
+    if (!lua_isnil(L, -1))
+        output->state->padding.top = luaL_checkint(L, -1);
+    lua_pop(L, 1);
+
+    lua_getfield(L, 2, "bottom");
+    if (!lua_isnil(L, -1))
+        output->state->padding.bottom = luaL_checkint(L, -1);
+    lua_pop(L, 1);
+
+    lua_getfield(L, 2, "right");
+    if (!lua_isnil(L, -1))
+        output->state->padding.right = luaL_checkint(L, -1);
+    lua_pop(L, 1);
+
+    lua_getfield(L, 2, "left");
+    if (!lua_isnil(L, -1))
+        output->state->padding.left = luaL_checkint(L, -1);
+    lua_pop(L, 1);
+
+    return 0;
+}
+
 /** Get containers in this screen.
  *
  * Ordered by time the container created (first item is newest to oldest).
@@ -1130,6 +1196,7 @@ void luaC_screen_setup(lua_State *L)
         REG_PROPERTY(active_tag),
         REG_PROPERTY(active_workspace),
         REG_PROPERTY(max_general_workspace),
+        REG_PROPERTY(padding),
 
         {NULL, NULL},
     };

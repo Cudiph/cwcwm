@@ -38,6 +38,14 @@ struct cwc_output_state {
 
     /* use array for now too lazy to manage the memory */
     struct cwc_tag_info tag_info[MAX_WORKSPACE + 1];
+
+    /* in pixel */
+    struct {
+        int top;
+        int right;
+        int bottom;
+        int left;
+    } padding;
 };
 
 void cwc_output_state_clear_saved_container(struct cwc_output_state *state);

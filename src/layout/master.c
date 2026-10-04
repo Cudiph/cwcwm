@@ -58,10 +58,13 @@ static void arrange_monocle(struct cwc_toplevel **toplevels,
     int i                         = 0;
     struct cwc_toplevel *toplevel = toplevels[i];
     while (toplevel) {
-        cwc_container_set_position_gap(
-            toplevel->container, output->usable_area.x, output->usable_area.y);
-        cwc_container_set_size(toplevel->container, output->usable_area.width,
-                               output->usable_area.height);
+        struct wlr_box box = {
+            .x      = output->usable_area.x,
+            .y      = output->usable_area.y,
+            .width  = output->usable_area.width,
+            .height = output->usable_area.height,
+        };
+        cwc_container_set_box_gap(toplevel->container, &box);
 
         toplevel = toplevels[++i];
     }
@@ -144,7 +147,7 @@ static void arrange_tile(struct cwc_toplevel **toplevels,
         }
     }
 
-    int next_x     = master_width;
+    int next_x     = start_x + master_width;
     int col_width  = sec_width / col_count;
     int cidx_start = master_count;
 

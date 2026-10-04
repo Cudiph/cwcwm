@@ -144,6 +144,13 @@ void arrange_layers(struct cwc_output *output)
     arrange_surface(output, &full_area, &usable_area, output->layers.background, false);
     // clang-format on
 
+    usable_area.x += output->state->padding.left;
+    usable_area.y += output->state->padding.top;
+    usable_area.width -=
+        output->state->padding.right + output->state->padding.left;
+    usable_area.height -=
+        output->state->padding.bottom + output->state->padding.top;
+
     if (!wlr_box_equal(&usable_area, &output->usable_area)) {
         output->usable_area = usable_area;
         transaction_schedule_tag(cwc_output_get_current_tag_info(output));

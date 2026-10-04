@@ -62,6 +62,13 @@ cwc.connect_signal("screen::new", function(screen)
         screen:set_position(1920, 0)
     end
 
+    screen.padding = {
+        top = 30,
+        bottom = 30,
+        left = 50,
+        right = 20,
+    }
+
     -- don't apply if restored since it will reset whats manually changed
     if screen.restored then return end
 

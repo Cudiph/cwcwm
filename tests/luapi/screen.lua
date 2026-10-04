@@ -96,6 +96,21 @@ local function prop_test(s)
     assert(not s.allow_tearing)
     s.allow_tearing = true
     assert(s.allow_tearing)
+
+    assert(s.padding.top == 0)
+    assert(s.padding.bottom == 0)
+    assert(s.padding.left == 0)
+    assert(s.padding.right == 0)
+    s.padding = {
+        top = 10,
+        bottom = 20,
+        left = 30,
+        right = 40,
+    }
+    assert(s.padding.top == 10)
+    assert(s.padding.bottom == 20)
+    assert(s.padding.left == 30)
+    assert(s.padding.right == 40)
 end
 
 local function method_test(s)
