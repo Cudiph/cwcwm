@@ -5,6 +5,7 @@ local conf = {
     -- misc --
     tasklist_show_all                  = false,
     middle_click_paste                 = true,
+    resize_snap                        = true,
 
     -- pointer config --
     cursor_size                        = 20,

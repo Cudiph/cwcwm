@@ -101,6 +101,10 @@ end
 -- @config middle_click_paste
 -- @tparam[opt=true] boolean middle_click_paste
 
+--- warp cursor to the edge of the client when doing interactive resize.
+-- @config resize_snap
+-- @tparam[opt=false] boolean resize_snap
+
 --- The color of client border.
 -- @config border_color_normal
 -- @tparam[opt=#888888] gears_color border_color_normal
