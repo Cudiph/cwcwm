@@ -111,6 +111,11 @@ local function prop_test(s)
     assert(s.padding.bottom == 20)
     assert(s.padding.left == 30)
     assert(s.padding.right == 40)
+    s.padding = 5
+    assert(s.padding.top == 5)
+    assert(s.padding.bottom == 5)
+    assert(s.padding.left == 5)
+    assert(s.padding.right == 5)
 end
 
 local function method_test(s)

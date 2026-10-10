@@ -19,6 +19,7 @@ struct cwc_config {
     // cwc
     bool tasklist_show_all;
     bool middle_click_paste;
+    bool resize_snap;
 
     // client
     int border_color_rotation;   // degree

@@ -66,6 +66,8 @@ static void on_commit(struct wl_listener *listener, void *data)
         if (!g_config.middle_click_paste)
             _clear_all_primary_selection();
     }
+    if (luaC_config_get(L, "resize_snap"))
+        g_config.resize_snap = lua_toboolean(L, -1);
 
     if (luaC_config_get(L, "border_color_rotation"))
         g_config.border_color_rotation = lua_tointeger(L, -1);
@@ -126,6 +128,7 @@ void cwc_config_set_default()
 {
     g_config.tasklist_show_all  = true;
     g_config.middle_click_paste = true;
+    g_config.resize_snap        = false;
 
     g_config.border_color_rotation   = 0;
     g_config.useless_gaps            = 0;

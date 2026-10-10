@@ -782,6 +782,27 @@ static void start_interactive_resize_master(struct cwc_cursor *cursor,
     cursor->state = CWC_CURSOR_STATE_RESIZE_MASTER;
 }
 
+static void _snap_cursor_to_client_edges(struct wlr_cursor *cursor,
+                                         struct cwc_toplevel *toplevel,
+                                         uint32_t edges)
+{
+    struct wlr_box box = cwc_container_get_box(toplevel->container);
+    double lx = cursor->x, ly = cursor->y;
+    if (edges & WLR_EDGE_TOP) {
+        ly = box.y;
+    } else if (edges & WLR_EDGE_BOTTOM) {
+        ly = box.y + box.height;
+    }
+
+    if (edges & WLR_EDGE_LEFT) {
+        lx = box.x;
+    } else if (edges & WLR_EDGE_RIGHT) {
+        lx = box.x + box.width;
+    }
+
+    wlr_cursor_warp(cursor, NULL, lx, ly);
+}
+
 void start_interactive_resize(struct cwc_toplevel *toplevel, uint32_t edges)
 {
     struct cwc_cursor *cursor = server.seat->cursor;
@@ -799,6 +820,12 @@ void start_interactive_resize(struct cwc_toplevel *toplevel, uint32_t edges)
 
     struct wlr_box geo_box = cwc_toplevel_get_geometry(toplevel);
     edges = edges ? edges : decide_which_edge_to_resize(sx, sy, geo_box);
+
+    if (g_config.resize_snap) {
+        _snap_cursor_to_client_edges(cursor->wlr_cursor, toplevel, edges);
+        cx = cursor->wlr_cursor->x;
+        cy = cursor->wlr_cursor->y;
+    }
 
     toplevel->container->state |= CONTAINER_STATE_RESIZING;
     cursor->grabbed_toplevel        = toplevel;

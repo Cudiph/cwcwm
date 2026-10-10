@@ -637,6 +637,7 @@ static int luaC_screen_set_max_general_workspace(lua_State *L)
  * @tparam integer padding.top
  * @tparam integer padding.bottom
  * @propertydefault 0
+ * @negativeallowed true
  */
 static int luaC_screen_get_padding(lua_State *L)
 {
