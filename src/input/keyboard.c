@@ -324,10 +324,16 @@ void on_keyboard_focus_change(struct wl_listener *listener, void *data)
     if (seat->input_method)
         text_input_try_focus_surface(seat, event->new_surface);
 
-    if (new && cwc_toplevel_is_fullscreen(new))
-        layer_surface_except_overlay_set_enabled(false);
-    else
-        layer_surface_except_overlay_set_enabled(true);
+    if (new) {
+        if (cwc_toplevel_is_fullscreen(new))
+            layer_surface_except_overlay_set_enabled(false,
+                                                     new->container->output);
+        else
+            layer_surface_except_overlay_set_enabled(true,
+                                                     new->container->output);
+    } else {
+        layer_surface_except_overlay_set_enabled(true, NULL);
+    }
 }
 
 static void apply_config(struct wlr_keyboard *kbd)

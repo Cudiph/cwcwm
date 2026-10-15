@@ -295,13 +295,17 @@ void cleanup_layer_shell(struct cwc_server *s)
     wl_list_remove(&s->layer_shell_surface_l.link);
 }
 
-void layer_surface_except_overlay_set_enabled(bool set)
+void layer_surface_except_overlay_set_enabled(bool set,
+                                              struct cwc_output *output)
 {
     struct cwc_layer_surface *layersurf;
     wl_list_for_each(layersurf, &server.layer_shells, link)
     {
         if (layersurf->wlr_layer_surface->current.layer
             == ZWLR_LAYER_SHELL_V1_LAYER_OVERLAY)
+            continue;
+
+        if (output && layersurf->output != output)
             continue;
 
         wlr_scene_node_set_enabled(&layersurf->scene_layer->tree->node, set);

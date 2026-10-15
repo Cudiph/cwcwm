@@ -1301,7 +1301,7 @@ void cwc_container_set_fullscreen(struct cwc_container *container, bool set)
 
     if (cwc_container_get_front_toplevel(container)
         == cwc_toplevel_get_focused())
-        layer_surface_except_overlay_set_enabled(!set);
+        layer_surface_except_overlay_set_enabled(!set, container->output);
 }
 
 static void all_toplevel_set_maximized(struct cwc_toplevel *toplevel,
